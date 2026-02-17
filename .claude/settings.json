@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(pnpm *)",
+      "Bash(node *)",
+      "Bash(git *)",
+      "Bash(mkdir *)",
+      "Bash(ls *)",
+      "Bash(cat *)",
+      "Bash(cd *)",
+      "Bash(tsc *)",
+      "Bash(prisma *)",
+      "Bash(npx prisma *)",
+      "Bash(npx create-next-app *)",
+      "Bash(npx shadcn *)",
+      "Bash(npx shadcn-ui *)",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "Task"
+    ]
+  }
+}

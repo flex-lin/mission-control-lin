@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.env
+.env.local
+.env.production
+*.log
+dist/
+.turbo/
+.vercel/
+prisma/*.db
+prisma/*.db-journal
