@@ -23,5 +23,6 @@
       "Grep",
       "Task"
     ]
-  }
+  },
+  "teammateMode": "tmux"
 }
