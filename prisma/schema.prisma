@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model ProxyLog {
+  id           Int      @id @default(autoincrement())
+  timestamp    DateTime @default(now())
+  model        String
+  inputTokens  Int      @map("input_tokens")
+  outputTokens Int      @map("output_tokens")
+  teamName     String?  @map("team_name")
+  endpoint     String
+  latencyMs    Int      @map("latency_ms")
+  statusCode   Int      @map("status_code")
+
+  @@map("proxy_logs")
+}
+
+model AnalyticsSnapshot {
+  id            Int    @id @default(autoincrement())
+  date          String
+  model         String
+  totalInput    Int    @map("total_input")
+  totalOutput   Int    @map("total_output")
+  estimatedCost Float  @map("estimated_cost")
+
+  @@map("analytics_snapshots")
+}
+
+model IndexedProject {
+  id          Int      @id @default(autoincrement())
+  path        String   @unique
+  name        String
+  lastScanned DateTime? @map("last_scanned")
+  tags        String   @default("[]")
+
+  @@map("indexed_projects")
+}
+
+model Preference {
+  key   String @id @unique
+  value String
+
+  @@map("preferences")
+}

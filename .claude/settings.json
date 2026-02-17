@@ -21,7 +21,9 @@
       "Write",
       "Glob",
       "Grep",
-      "Task"
+      "Task",
+      "WebFetch",
+      "WebSearch"
     ]
   },
   "teammateMode": "tmux"
