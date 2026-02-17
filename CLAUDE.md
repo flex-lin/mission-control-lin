@@ -6,7 +6,7 @@ AI/LLM management platform built with Next.js 14.
 - **Framework**: Next.js 14 (App Router)
 - **Language**: TypeScript (strict mode)
 - **Styling**: Tailwind CSS + shadcn/ui
-- **Database**: PostgreSQL + Prisma ORM
+- **Database**: SQLite + Prisma ORM (fully local, no external DB)
 - **Auth**: NextAuth.js
 - **Charts**: Recharts
 - **API**: Next.js API routes or tRPC
