@@ -55,3 +55,27 @@ mission-control-lin/
 - App name: **Mission Control Lin**
 - Sidebar logo text: "Mission Control"
 - Dark theme with accent colors for status indicators
+
+## Autonomous Team Rules
+
+### Quality Gates (must pass before moving to next phase)
+- **After scaffold**: `pnpm install` and `npx prisma generate` succeed
+- **After implementation**: `pnpm build` exits with zero errors
+- **After integration**: `pnpm build` + all pages render without runtime errors
+- **After review fixes**: `pnpm build` + reviewer confirms all critical issues resolved
+
+### Error Recovery
+- Build failures: read the error, fix the root cause, rebuild — do not skip or suppress
+- Dependency issues: check version compatibility, pin versions if needed
+- Type errors: fix the type properly, never use `as any` or `@ts-ignore`
+- File conflicts: team lead reads both versions and produces a merged result
+
+### Git Discipline
+- Commit after each completed phase with a descriptive message
+- Never commit broken code — `pnpm build` must pass before committing
+- Use conventional commits: `feat:`, `fix:`, `chore:`, `refactor:`
+
+### Self-Improvement
+- If a pattern causes repeated issues, update this CLAUDE.md with the fix
+- If a new shared type is needed, add it to types/ so all teammates use it
+- If a utility is used in 3+ places, extract it to lib/
