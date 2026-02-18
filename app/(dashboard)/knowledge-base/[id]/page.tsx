@@ -6,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import type { Project, ProjectContext } from "@/types"
-import { FileText, FolderTree, BookOpen } from "lucide-react"
+import { FileText, FolderTree, BookOpen, Zap } from "lucide-react"
+import { SkillsTab } from "@/components/knowledge-base/skills-tab"
 
 async function getProjectWithContext(id: string): Promise<(Project & ProjectContext) | null> {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
@@ -62,6 +63,10 @@ export default async function ProjectDetailPage({
             <TabsTrigger value="files" className="gap-1.5">
               <FolderTree className="h-3.5 w-3.5" />
               Files
+            </TabsTrigger>
+            <TabsTrigger value="skills" className="gap-1.5">
+              <Zap className="h-3.5 w-3.5" />
+              Skills
             </TabsTrigger>
           </TabsList>
 
@@ -135,6 +140,9 @@ export default async function ProjectDetailPage({
                 </ScrollArea>
               </CardContent>
             </Card>
+          </TabsContent>
+          <TabsContent value="skills">
+            <SkillsTab />
           </TabsContent>
         </Tabs>
       </div>

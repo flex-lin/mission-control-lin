@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { Team, Teammate, TeamTask, Settings, Project, ProjectContext } from "@/types";
+import type { Team, Teammate, TeamTask, Settings, Project, ProjectContext, Skill } from "@/types";
 
 const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
 
@@ -519,6 +519,112 @@ export function listProjects(): Project[] {
   }
 
   return projects;
+}
+
+// ── Skill functions ───────────────────────────────────────────────────────────
+
+function skillsDir(): string {
+  return path.join(CLAUDE_DIR, "skills");
+}
+
+/**
+ * Parse YAML front matter from a markdown string.
+ * Expects content starting with `---\n...\n---\n` delimiters.
+ * Returns extracted key-value pairs and the remaining body.
+ */
+function parseFrontMatter(raw: string): { attrs: Record<string, string>; body: string } {
+  const attrs: Record<string, string> = {};
+  const trimmed = raw.trimStart();
+  if (!trimmed.startsWith("---")) {
+    return { attrs, body: raw };
+  }
+
+  const endIdx = trimmed.indexOf("---", 3);
+  if (endIdx === -1) {
+    return { attrs, body: raw };
+  }
+
+  const frontMatter = trimmed.slice(3, endIdx).trim();
+  const body = trimmed.slice(endIdx + 3).replace(/^\r?\n/, "");
+
+  for (const line of frontMatter.split("\n")) {
+    const colonIdx = line.indexOf(":");
+    if (colonIdx === -1) continue;
+    const key = line.slice(0, colonIdx).trim();
+    const value = line.slice(colonIdx + 1).trim().replace(/^["']|["']$/g, "");
+    if (key) attrs[key] = value;
+  }
+
+  return { attrs, body };
+}
+
+export function listSkills(): Skill[] {
+  const dir = skillsDir();
+  if (!fs.existsSync(dir)) return [];
+
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const skills: Skill[] = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+
+    const skillDir = path.join(dir, entry.name);
+    // Find SKILL.md case-insensitively
+    let skillFile: string | null = null;
+    try {
+      const files = fs.readdirSync(skillDir);
+      skillFile = files.find((f) => f.toLowerCase() === "skill.md") ?? null;
+    } catch {
+      continue;
+    }
+
+    if (!skillFile) continue;
+
+    try {
+      const raw = fs.readFileSync(path.join(skillDir, skillFile), "utf-8");
+      const { attrs, body } = parseFrontMatter(raw);
+
+      skills.push({
+        folderName: entry.name,
+        name: attrs.name || entry.name,
+        description: attrs.description || "",
+        content: body,
+      });
+    } catch {
+      // skip unreadable
+    }
+  }
+
+  return skills;
+}
+
+export function readSkill(folderName: string): Skill | null {
+  const dir = skillsDir();
+  const skillDir = path.join(dir, folderName);
+  if (!fs.existsSync(skillDir)) return null;
+
+  let skillFile: string | null = null;
+  try {
+    const files = fs.readdirSync(skillDir);
+    skillFile = files.find((f) => f.toLowerCase() === "skill.md") ?? null;
+  } catch {
+    return null;
+  }
+
+  if (!skillFile) return null;
+
+  try {
+    const raw = fs.readFileSync(path.join(skillDir, skillFile), "utf-8");
+    const { attrs, body } = parseFrontMatter(raw);
+    return {
+      folderName,
+      name: attrs.name || folderName,
+      description: attrs.description || "",
+      content: body,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function readProjectContext(projectDirName: string): ProjectContext {

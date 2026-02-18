@@ -129,6 +129,15 @@ export interface ProjectContext {
   fileTree?: string[];
 }
 
+// ── Skill Types ──────────────────────────────────────────────────────────────
+
+export interface Skill {
+  folderName: string;   // directory name under ~/.claude/skills/
+  name: string;         // from front matter
+  description: string;  // from front matter
+  content: string;      // markdown body
+}
+
 // ── Knowledge Base Types ──────────────────────────────────────────────────────
 
 export interface KnowledgeBaseEntry {

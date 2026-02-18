@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic"
 
 import { Topbar } from "@/components/layout/topbar"
 import { KnowledgeBaseClient } from "@/components/knowledge-base/knowledge-base-client"
+import { SkillsSection } from "@/components/knowledge-base/skills-section"
 import type { KnowledgeBaseEntry } from "@/types"
 
 async function getEntries(): Promise<KnowledgeBaseEntry[]> {
@@ -25,8 +26,9 @@ export default async function KnowledgeBasePage() {
         title="Knowledge Base"
         subtitle={`${entries.length} indexed path${entries.length !== 1 ? "s" : ""}`}
       />
-      <div className="p-6">
+      <div className="space-y-8 p-6">
         <KnowledgeBaseClient initialEntries={entries} />
+        <SkillsSection />
       </div>
     </div>
   )
