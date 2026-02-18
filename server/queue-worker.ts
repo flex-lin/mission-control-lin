@@ -263,6 +263,9 @@ async function processTask(db: Database.Database, task: QueuedTaskRow): Promise<
     `UPDATE queued_tasks SET status = 'running', started_at = datetime('now') WHERE id = ?`
   ).run(task.id);
 
+  // Declared outside try so it's accessible in finally for cleanup
+  let teamName: string | null = null;
+
   try {
     const { generateTeamPlan, ensureUniqueName } = await import("../lib/team-planner");
 
@@ -270,7 +273,7 @@ async function processTask(db: Database.Database, task: QueuedTaskRow): Promise<
     const plan = await generateTeamPlan(task.goal, task.project_path);
 
     // Use plan's AI-generated name with queue prefix, ensure uniqueness
-    const teamName = ensureUniqueName(`q-${task.id}-${plan.teamName}`);
+    teamName = ensureUniqueName(`q-${task.id}-${plan.teamName}`);
     plan.teamName = teamName;
 
     console.log(`[queue] Generated team name: ${teamName}`);
@@ -364,8 +367,10 @@ async function processTask(db: Database.Database, task: QueuedTaskRow): Promise<
       `UPDATE queued_tasks SET status = 'failed', result = ?, completed_at = datetime('now') WHERE id = ?`
     ).run(msg, task.id);
   } finally {
-    console.log(`[queue] Cleaning up team ${teamName}`);
-    cleanupTeam(teamName);
+    if (teamName) {
+      console.log(`[queue] Cleaning up team ${teamName}`);
+      cleanupTeam(teamName);
+    }
   }
 }
 
