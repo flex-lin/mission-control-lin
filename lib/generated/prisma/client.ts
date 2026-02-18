@@ -64,3 +64,23 @@ export type Preference = Prisma.PreferenceModel
  * 
  */
 export type QueuedTask = Prisma.QueuedTaskModel
+/**
+ * Model UsageRecord
+ * Record synced from Anthropic Usage API (per-bucket, per-model)
+ */
+export type UsageRecord = Prisma.UsageRecordModel
+/**
+ * Model CostRecord
+ * Record synced from Anthropic Cost API (daily, per-model, per-token-type)
+ */
+export type CostRecord = Prisma.CostRecordModel
+/**
+ * Model ClaudeCodeDailyMetric
+ * Claude Code per-user daily analytics from the Admin API
+ */
+export type ClaudeCodeDailyMetric = Prisma.ClaudeCodeDailyMetricModel
+/**
+ * Model UsageSyncCursor
+ * Tracks sync state so we know what's already been fetched
+ */
+export type UsageSyncCursor = Prisma.UsageSyncCursorModel

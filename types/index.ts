@@ -225,6 +225,86 @@ export interface QueuedTask {
   completedAt?: string | null;
 }
 
+// ── Usage API Types ──────────────────────────────────────────────────────────
+
+export interface UsageDailySummary {
+  date: string;
+  totalInputTokens: number;
+  uncachedInputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  outputTokens: number;
+  costCents: number;
+  source: "api" | "proxy";
+}
+
+export interface UsageByModel {
+  model: string;
+  uncachedInputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  costCents: number;
+  source: "api" | "proxy";
+}
+
+export interface UsageByWorkspace {
+  workspaceId: string | null;
+  totalInputTokens: number;
+  outputTokens: number;
+  costCents: number;
+}
+
+export interface ClaudeCodeSummary {
+  summary: {
+    totalSessions: number;
+    totalLinesAdded: number;
+    totalLinesRemoved: number;
+    totalCommits: number;
+    totalPRs: number;
+    avgEditAcceptRate: number;
+    avgWriteAcceptRate: number;
+  };
+  daily: Array<{
+    date: string;
+    sessions: number;
+    linesAdded: number;
+    linesRemoved: number;
+    commits: number;
+    pullRequests: number;
+  }>;
+  byUser: Array<{
+    actor: string;
+    sessions: number;
+    linesAdded: number;
+    linesRemoved: number;
+    costCents: number;
+  }>;
+  byModel: Array<{
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    costCents: number;
+  }>;
+}
+
+export interface UsageSyncResult {
+  usage: { synced: number; fromDate: string; toDate: string } | null;
+  cost: { synced: number; fromDate: string; toDate: string } | null;
+  claudeCode: { synced: number; fromDate: string; toDate: string } | null;
+}
+
+export interface UsageSyncStatus {
+  configured: boolean;
+  lastSync: {
+    usage: string | null;
+    cost: string | null;
+    claudeCode: string | null;
+  };
+  keyPrefix: string | null;
+}
+
 // ── API Response Wrapper ──────────────────────────────────────────────────────
 
 export interface ApiResponse<T> {

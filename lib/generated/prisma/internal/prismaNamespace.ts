@@ -388,7 +388,11 @@ export const ModelName = {
   AnalyticsSnapshot: 'AnalyticsSnapshot',
   IndexedProject: 'IndexedProject',
   Preference: 'Preference',
-  QueuedTask: 'QueuedTask'
+  QueuedTask: 'QueuedTask',
+  UsageRecord: 'UsageRecord',
+  CostRecord: 'CostRecord',
+  ClaudeCodeDailyMetric: 'ClaudeCodeDailyMetric',
+  UsageSyncCursor: 'UsageSyncCursor'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -404,7 +408,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "proxyLog" | "analyticsSnapshot" | "indexedProject" | "preference" | "queuedTask"
+    modelProps: "proxyLog" | "analyticsSnapshot" | "indexedProject" | "preference" | "queuedTask" | "usageRecord" | "costRecord" | "claudeCodeDailyMetric" | "usageSyncCursor"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -778,6 +782,302 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    UsageRecord: {
+      payload: Prisma.$UsageRecordPayload<ExtArgs>
+      fields: Prisma.UsageRecordFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UsageRecordFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageRecordPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UsageRecordFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageRecordPayload>
+        }
+        findFirst: {
+          args: Prisma.UsageRecordFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageRecordPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UsageRecordFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageRecordPayload>
+        }
+        findMany: {
+          args: Prisma.UsageRecordFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageRecordPayload>[]
+        }
+        create: {
+          args: Prisma.UsageRecordCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageRecordPayload>
+        }
+        createMany: {
+          args: Prisma.UsageRecordCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.UsageRecordCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageRecordPayload>[]
+        }
+        delete: {
+          args: Prisma.UsageRecordDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageRecordPayload>
+        }
+        update: {
+          args: Prisma.UsageRecordUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageRecordPayload>
+        }
+        deleteMany: {
+          args: Prisma.UsageRecordDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UsageRecordUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.UsageRecordUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageRecordPayload>[]
+        }
+        upsert: {
+          args: Prisma.UsageRecordUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageRecordPayload>
+        }
+        aggregate: {
+          args: Prisma.UsageRecordAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUsageRecord>
+        }
+        groupBy: {
+          args: Prisma.UsageRecordGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UsageRecordGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UsageRecordCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UsageRecordCountAggregateOutputType> | number
+        }
+      }
+    }
+    CostRecord: {
+      payload: Prisma.$CostRecordPayload<ExtArgs>
+      fields: Prisma.CostRecordFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CostRecordFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CostRecordPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CostRecordFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CostRecordPayload>
+        }
+        findFirst: {
+          args: Prisma.CostRecordFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CostRecordPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CostRecordFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CostRecordPayload>
+        }
+        findMany: {
+          args: Prisma.CostRecordFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CostRecordPayload>[]
+        }
+        create: {
+          args: Prisma.CostRecordCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CostRecordPayload>
+        }
+        createMany: {
+          args: Prisma.CostRecordCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CostRecordCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CostRecordPayload>[]
+        }
+        delete: {
+          args: Prisma.CostRecordDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CostRecordPayload>
+        }
+        update: {
+          args: Prisma.CostRecordUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CostRecordPayload>
+        }
+        deleteMany: {
+          args: Prisma.CostRecordDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CostRecordUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CostRecordUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CostRecordPayload>[]
+        }
+        upsert: {
+          args: Prisma.CostRecordUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CostRecordPayload>
+        }
+        aggregate: {
+          args: Prisma.CostRecordAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCostRecord>
+        }
+        groupBy: {
+          args: Prisma.CostRecordGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CostRecordGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CostRecordCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CostRecordCountAggregateOutputType> | number
+        }
+      }
+    }
+    ClaudeCodeDailyMetric: {
+      payload: Prisma.$ClaudeCodeDailyMetricPayload<ExtArgs>
+      fields: Prisma.ClaudeCodeDailyMetricFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ClaudeCodeDailyMetricFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClaudeCodeDailyMetricPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ClaudeCodeDailyMetricFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClaudeCodeDailyMetricPayload>
+        }
+        findFirst: {
+          args: Prisma.ClaudeCodeDailyMetricFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClaudeCodeDailyMetricPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ClaudeCodeDailyMetricFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClaudeCodeDailyMetricPayload>
+        }
+        findMany: {
+          args: Prisma.ClaudeCodeDailyMetricFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClaudeCodeDailyMetricPayload>[]
+        }
+        create: {
+          args: Prisma.ClaudeCodeDailyMetricCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClaudeCodeDailyMetricPayload>
+        }
+        createMany: {
+          args: Prisma.ClaudeCodeDailyMetricCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ClaudeCodeDailyMetricCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClaudeCodeDailyMetricPayload>[]
+        }
+        delete: {
+          args: Prisma.ClaudeCodeDailyMetricDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClaudeCodeDailyMetricPayload>
+        }
+        update: {
+          args: Prisma.ClaudeCodeDailyMetricUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClaudeCodeDailyMetricPayload>
+        }
+        deleteMany: {
+          args: Prisma.ClaudeCodeDailyMetricDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ClaudeCodeDailyMetricUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ClaudeCodeDailyMetricUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClaudeCodeDailyMetricPayload>[]
+        }
+        upsert: {
+          args: Prisma.ClaudeCodeDailyMetricUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ClaudeCodeDailyMetricPayload>
+        }
+        aggregate: {
+          args: Prisma.ClaudeCodeDailyMetricAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateClaudeCodeDailyMetric>
+        }
+        groupBy: {
+          args: Prisma.ClaudeCodeDailyMetricGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClaudeCodeDailyMetricGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ClaudeCodeDailyMetricCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ClaudeCodeDailyMetricCountAggregateOutputType> | number
+        }
+      }
+    }
+    UsageSyncCursor: {
+      payload: Prisma.$UsageSyncCursorPayload<ExtArgs>
+      fields: Prisma.UsageSyncCursorFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UsageSyncCursorFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageSyncCursorPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UsageSyncCursorFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageSyncCursorPayload>
+        }
+        findFirst: {
+          args: Prisma.UsageSyncCursorFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageSyncCursorPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UsageSyncCursorFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageSyncCursorPayload>
+        }
+        findMany: {
+          args: Prisma.UsageSyncCursorFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageSyncCursorPayload>[]
+        }
+        create: {
+          args: Prisma.UsageSyncCursorCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageSyncCursorPayload>
+        }
+        createMany: {
+          args: Prisma.UsageSyncCursorCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.UsageSyncCursorCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageSyncCursorPayload>[]
+        }
+        delete: {
+          args: Prisma.UsageSyncCursorDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageSyncCursorPayload>
+        }
+        update: {
+          args: Prisma.UsageSyncCursorUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageSyncCursorPayload>
+        }
+        deleteMany: {
+          args: Prisma.UsageSyncCursorDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UsageSyncCursorUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.UsageSyncCursorUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageSyncCursorPayload>[]
+        }
+        upsert: {
+          args: Prisma.UsageSyncCursorUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UsageSyncCursorPayload>
+        }
+        aggregate: {
+          args: Prisma.UsageSyncCursorAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUsageSyncCursor>
+        }
+        groupBy: {
+          args: Prisma.UsageSyncCursorGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UsageSyncCursorGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UsageSyncCursorCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UsageSyncCursorCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -877,6 +1177,76 @@ export const QueuedTaskScalarFieldEnum = {
 } as const
 
 export type QueuedTaskScalarFieldEnum = (typeof QueuedTaskScalarFieldEnum)[keyof typeof QueuedTaskScalarFieldEnum]
+
+
+export const UsageRecordScalarFieldEnum = {
+  id: 'id',
+  bucketStart: 'bucketStart',
+  bucketEnd: 'bucketEnd',
+  bucketWidth: 'bucketWidth',
+  model: 'model',
+  workspaceId: 'workspaceId',
+  serviceTier: 'serviceTier',
+  uncachedInputTokens: 'uncachedInputTokens',
+  cacheReadInputTokens: 'cacheReadInputTokens',
+  cache5mCreationTokens: 'cache5mCreationTokens',
+  cache1hCreationTokens: 'cache1hCreationTokens',
+  outputTokens: 'outputTokens',
+  webSearchRequests: 'webSearchRequests',
+  syncedAt: 'syncedAt'
+} as const
+
+export type UsageRecordScalarFieldEnum = (typeof UsageRecordScalarFieldEnum)[keyof typeof UsageRecordScalarFieldEnum]
+
+
+export const CostRecordScalarFieldEnum = {
+  id: 'id',
+  bucketStart: 'bucketStart',
+  bucketEnd: 'bucketEnd',
+  model: 'model',
+  workspaceId: 'workspaceId',
+  serviceTier: 'serviceTier',
+  costType: 'costType',
+  tokenType: 'tokenType',
+  amountCents: 'amountCents',
+  currency: 'currency',
+  syncedAt: 'syncedAt'
+} as const
+
+export type CostRecordScalarFieldEnum = (typeof CostRecordScalarFieldEnum)[keyof typeof CostRecordScalarFieldEnum]
+
+
+export const ClaudeCodeDailyMetricScalarFieldEnum = {
+  id: 'id',
+  date: 'date',
+  actorType: 'actorType',
+  actorIdentifier: 'actorIdentifier',
+  terminalType: 'terminalType',
+  numSessions: 'numSessions',
+  linesAdded: 'linesAdded',
+  linesRemoved: 'linesRemoved',
+  commitsByClaudeCode: 'commitsByClaudeCode',
+  pullRequestsByClaudeCode: 'pullRequestsByClaudeCode',
+  editToolAccepted: 'editToolAccepted',
+  editToolRejected: 'editToolRejected',
+  writeToolAccepted: 'writeToolAccepted',
+  writeToolRejected: 'writeToolRejected',
+  notebookEditAccepted: 'notebookEditAccepted',
+  notebookEditRejected: 'notebookEditRejected',
+  modelBreakdown: 'modelBreakdown',
+  syncedAt: 'syncedAt'
+} as const
+
+export type ClaudeCodeDailyMetricScalarFieldEnum = (typeof ClaudeCodeDailyMetricScalarFieldEnum)[keyof typeof ClaudeCodeDailyMetricScalarFieldEnum]
+
+
+export const UsageSyncCursorScalarFieldEnum = {
+  id: 'id',
+  lastSyncAt: 'lastSyncAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UsageSyncCursorScalarFieldEnum = (typeof UsageSyncCursorScalarFieldEnum)[keyof typeof UsageSyncCursorScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1028,6 +1398,10 @@ export type GlobalOmitConfig = {
   indexedProject?: Prisma.IndexedProjectOmit
   preference?: Prisma.PreferenceOmit
   queuedTask?: Prisma.QueuedTaskOmit
+  usageRecord?: Prisma.UsageRecordOmit
+  costRecord?: Prisma.CostRecordOmit
+  claudeCodeDailyMetric?: Prisma.ClaudeCodeDailyMetricOmit
+  usageSyncCursor?: Prisma.UsageSyncCursorOmit
 }
 
 /* Types for Logging */

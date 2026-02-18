@@ -55,7 +55,11 @@ export const ModelName = {
   AnalyticsSnapshot: 'AnalyticsSnapshot',
   IndexedProject: 'IndexedProject',
   Preference: 'Preference',
-  QueuedTask: 'QueuedTask'
+  QueuedTask: 'QueuedTask',
+  UsageRecord: 'UsageRecord',
+  CostRecord: 'CostRecord',
+  ClaudeCodeDailyMetric: 'ClaudeCodeDailyMetric',
+  UsageSyncCursor: 'UsageSyncCursor'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -134,6 +138,76 @@ export const QueuedTaskScalarFieldEnum = {
 } as const
 
 export type QueuedTaskScalarFieldEnum = (typeof QueuedTaskScalarFieldEnum)[keyof typeof QueuedTaskScalarFieldEnum]
+
+
+export const UsageRecordScalarFieldEnum = {
+  id: 'id',
+  bucketStart: 'bucketStart',
+  bucketEnd: 'bucketEnd',
+  bucketWidth: 'bucketWidth',
+  model: 'model',
+  workspaceId: 'workspaceId',
+  serviceTier: 'serviceTier',
+  uncachedInputTokens: 'uncachedInputTokens',
+  cacheReadInputTokens: 'cacheReadInputTokens',
+  cache5mCreationTokens: 'cache5mCreationTokens',
+  cache1hCreationTokens: 'cache1hCreationTokens',
+  outputTokens: 'outputTokens',
+  webSearchRequests: 'webSearchRequests',
+  syncedAt: 'syncedAt'
+} as const
+
+export type UsageRecordScalarFieldEnum = (typeof UsageRecordScalarFieldEnum)[keyof typeof UsageRecordScalarFieldEnum]
+
+
+export const CostRecordScalarFieldEnum = {
+  id: 'id',
+  bucketStart: 'bucketStart',
+  bucketEnd: 'bucketEnd',
+  model: 'model',
+  workspaceId: 'workspaceId',
+  serviceTier: 'serviceTier',
+  costType: 'costType',
+  tokenType: 'tokenType',
+  amountCents: 'amountCents',
+  currency: 'currency',
+  syncedAt: 'syncedAt'
+} as const
+
+export type CostRecordScalarFieldEnum = (typeof CostRecordScalarFieldEnum)[keyof typeof CostRecordScalarFieldEnum]
+
+
+export const ClaudeCodeDailyMetricScalarFieldEnum = {
+  id: 'id',
+  date: 'date',
+  actorType: 'actorType',
+  actorIdentifier: 'actorIdentifier',
+  terminalType: 'terminalType',
+  numSessions: 'numSessions',
+  linesAdded: 'linesAdded',
+  linesRemoved: 'linesRemoved',
+  commitsByClaudeCode: 'commitsByClaudeCode',
+  pullRequestsByClaudeCode: 'pullRequestsByClaudeCode',
+  editToolAccepted: 'editToolAccepted',
+  editToolRejected: 'editToolRejected',
+  writeToolAccepted: 'writeToolAccepted',
+  writeToolRejected: 'writeToolRejected',
+  notebookEditAccepted: 'notebookEditAccepted',
+  notebookEditRejected: 'notebookEditRejected',
+  modelBreakdown: 'modelBreakdown',
+  syncedAt: 'syncedAt'
+} as const
+
+export type ClaudeCodeDailyMetricScalarFieldEnum = (typeof ClaudeCodeDailyMetricScalarFieldEnum)[keyof typeof ClaudeCodeDailyMetricScalarFieldEnum]
+
+
+export const UsageSyncCursorScalarFieldEnum = {
+  id: 'id',
+  lastSyncAt: 'lastSyncAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UsageSyncCursorScalarFieldEnum = (typeof UsageSyncCursorScalarFieldEnum)[keyof typeof UsageSyncCursorScalarFieldEnum]
 
 
 export const SortOrder = {
