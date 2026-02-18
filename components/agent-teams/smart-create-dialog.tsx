@@ -189,7 +189,13 @@ export function SmartCreateDialog() {
             </DialogHeader>
             <div className="max-h-[50vh] space-y-4 overflow-y-auto pr-1">
               <div className="space-y-1.5">
-                <Label htmlFor="plan-name">Team Name</Label>
+                <Label htmlFor="plan-name" className="flex items-center gap-1.5">
+                  Team Name
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                    <Sparkles className="h-2.5 w-2.5" />
+                    AI-suggested
+                  </span>
+                </Label>
                 <Input
                   id="plan-name"
                   value={plan.teamName}

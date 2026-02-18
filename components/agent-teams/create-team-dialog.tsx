@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus } from "lucide-react"
+import { Plus, Sparkles, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 interface CreateTeamDialogProps {
@@ -27,6 +27,33 @@ export function CreateTeamDialog({ triggerLabel }: CreateTeamDialogProps) {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [loading, setLoading] = useState(false)
+  const [suggesting, setSuggesting] = useState(false)
+
+  async function handleSuggestName() {
+    if (!description.trim()) {
+      toast.error("Enter a description first so AI can suggest a name")
+      return
+    }
+    setSuggesting(true)
+    try {
+      const res = await fetch("/api/teams/smart-create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: description.trim() }),
+      })
+      const json = await res.json()
+      if (res.ok && json.data?.teamName) {
+        setName(json.data.teamName)
+        toast.success("Name suggested by AI")
+      } else {
+        toast.error("Could not generate a name")
+      }
+    } catch {
+      toast.error("Network error")
+    } finally {
+      setSuggesting(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -72,13 +99,31 @@ export function CreateTeamDialog({ triggerLabel }: CreateTeamDialogProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="team-name">Team Name</Label>
-            <Input
-              id="team-name"
-              placeholder="e.g. mission-control"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
+            <div className="flex gap-2">
+              <Input
+                id="team-name"
+                placeholder="e.g. mission-control"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1 text-xs"
+                disabled={suggesting || !description.trim()}
+                onClick={handleSuggestName}
+              >
+                {suggesting ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3 w-3" />
+                )}
+                Suggest
+              </Button>
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="team-desc">Description (optional)</Label>

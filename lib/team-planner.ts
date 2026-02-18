@@ -2,11 +2,19 @@
  * Team planning logic — extracted from app/api/teams/smart-create/route.ts
  * so it can be called from both the API route and the queue worker.
  */
+import fs from "fs";
+import path from "path";
 import Anthropic from "@anthropic-ai/sdk";
 import type { TeamPlan, TeamPersona } from "@/types";
 
+const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
+
 const SYSTEM_PROMPT = `You are an expert at designing Claude Code agent teams. Given a goal, output a JSON TeamPlan with:
-- teamName: a short kebab-case name for the team (alphanumeric and dashes only)
+- teamName: a short kebab-case name (3-5 words, max 40 chars, alphanumeric and dashes only) that summarizes the specific goal — NOT generic names like "fullstack-team" or "api-builders". Examples:
+  - "Add user authentication" → "user-auth-impl"
+  - "Refactor database queries for performance" → "db-query-optimization"
+  - "Build a REST API for inventory management" → "inventory-api"
+  - "Fix login page CSS bugs" → "login-css-fixes"
 - description: a one-sentence description of what the team does
 - personas: an array of team members, each with:
   - name: kebab-case agent name (e.g. "frontend-dev", "backend-dev")
@@ -120,6 +128,65 @@ function toKebabCase(s: string): string {
     .slice(0, 40);
 }
 
+// Common filler words to strip when deriving a team name from goal text
+const STOP_WORDS = new Set([
+  "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
+  "of", "with", "by", "from", "is", "are", "was", "were", "be", "been",
+  "being", "have", "has", "had", "do", "does", "did", "will", "would",
+  "could", "should", "may", "might", "shall", "can", "need", "must",
+  "i", "we", "you", "they", "it", "that", "this", "these", "those",
+  "my", "our", "your", "make", "create", "implement", "please", "want",
+  "like", "get", "set", "use", "using", "into", "about", "some", "all",
+]);
+
+/**
+ * Derive a meaningful kebab-case name from goal text by stripping
+ * filler/stop words and keeping 3-5 descriptive terms.
+ */
+function deriveNameFromGoal(goal: string): string {
+  const words = goal
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .split(/\s+/)
+    .filter((w) => w.length > 1 && !STOP_WORDS.has(w));
+
+  const meaningful = words.slice(0, 5);
+  if (meaningful.length === 0) return "";
+  return meaningful.join("-").slice(0, 40);
+}
+
+/**
+ * Ensure a team name is unique by checking active teams and archived teams.
+ * Appends -2, -3, etc. if the name already exists.
+ */
+export function ensureUniqueName(baseName: string): string {
+  const existing = new Set<string>();
+
+  // Check active teams
+  const teamsPath = path.join(CLAUDE_DIR, "teams");
+  if (fs.existsSync(teamsPath)) {
+    for (const entry of fs.readdirSync(teamsPath, { withFileTypes: true })) {
+      if (entry.isDirectory()) existing.add(entry.name);
+    }
+  }
+
+  // Check archived teams
+  const archivePath = path.join(CLAUDE_DIR, "teams-archive");
+  if (fs.existsSync(archivePath)) {
+    for (const entry of fs.readdirSync(archivePath, { withFileTypes: true })) {
+      if (entry.isDirectory()) existing.add(entry.name);
+    }
+  }
+
+  if (!existing.has(baseName)) return baseName;
+
+  let suffix = 2;
+  while (existing.has(`${baseName}-${suffix}`)) {
+    suffix++;
+  }
+  return `${baseName}-${suffix}`;
+}
+
 export function generateLocalPlan(goal: string): TeamPlan {
   const lower = goal.toLowerCase();
 
@@ -134,9 +201,9 @@ export function generateLocalPlan(goal: string): TeamPlan {
     }
   }
 
-  const words = goal.trim().split(/\s+/).slice(0, 4);
-  const derivedName = toKebabCase(words.join(" "));
-  const teamName = derivedName.length >= 3 ? derivedName : bestTemplate.teamName;
+  const derivedName = deriveNameFromGoal(goal);
+  const rawName = derivedName.length >= 3 ? derivedName : bestTemplate.teamName;
+  const teamName = ensureUniqueName(rawName);
 
   return {
     teamName,
@@ -191,6 +258,8 @@ export async function generateTeamPlan(
     if (!plan.initialTasks || !Array.isArray(plan.initialTasks)) {
       plan.initialTasks = [];
     }
+
+    plan.teamName = ensureUniqueName(plan.teamName);
 
     return { ...plan, _source: "ai" };
   } catch (e) {

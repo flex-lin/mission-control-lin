@@ -102,10 +102,30 @@ function readTeamTasks(teamName: string): TaskFileData[] {
   return tasks;
 }
 
-function allTasksCompleted(teamName: string): boolean {
+/**
+ * Determine the completion state of a team's tasks.
+ * - "completed": all task files have status completed/deleted
+ * - "cleaned_up": task directory was removed (e.g. TeamDelete was called)
+ * - "has_pending": some tasks are still pending/in_progress
+ * - "no_tasks": task dir exists but has no task files (shouldn't normally happen)
+ */
+function getTaskCompletionState(teamName: string): "completed" | "cleaned_up" | "has_pending" | "no_tasks" {
+  const taskDir = path.join(CLAUDE_DIR, "tasks", teamName);
+  if (!fs.existsSync(taskDir)) return "cleaned_up";
+
   const tasks = readTeamTasks(teamName);
-  if (tasks.length === 0) return false;
-  return tasks.every((t) => t.status === "completed" || t.status === "deleted");
+  if (tasks.length === 0) return "no_tasks";
+
+  if (tasks.every((t) => t.status === "completed" || t.status === "deleted")) {
+    return "completed";
+  }
+
+  return "has_pending";
+}
+
+function allTasksCompleted(teamName: string): boolean {
+  const state = getTaskCompletionState(teamName);
+  return state === "completed";
 }
 
 function cleanupTeam(teamName: string): void {
@@ -209,26 +229,33 @@ async function spawnTeamForQueue(
 // ── Core Queue Processing ────────────────────────────────────────────────────
 
 async function processTask(db: Database.Database, task: QueuedTaskRow): Promise<void> {
-  const teamName = `q-${task.id}-${Date.now().toString(36)}`;
-
-  console.log(`[queue] Processing task #${task.id}: "${task.goal}" → team ${teamName}`);
+  console.log(`[queue] Processing task #${task.id}: "${task.goal}"`);
 
   db.prepare(
-    `UPDATE queued_tasks SET status = 'running', team_name = ?, started_at = datetime('now') WHERE id = ?`
-  ).run(teamName, task.id);
+    `UPDATE queued_tasks SET status = 'running', started_at = datetime('now') WHERE id = ?`
+  ).run(task.id);
 
   try {
-    const { generateTeamPlan } = await import("../lib/team-planner");
+    const { generateTeamPlan, ensureUniqueName } = await import("../lib/team-planner");
 
     console.log(`[queue] Generating team plan for: ${task.goal}`);
     const plan = await generateTeamPlan(task.goal, task.project_path);
+
+    // Use plan's AI-generated name with queue prefix, ensure uniqueness
+    const teamName = ensureUniqueName(`q-${task.id}-${plan.teamName}`);
     plan.teamName = teamName;
+
+    console.log(`[queue] Generated team name: ${teamName}`);
+
+    db.prepare(
+      `UPDATE queued_tasks SET team_name = ? WHERE id = ?`
+    ).run(teamName, task.id);
 
     console.log(`[queue] Spawning team ${teamName} at ${task.project_path}`);
     await spawnTeamForQueue(teamName, task.goal, task.project_path, plan);
 
     const startTime = Date.now();
-    const { sessionExists } = await import("../lib/tmux-manager");
+    const { sessionExists, sessionProcessAlive } = await import("../lib/tmux-manager");
     const { getLeaderSessionName } = await import("../lib/agent-launcher");
 
     while (true) {
@@ -236,32 +263,48 @@ async function processTask(db: Database.Database, task: QueuedTaskRow): Promise<
       writeHeartbeat();
 
       const elapsed = Date.now() - startTime;
+      const taskState = getTaskCompletionState(teamName);
+      const leaderSession = getLeaderSessionName(teamName);
 
-      if (allTasksCompleted(teamName)) {
-        console.log(`[queue] All tasks completed for team ${teamName}`);
-        await sleep(30_000);
+      // Check if tasks are done (either all completed or team called TeamDelete)
+      if (taskState === "completed" || taskState === "cleaned_up" || taskState === "no_tasks") {
+        const reason = taskState === "cleaned_up"
+          ? "Team cleaned up (TeamDelete called)"
+          : "All tasks completed successfully";
 
-        const leaderSession = getLeaderSessionName(teamName);
-        if (sessionExists(leaderSession)) {
-          console.log(`[queue] Leader still running (likely verifying/committing), waiting...`);
-          await sleep(60_000);
+        if (taskState === "completed") {
+          // Tasks still on disk and all completed — give leader time to build/commit
+          console.log(`[queue] All tasks completed for team ${teamName}`);
+          await sleep(30_000);
+
+          if (sessionExists(leaderSession) && sessionProcessAlive(leaderSession)) {
+            console.log(`[queue] Leader still running (likely verifying/committing), waiting...`);
+            await sleep(60_000);
+          }
+        } else {
+          // Task dir gone or empty — team already cleaned up, brief grace period
+          console.log(`[queue] ${reason} for team ${teamName}`);
+          await sleep(5_000);
         }
 
         db.prepare(
           `UPDATE queued_tasks SET status = 'completed', result = ?, completed_at = datetime('now') WHERE id = ?`
-        ).run("All tasks completed successfully", task.id);
+        ).run(reason, task.id);
 
-        console.log(`[queue] Task #${task.id} completed successfully`);
+        console.log(`[queue] Task #${task.id} completed: ${reason}`);
         break;
       }
 
-      const leaderSession = getLeaderSessionName(teamName);
-      if (!sessionExists(leaderSession)) {
+      // Leader liveness: check both tmux session AND whether claude process is alive
+      // (tmux session can linger as a shell prompt after claude exits)
+      const leaderAlive = sessionExists(leaderSession) && sessionProcessAlive(leaderSession);
+
+      if (!leaderAlive) {
         const fileTasks = readTeamTasks(teamName);
         const pending = fileTasks.filter((t) => t.status === "pending" || t.status === "in_progress");
 
         if (pending.length > 0) {
-          const msg = `Leader died with ${pending.length} unfinished tasks`;
+          const msg = `Leader exited with ${pending.length} unfinished tasks`;
           console.error(`[queue] ${msg} for team ${teamName}`);
           db.prepare(
             `UPDATE queued_tasks SET status = 'failed', result = ?, completed_at = datetime('now') WHERE id = ?`
