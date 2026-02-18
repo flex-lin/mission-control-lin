@@ -8,6 +8,13 @@ import { launchTeamAsLeader, getLeaderSessionName, personaToLaunchable } from "@
 import { writeBackgroundConfig, DEFAULT_BACKGROUND_CONFIG } from "@/lib/sleep-detector";
 import type { TeamPlan, Teammate, TeamTask } from "@/types";
 
+export class DuplicateTeamError extends Error {
+  constructor(teamName: string) {
+    super(`Team "${teamName}" already exists — cannot spawn duplicate`);
+    this.name = "DuplicateTeamError";
+  }
+}
+
 const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
 
 function assertSafePath(resolvedPath: string): void {
@@ -43,7 +50,7 @@ export async function spawnTeam(
 
   // One-team-per-task guard: reject if team directory already exists (prevents duplicates)
   if (fs.existsSync(path.join(teamDir, "config.json"))) {
-    throw new Error(`Team "${teamName}" already exists — cannot spawn duplicate`);
+    throw new DuplicateTeamError(teamName);
   }
 
   // Pre-populate ALL members in config

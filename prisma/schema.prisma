@@ -65,6 +65,8 @@ model QueuedTask {
   startedAt   DateTime? @map("started_at")
   completedAt DateTime? @map("completed_at")
 
+  @@index([status, createdAt])
+  @@index([teamName])
   @@map("queued_tasks")
 }
 

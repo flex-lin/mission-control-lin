@@ -5,10 +5,10 @@
 export function getCutoffDate(period: string): Date {
   const now = new Date();
   const cutoff = new Date(now);
-  if (period === "all") cutoff.setFullYear(2000);
-  else if (period === "30d") cutoff.setDate(now.getDate() - 30);
-  else if (period === "1m") cutoff.setMonth(now.getMonth() - 1);
-  else cutoff.setDate(now.getDate() - 7);
+  if (period === "all") cutoff.setUTCFullYear(2000);
+  else if (period === "30d") cutoff.setUTCDate(now.getUTCDate() - 30);
+  else if (period === "1m") cutoff.setUTCMonth(now.getUTCMonth() - 1);
+  else cutoff.setUTCDate(now.getUTCDate() - 7);
   return cutoff;
 }
 

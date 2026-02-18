@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ok, err, serverError } from "@/lib/api-helpers";
-import { spawnTeam } from "@/lib/team-spawner";
+import { spawnTeam, DuplicateTeamError } from "@/lib/team-spawner";
 import { findTeamBySourceTaskId } from "@/lib/claude-files";
 import { db } from "@/lib/db";
 import type { TeamPlan } from "@/types";
@@ -49,12 +49,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       persistent: body.persistent,
     });
 
-    // Link the spawned team back to the queued task
+    // Link the spawned team back to the queued task (optimistic lock via status: "pending")
     if (plan.sourceTaskId != null) {
-      await db.queuedTask.updateMany({
+      const updated = await db.queuedTask.updateMany({
         where: { id: plan.sourceTaskId, status: "pending" },
         data: { teamName: result.teamName, status: "running", startedAt: new Date() },
       });
+      if (updated.count === 0) {
+        // Another request already claimed this task — log but don't fail
+        // (team was already spawned, so it will proceed regardless)
+        console.warn(`[spawn] Task #${plan.sourceTaskId} was already claimed by another request`);
+      }
     }
 
     return ok({
@@ -62,8 +67,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       alreadyRunning: result.launched.length === 0 ? ["leader"] : [],
     });
   } catch (e) {
-    // Surface the duplicate-team error from spawnTeam as a 409 instead of 500
-    if (e instanceof Error && e.message.includes("already exists")) {
+    if (e instanceof DuplicateTeamError) {
       return err(e.message, "DUPLICATE_TEAM", 409);
     }
     return serverError(e);
