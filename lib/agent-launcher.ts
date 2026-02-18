@@ -159,7 +159,7 @@ function writeLeaderLauncher(teamName: string, projectPath: string): string {
   ].join("\n");
 
   const promptFile = path.join(teamDir, "leader-system-prompt.txt");
-  fs.writeFileSync(promptFile, systemPrompt, "utf-8");
+  fs.writeFileSync(promptFile, systemPrompt, { mode: 0o600, encoding: "utf-8" });
 
   // Write launcher script
   const scriptFile = path.join(teamDir, "launch-leader.sh");

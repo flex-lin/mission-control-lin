@@ -55,7 +55,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
         // Remove the limit
         await db.preference.deleteMany({ where: { key } });
       } else {
-        if (typeof value !== "number" || value < 0) {
+        if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
           return err(`Invalid value for ${field}: must be a non-negative number`, "INVALID_LIMIT");
         }
         await db.preference.upsert({

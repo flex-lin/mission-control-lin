@@ -105,9 +105,11 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/knowledge-base/[id] — remove a path from knowledge base (DB only)
+// DELETE /api/knowledge-base/[id] — remove a path from knowledge base
+// For DB entries (id > 0): deletes the DB record
+// For filesystem entries (id = -1): expects ?path= query param, adds to hidden list
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: RouteContext
 ): Promise<NextResponse> {
   try {
@@ -115,6 +117,37 @@ export async function DELETE(
     const id = parseInt(rawId, 10);
     if (isNaN(id)) return err("Invalid id", "VALIDATION_ERROR");
 
+    // Filesystem-only entry: hide by path
+    if (id === -1) {
+      const hidePath = req.nextUrl.searchParams.get("path");
+      if (!hidePath) return err("path query param required for filesystem entries", "VALIDATION_ERROR");
+      if (!hidePath.startsWith("/") || hidePath.length > 4096) {
+        return err("path must be an absolute path (max 4096 chars)", "VALIDATION_ERROR");
+      }
+
+      const pref = await db.preference.findUnique({ where: { key: "kb_hidden_paths" } });
+      let hidden: string[] = [];
+      if (pref) {
+        try { hidden = JSON.parse(pref.value) as string[]; } catch { /* reset */ }
+      }
+
+      if (hidden.length >= 500) {
+        return err("Too many hidden paths (max 500)", "VALIDATION_ERROR");
+      }
+      if (!hidden.includes(hidePath)) {
+        hidden.push(hidePath);
+      }
+
+      await db.preference.upsert({
+        where: { key: "kb_hidden_paths" },
+        create: { key: "kb_hidden_paths", value: JSON.stringify(hidden) },
+        update: { value: JSON.stringify(hidden) },
+      });
+
+      return ok({ deleted: true });
+    }
+
+    // DB entry: delete the record
     const existing = await db.indexedProject.findUnique({ where: { id } });
     if (!existing) return notFound("Knowledge base entry not found");
 

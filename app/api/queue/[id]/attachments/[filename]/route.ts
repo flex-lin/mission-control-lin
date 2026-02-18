@@ -23,10 +23,11 @@ export async function GET(_req: NextRequest, ctx: RouteContext): Promise<NextRes
     const attachment = attachments.find((a) => a.filename === filename);
     if (!attachment) return notFound("Attachment not found");
 
-    const filePath = path.join(UPLOAD_DIR, String(taskId), filename);
+    const taskDir = path.join(UPLOAD_DIR, String(taskId));
+    const filePath = path.resolve(taskDir, filename);
 
-    // Prevent path traversal
-    if (!filePath.startsWith(path.join(UPLOAD_DIR, String(taskId)))) {
+    // Prevent path traversal — resolved path must be strictly inside this task's directory
+    if (!filePath.startsWith(taskDir + path.sep)) {
       return err("Invalid filename", "VALIDATION_ERROR");
     }
 
@@ -37,7 +38,7 @@ export async function GET(_req: NextRequest, ctx: RouteContext): Promise<NextRes
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": attachment.mimeType,
-        "Content-Disposition": `inline; filename="${attachment.originalName}"`,
+        "Content-Disposition": `inline; filename="${attachment.originalName.replace(/["\\]/g, "_")}"`,
         "Cache-Control": "public, max-age=31536000, immutable",
       },
     });
@@ -59,10 +60,11 @@ export async function DELETE(_req: NextRequest, ctx: RouteContext): Promise<Next
     const attachment = attachments.find((a) => a.filename === filename);
     if (!attachment) return notFound("Attachment not found");
 
-    const filePath = path.join(UPLOAD_DIR, String(taskId), filename);
+    const taskDir = path.join(UPLOAD_DIR, String(taskId));
+    const filePath = path.resolve(taskDir, filename);
 
-    // Prevent path traversal
-    if (!filePath.startsWith(path.join(UPLOAD_DIR, String(taskId)))) {
+    // Prevent path traversal — resolved path must be strictly inside this task's directory
+    if (!filePath.startsWith(taskDir + path.sep)) {
       return err("Invalid filename", "VALIDATION_ERROR");
     }
 
