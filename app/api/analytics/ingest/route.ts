@@ -21,11 +21,13 @@ interface SessionLogEntry {
   timestamp?: string;
   sessionId?: string;
   parentMessageId?: string;
+  requestId?: string;
   teamName?: string;
   agentName?: string;
   message?: {
     role?: string;
     model?: string;
+    id?: string;
     usage?: {
       input_tokens?: number;
       output_tokens?: number;
@@ -61,16 +63,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       ? projectDirs.filter((d) => d.name.includes(body.projectDir!.replace(/\//g, "-")))
       : projectDirs;
 
+    // Clear existing ingested records (endpoint = /v1/messages, latencyMs = 0)
+    // to avoid duplicates on re-ingest. Proxy-captured records have real latency values.
+    await db.proxyLog.deleteMany({
+      where: {
+        endpoint: "/v1/messages",
+        latencyMs: 0,
+      },
+    });
+
     let totalIngested = 0;
     let totalSkipped = 0;
 
     for (const dir of targetDirs) {
       const dirPath = path.join(projectsDir, dir.name);
-      const jsonlFiles = fs.readdirSync(dirPath)
-        .filter((f) => f.endsWith(".jsonl"));
 
-      for (const file of jsonlFiles) {
-        const filePath = path.join(dirPath, file);
+      // Collect JSONL files including subagent directories
+      const jsonlFiles: string[] = [];
+      collectJsonlFiles(dirPath, jsonlFiles);
+
+      for (const filePath of jsonlFiles) {
         const stat = fs.statSync(filePath);
 
         // Skip files older than cutoff
@@ -82,8 +94,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         try {
           const entries = await parseJsonlFile(filePath);
 
-          // Extract session-level metadata from entries (agentName/teamName
-          // are typically on the first entry but we scan until found)
+          // Extract session-level metadata from entries
           let sessionTeamName: string | null = null;
           let sessionMemberName: string | null = null;
           for (const e of entries) {
@@ -95,6 +106,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           // Fall back to extracting team from directory name
           const teamName = sessionTeamName ?? extractTeamFromPath(dir.name);
 
+          // Collect the LAST entry per requestId — streaming chunks accumulate
+          // output tokens, so only the final entry has the correct count.
+          const requestMap = new Map<string, {
+            model: string;
+            inputTokens: number;
+            outputTokens: number;
+            cacheReadTokens: number;
+            cacheCreationTokens: number;
+            teamName: string | null;
+            memberName: string | null;
+            endpoint: string;
+            latencyMs: number;
+            statusCode: number;
+            timestamp: Date;
+          }>();
+
           for (const entry of entries) {
             // Look for assistant messages with usage data
             const usage = entry.usage ?? entry.message?.usage;
@@ -102,54 +129,46 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
             if (!usage || !model) continue;
 
-            const inputTokens =
-              (usage.input_tokens ?? 0) +
-              (usage.cache_read_input_tokens ?? 0) +
-              (usage.cache_creation_input_tokens ?? 0);
+            const baseInput = usage.input_tokens ?? 0;
+            const cacheRead = usage.cache_read_input_tokens ?? 0;
+            const cacheCreate = usage.cache_creation_input_tokens ?? 0;
             const outputTokens = usage.output_tokens ?? 0;
 
-            if (inputTokens === 0 && outputTokens === 0) continue;
+            if (baseInput === 0 && cacheRead === 0 && cacheCreate === 0 && outputTokens === 0) continue;
 
-            // Check if this entry already exists (deduplicate by timestamp + model + tokens)
+            const requestId = entry.requestId ?? entry.message?.id ?? crypto.randomUUID();
+
             const timestamp = entry.timestamp
               ? new Date(entry.timestamp)
               : stat.mtime;
 
-            const existing = await db.proxyLog.findFirst({
-              where: {
-                model,
-                inputTokens,
-                outputTokens,
-                timestamp: {
-                  gte: new Date(timestamp.getTime() - 1000),
-                  lte: new Date(timestamp.getTime() + 1000),
-                },
-              },
+            // Always overwrite — last entry per requestId has final token counts
+            requestMap.set(requestId, {
+              model,
+              inputTokens: baseInput,
+              outputTokens,
+              cacheReadTokens: cacheRead,
+              cacheCreationTokens: cacheCreate,
+              teamName,
+              memberName: entry.agentName ?? sessionMemberName,
+              endpoint: "/v1/messages",
+              latencyMs: entry.durationMs ?? 0,
+              statusCode: 200,
+              timestamp,
             });
-
-            if (existing) {
-              totalSkipped++;
-              continue;
-            }
-
-            await db.proxyLog.create({
-              data: {
-                model,
-                inputTokens,
-                outputTokens,
-                teamName,
-                memberName: entry.agentName ?? sessionMemberName,
-                endpoint: "/v1/messages",
-                latencyMs: entry.durationMs ?? 0,
-                statusCode: 200,
-                timestamp,
-              },
-            });
-
-            totalIngested++;
           }
-        } catch {
-          // Skip unparseable files
+
+          const pendingRecords = Array.from(requestMap.values());
+
+          if (pendingRecords.length > 0) {
+            const result = await db.proxyLog.createMany({
+              data: pendingRecords,
+            });
+            totalIngested += result.count;
+            totalSkipped += pendingRecords.length - result.count;
+          }
+        } catch (fileErr) {
+          console.error(`[ingest] Error processing ${filePath}:`, fileErr);
           totalSkipped++;
         }
       }
@@ -162,6 +181,24 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
   } catch (e) {
     return serverError(e);
+  }
+}
+
+function collectJsonlFiles(dirPath: string, results: string[]): void {
+  const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name);
+    if (entry.isFile() && entry.name.endsWith(".jsonl")) {
+      results.push(fullPath);
+    } else if (entry.isDirectory() && entry.name === "subagents") {
+      // Include subagent session logs
+      const subFiles = fs.readdirSync(fullPath, { withFileTypes: true });
+      for (const sub of subFiles) {
+        if (sub.isFile() && sub.name.endsWith(".jsonl")) {
+          results.push(path.join(fullPath, sub.name));
+        }
+      }
+    }
   }
 }
 

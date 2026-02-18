@@ -30,6 +30,8 @@ export type ProxyLogAvgAggregateOutputType = {
   id: number | null
   inputTokens: number | null
   outputTokens: number | null
+  cacheReadTokens: number | null
+  cacheCreationTokens: number | null
   latencyMs: number | null
   statusCode: number | null
 }
@@ -38,6 +40,8 @@ export type ProxyLogSumAggregateOutputType = {
   id: number | null
   inputTokens: number | null
   outputTokens: number | null
+  cacheReadTokens: number | null
+  cacheCreationTokens: number | null
   latencyMs: number | null
   statusCode: number | null
 }
@@ -48,6 +52,8 @@ export type ProxyLogMinAggregateOutputType = {
   model: string | null
   inputTokens: number | null
   outputTokens: number | null
+  cacheReadTokens: number | null
+  cacheCreationTokens: number | null
   teamName: string | null
   memberName: string | null
   endpoint: string | null
@@ -61,6 +67,8 @@ export type ProxyLogMaxAggregateOutputType = {
   model: string | null
   inputTokens: number | null
   outputTokens: number | null
+  cacheReadTokens: number | null
+  cacheCreationTokens: number | null
   teamName: string | null
   memberName: string | null
   endpoint: string | null
@@ -74,6 +82,8 @@ export type ProxyLogCountAggregateOutputType = {
   model: number
   inputTokens: number
   outputTokens: number
+  cacheReadTokens: number
+  cacheCreationTokens: number
   teamName: number
   memberName: number
   endpoint: number
@@ -87,6 +97,8 @@ export type ProxyLogAvgAggregateInputType = {
   id?: true
   inputTokens?: true
   outputTokens?: true
+  cacheReadTokens?: true
+  cacheCreationTokens?: true
   latencyMs?: true
   statusCode?: true
 }
@@ -95,6 +107,8 @@ export type ProxyLogSumAggregateInputType = {
   id?: true
   inputTokens?: true
   outputTokens?: true
+  cacheReadTokens?: true
+  cacheCreationTokens?: true
   latencyMs?: true
   statusCode?: true
 }
@@ -105,6 +119,8 @@ export type ProxyLogMinAggregateInputType = {
   model?: true
   inputTokens?: true
   outputTokens?: true
+  cacheReadTokens?: true
+  cacheCreationTokens?: true
   teamName?: true
   memberName?: true
   endpoint?: true
@@ -118,6 +134,8 @@ export type ProxyLogMaxAggregateInputType = {
   model?: true
   inputTokens?: true
   outputTokens?: true
+  cacheReadTokens?: true
+  cacheCreationTokens?: true
   teamName?: true
   memberName?: true
   endpoint?: true
@@ -131,6 +149,8 @@ export type ProxyLogCountAggregateInputType = {
   model?: true
   inputTokens?: true
   outputTokens?: true
+  cacheReadTokens?: true
+  cacheCreationTokens?: true
   teamName?: true
   memberName?: true
   endpoint?: true
@@ -231,6 +251,8 @@ export type ProxyLogGroupByOutputType = {
   model: string
   inputTokens: number
   outputTokens: number
+  cacheReadTokens: number
+  cacheCreationTokens: number
   teamName: string | null
   memberName: string | null
   endpoint: string
@@ -267,6 +289,8 @@ export type ProxyLogWhereInput = {
   model?: Prisma.StringFilter<"ProxyLog"> | string
   inputTokens?: Prisma.IntFilter<"ProxyLog"> | number
   outputTokens?: Prisma.IntFilter<"ProxyLog"> | number
+  cacheReadTokens?: Prisma.IntFilter<"ProxyLog"> | number
+  cacheCreationTokens?: Prisma.IntFilter<"ProxyLog"> | number
   teamName?: Prisma.StringNullableFilter<"ProxyLog"> | string | null
   memberName?: Prisma.StringNullableFilter<"ProxyLog"> | string | null
   endpoint?: Prisma.StringFilter<"ProxyLog"> | string
@@ -280,6 +304,8 @@ export type ProxyLogOrderByWithRelationInput = {
   model?: Prisma.SortOrder
   inputTokens?: Prisma.SortOrder
   outputTokens?: Prisma.SortOrder
+  cacheReadTokens?: Prisma.SortOrder
+  cacheCreationTokens?: Prisma.SortOrder
   teamName?: Prisma.SortOrderInput | Prisma.SortOrder
   memberName?: Prisma.SortOrderInput | Prisma.SortOrder
   endpoint?: Prisma.SortOrder
@@ -296,6 +322,8 @@ export type ProxyLogWhereUniqueInput = Prisma.AtLeast<{
   model?: Prisma.StringFilter<"ProxyLog"> | string
   inputTokens?: Prisma.IntFilter<"ProxyLog"> | number
   outputTokens?: Prisma.IntFilter<"ProxyLog"> | number
+  cacheReadTokens?: Prisma.IntFilter<"ProxyLog"> | number
+  cacheCreationTokens?: Prisma.IntFilter<"ProxyLog"> | number
   teamName?: Prisma.StringNullableFilter<"ProxyLog"> | string | null
   memberName?: Prisma.StringNullableFilter<"ProxyLog"> | string | null
   endpoint?: Prisma.StringFilter<"ProxyLog"> | string
@@ -309,6 +337,8 @@ export type ProxyLogOrderByWithAggregationInput = {
   model?: Prisma.SortOrder
   inputTokens?: Prisma.SortOrder
   outputTokens?: Prisma.SortOrder
+  cacheReadTokens?: Prisma.SortOrder
+  cacheCreationTokens?: Prisma.SortOrder
   teamName?: Prisma.SortOrderInput | Prisma.SortOrder
   memberName?: Prisma.SortOrderInput | Prisma.SortOrder
   endpoint?: Prisma.SortOrder
@@ -330,6 +360,8 @@ export type ProxyLogScalarWhereWithAggregatesInput = {
   model?: Prisma.StringWithAggregatesFilter<"ProxyLog"> | string
   inputTokens?: Prisma.IntWithAggregatesFilter<"ProxyLog"> | number
   outputTokens?: Prisma.IntWithAggregatesFilter<"ProxyLog"> | number
+  cacheReadTokens?: Prisma.IntWithAggregatesFilter<"ProxyLog"> | number
+  cacheCreationTokens?: Prisma.IntWithAggregatesFilter<"ProxyLog"> | number
   teamName?: Prisma.StringNullableWithAggregatesFilter<"ProxyLog"> | string | null
   memberName?: Prisma.StringNullableWithAggregatesFilter<"ProxyLog"> | string | null
   endpoint?: Prisma.StringWithAggregatesFilter<"ProxyLog"> | string
@@ -342,6 +374,8 @@ export type ProxyLogCreateInput = {
   model: string
   inputTokens: number
   outputTokens: number
+  cacheReadTokens?: number
+  cacheCreationTokens?: number
   teamName?: string | null
   memberName?: string | null
   endpoint: string
@@ -355,6 +389,8 @@ export type ProxyLogUncheckedCreateInput = {
   model: string
   inputTokens: number
   outputTokens: number
+  cacheReadTokens?: number
+  cacheCreationTokens?: number
   teamName?: string | null
   memberName?: string | null
   endpoint: string
@@ -367,6 +403,8 @@ export type ProxyLogUpdateInput = {
   model?: Prisma.StringFieldUpdateOperationsInput | string
   inputTokens?: Prisma.IntFieldUpdateOperationsInput | number
   outputTokens?: Prisma.IntFieldUpdateOperationsInput | number
+  cacheReadTokens?: Prisma.IntFieldUpdateOperationsInput | number
+  cacheCreationTokens?: Prisma.IntFieldUpdateOperationsInput | number
   teamName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   memberName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   endpoint?: Prisma.StringFieldUpdateOperationsInput | string
@@ -380,6 +418,8 @@ export type ProxyLogUncheckedUpdateInput = {
   model?: Prisma.StringFieldUpdateOperationsInput | string
   inputTokens?: Prisma.IntFieldUpdateOperationsInput | number
   outputTokens?: Prisma.IntFieldUpdateOperationsInput | number
+  cacheReadTokens?: Prisma.IntFieldUpdateOperationsInput | number
+  cacheCreationTokens?: Prisma.IntFieldUpdateOperationsInput | number
   teamName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   memberName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   endpoint?: Prisma.StringFieldUpdateOperationsInput | string
@@ -393,6 +433,8 @@ export type ProxyLogCreateManyInput = {
   model: string
   inputTokens: number
   outputTokens: number
+  cacheReadTokens?: number
+  cacheCreationTokens?: number
   teamName?: string | null
   memberName?: string | null
   endpoint: string
@@ -405,6 +447,8 @@ export type ProxyLogUpdateManyMutationInput = {
   model?: Prisma.StringFieldUpdateOperationsInput | string
   inputTokens?: Prisma.IntFieldUpdateOperationsInput | number
   outputTokens?: Prisma.IntFieldUpdateOperationsInput | number
+  cacheReadTokens?: Prisma.IntFieldUpdateOperationsInput | number
+  cacheCreationTokens?: Prisma.IntFieldUpdateOperationsInput | number
   teamName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   memberName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   endpoint?: Prisma.StringFieldUpdateOperationsInput | string
@@ -418,6 +462,8 @@ export type ProxyLogUncheckedUpdateManyInput = {
   model?: Prisma.StringFieldUpdateOperationsInput | string
   inputTokens?: Prisma.IntFieldUpdateOperationsInput | number
   outputTokens?: Prisma.IntFieldUpdateOperationsInput | number
+  cacheReadTokens?: Prisma.IntFieldUpdateOperationsInput | number
+  cacheCreationTokens?: Prisma.IntFieldUpdateOperationsInput | number
   teamName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   memberName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   endpoint?: Prisma.StringFieldUpdateOperationsInput | string
@@ -431,6 +477,8 @@ export type ProxyLogCountOrderByAggregateInput = {
   model?: Prisma.SortOrder
   inputTokens?: Prisma.SortOrder
   outputTokens?: Prisma.SortOrder
+  cacheReadTokens?: Prisma.SortOrder
+  cacheCreationTokens?: Prisma.SortOrder
   teamName?: Prisma.SortOrder
   memberName?: Prisma.SortOrder
   endpoint?: Prisma.SortOrder
@@ -442,6 +490,8 @@ export type ProxyLogAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
   inputTokens?: Prisma.SortOrder
   outputTokens?: Prisma.SortOrder
+  cacheReadTokens?: Prisma.SortOrder
+  cacheCreationTokens?: Prisma.SortOrder
   latencyMs?: Prisma.SortOrder
   statusCode?: Prisma.SortOrder
 }
@@ -452,6 +502,8 @@ export type ProxyLogMaxOrderByAggregateInput = {
   model?: Prisma.SortOrder
   inputTokens?: Prisma.SortOrder
   outputTokens?: Prisma.SortOrder
+  cacheReadTokens?: Prisma.SortOrder
+  cacheCreationTokens?: Prisma.SortOrder
   teamName?: Prisma.SortOrder
   memberName?: Prisma.SortOrder
   endpoint?: Prisma.SortOrder
@@ -465,6 +517,8 @@ export type ProxyLogMinOrderByAggregateInput = {
   model?: Prisma.SortOrder
   inputTokens?: Prisma.SortOrder
   outputTokens?: Prisma.SortOrder
+  cacheReadTokens?: Prisma.SortOrder
+  cacheCreationTokens?: Prisma.SortOrder
   teamName?: Prisma.SortOrder
   memberName?: Prisma.SortOrder
   endpoint?: Prisma.SortOrder
@@ -476,6 +530,8 @@ export type ProxyLogSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
   inputTokens?: Prisma.SortOrder
   outputTokens?: Prisma.SortOrder
+  cacheReadTokens?: Prisma.SortOrder
+  cacheCreationTokens?: Prisma.SortOrder
   latencyMs?: Prisma.SortOrder
   statusCode?: Prisma.SortOrder
 }
@@ -508,6 +564,8 @@ export type ProxyLogSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   model?: boolean
   inputTokens?: boolean
   outputTokens?: boolean
+  cacheReadTokens?: boolean
+  cacheCreationTokens?: boolean
   teamName?: boolean
   memberName?: boolean
   endpoint?: boolean
@@ -521,6 +579,8 @@ export type ProxyLogSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   model?: boolean
   inputTokens?: boolean
   outputTokens?: boolean
+  cacheReadTokens?: boolean
+  cacheCreationTokens?: boolean
   teamName?: boolean
   memberName?: boolean
   endpoint?: boolean
@@ -534,6 +594,8 @@ export type ProxyLogSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   model?: boolean
   inputTokens?: boolean
   outputTokens?: boolean
+  cacheReadTokens?: boolean
+  cacheCreationTokens?: boolean
   teamName?: boolean
   memberName?: boolean
   endpoint?: boolean
@@ -547,6 +609,8 @@ export type ProxyLogSelectScalar = {
   model?: boolean
   inputTokens?: boolean
   outputTokens?: boolean
+  cacheReadTokens?: boolean
+  cacheCreationTokens?: boolean
   teamName?: boolean
   memberName?: boolean
   endpoint?: boolean
@@ -554,7 +618,7 @@ export type ProxyLogSelectScalar = {
   statusCode?: boolean
 }
 
-export type ProxyLogOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "timestamp" | "model" | "inputTokens" | "outputTokens" | "teamName" | "memberName" | "endpoint" | "latencyMs" | "statusCode", ExtArgs["result"]["proxyLog"]>
+export type ProxyLogOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "timestamp" | "model" | "inputTokens" | "outputTokens" | "cacheReadTokens" | "cacheCreationTokens" | "teamName" | "memberName" | "endpoint" | "latencyMs" | "statusCode", ExtArgs["result"]["proxyLog"]>
 
 export type $ProxyLogPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ProxyLog"
@@ -565,6 +629,8 @@ export type $ProxyLogPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     model: string
     inputTokens: number
     outputTokens: number
+    cacheReadTokens: number
+    cacheCreationTokens: number
     teamName: string | null
     memberName: string | null
     endpoint: string
@@ -998,6 +1064,8 @@ export interface ProxyLogFieldRefs {
   readonly model: Prisma.FieldRef<"ProxyLog", 'String'>
   readonly inputTokens: Prisma.FieldRef<"ProxyLog", 'Int'>
   readonly outputTokens: Prisma.FieldRef<"ProxyLog", 'Int'>
+  readonly cacheReadTokens: Prisma.FieldRef<"ProxyLog", 'Int'>
+  readonly cacheCreationTokens: Prisma.FieldRef<"ProxyLog", 'Int'>
   readonly teamName: Prisma.FieldRef<"ProxyLog", 'String'>
   readonly memberName: Prisma.FieldRef<"ProxyLog", 'String'>
   readonly endpoint: Prisma.FieldRef<"ProxyLog", 'String'>

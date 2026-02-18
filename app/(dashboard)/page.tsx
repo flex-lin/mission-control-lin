@@ -1,8 +1,14 @@
+export const dynamic = "force-dynamic"
+
 import { Topbar } from "@/components/layout/topbar"
 import { StatCard } from "@/components/dashboard/stat-card"
 import { ActivityFeed } from "@/components/dashboard/activity-feed"
 import { QuickActions } from "@/components/dashboard/quick-actions"
+import { StuckTeamsSummary } from "@/components/dashboard/stuck-teams-summary"
 import { Users, Zap, DollarSign, Activity } from "lucide-react"
+import { db } from "@/lib/db"
+import { listTeams } from "@/lib/claude-files"
+import { computeCost } from "@/lib/pricing"
 
 interface DashboardStats {
   totalRequests: { value: number; change: number; period: string }
@@ -12,20 +18,91 @@ interface DashboardStats {
 }
 
 async function getDashboardStats(): Promise<DashboardStats> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  const fallback: DashboardStats = {
-    totalRequests: { value: 0, change: 0, period: "vs yesterday" },
-    avgLatencyMs: { value: 0, change: 0, period: "vs last week" },
-    activeTeams: { value: 0, change: 0, period: "total" },
-    estimatedCost: { value: 0, change: 0, period: "vs last week" },
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const yesterday = new Date(today)
+  yesterday.setDate(today.getDate() - 1)
+  const weekAgo = new Date(today)
+  weekAgo.setDate(today.getDate() - 7)
+  const prevWeek = new Date(weekAgo)
+  prevWeek.setDate(weekAgo.getDate() - 7)
+
+  // Active teams (always from filesystem)
+  const teams = listTeams()
+  const activeTeams = teams.length
+
+  // Total requests today vs yesterday
+  const [todayCount, yesterdayCount] = await Promise.all([
+    db.proxyLog.count({ where: { timestamp: { gte: today } } }),
+    db.proxyLog.count({ where: { timestamp: { gte: yesterday, lt: today } } }),
+  ])
+
+  // Avg latency this week vs last week
+  const [thisWeekStats, lastWeekStats] = await Promise.all([
+    db.proxyLog.aggregate({
+      where: { timestamp: { gte: weekAgo } },
+      _avg: { latencyMs: true },
+    }),
+    db.proxyLog.aggregate({
+      where: { timestamp: { gte: prevWeek, lt: weekAgo } },
+      _avg: { latencyMs: true },
+    }),
+  ])
+
+  // Cost this week — group by model for accurate per-model pricing
+  const [thisWeekByModel, lastWeekByModel] = await Promise.all([
+    db.proxyLog.groupBy({
+      by: ["model"],
+      where: { timestamp: { gte: weekAgo } },
+      _sum: { inputTokens: true, outputTokens: true, cacheReadTokens: true, cacheCreationTokens: true },
+    }),
+    db.proxyLog.groupBy({
+      by: ["model"],
+      where: { timestamp: { gte: prevWeek, lt: weekAgo } },
+      _sum: { inputTokens: true, outputTokens: true, cacheReadTokens: true, cacheCreationTokens: true },
+    }),
+  ])
+
+  const estimatedCost = thisWeekByModel.reduce(
+    (sum, g) => sum + computeCost(g.model, g._sum.inputTokens ?? 0, g._sum.outputTokens ?? 0, g._sum.cacheReadTokens ?? 0, g._sum.cacheCreationTokens ?? 0),
+    0,
+  )
+  const prevCost = lastWeekByModel.reduce(
+    (sum, g) => sum + computeCost(g.model, g._sum.inputTokens ?? 0, g._sum.outputTokens ?? 0, g._sum.cacheReadTokens ?? 0, g._sum.cacheCreationTokens ?? 0),
+    0,
+  )
+
+  function pctChange(current: number, previous: number): number {
+    if (previous === 0) return current > 0 ? 100 : 0
+    return Math.round(((current - previous) / previous) * 100)
   }
-  try {
-    const res = await fetch(`${base}/api/dashboard/stats`, { cache: "no-store" })
-    if (!res.ok) return fallback
-    const json = await res.json()
-    return json.data ?? fallback
-  } catch {
-    return fallback
+
+  const hasProxyData = todayCount > 0 || (thisWeekStats._avg.latencyMs ?? 0) > 0
+
+  return {
+    totalRequests: {
+      value: todayCount,
+      change: pctChange(todayCount, yesterdayCount),
+      period: hasProxyData ? "vs yesterday" : "No proxy data yet",
+    },
+    avgLatencyMs: {
+      value: Math.round(thisWeekStats._avg.latencyMs ?? 0),
+      change: pctChange(
+        thisWeekStats._avg.latencyMs ?? 0,
+        lastWeekStats._avg.latencyMs ?? 0,
+      ),
+      period: hasProxyData ? "vs last week" : "No proxy data yet",
+    },
+    activeTeams: {
+      value: activeTeams,
+      change: 0,
+      period: "total",
+    },
+    estimatedCost: {
+      value: Math.round(estimatedCost * 10000) / 10000,
+      change: pctChange(estimatedCost, prevCost),
+      period: hasProxyData ? "vs last week" : "No proxy data yet",
+    },
   }
 }
 
@@ -80,6 +157,9 @@ export default async function DashboardPage() {
             trend={changeTrend(-stats.estimatedCost.change)}
           />
         </div>
+
+        {/* Stuck Teams */}
+        <StuckTeamsSummary />
 
         {/* Activity + Quick Actions */}
         <div className="grid gap-4 lg:grid-cols-3">

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+import { useSettings } from "@/lib/settings-context"
 
 interface UseAutoRefreshOptions {
   url: string
@@ -17,13 +18,17 @@ interface UseAutoRefreshResult<T> {
 
 export function useAutoRefresh<T>({
   url,
-  intervalMs = 5000,
+  intervalMs,
   enabled = true,
 }: UseAutoRefreshOptions): UseAutoRefreshResult<T> {
+  const { settings } = useSettings()
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Use explicit intervalMs if provided, otherwise read from settings (seconds → ms)
+  const resolvedInterval = intervalMs ?? (settings.refreshInterval ?? 30) * 1000
 
   const refetch = useCallback(async () => {
     try {
@@ -44,11 +49,11 @@ export function useAutoRefresh<T>({
 
     refetch()
 
-    intervalRef.current = setInterval(refetch, intervalMs)
+    intervalRef.current = setInterval(refetch, resolvedInterval)
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
-  }, [refetch, intervalMs, enabled])
+  }, [refetch, resolvedInterval, enabled])
 
   return { data, loading, error, refetch }
 }

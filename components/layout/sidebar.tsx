@@ -9,11 +9,15 @@ import {
   BookOpen,
   Settings,
   Cpu,
+  AlertTriangle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useAutoRefresh } from "@/lib/hooks/use-auto-refresh"
+import type { StuckTask } from "@/types"
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/stuck", label: "Stuck", icon: AlertTriangle },
   { href: "/agent-teams", label: "Agent Teams", icon: Users },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
@@ -22,6 +26,11 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { data: stuckTasks } = useAutoRefresh<StuckTask[]>({
+    url: "/api/teams/stuck",
+    intervalMs: 15000,
+  })
+  const stuckCount = stuckTasks?.length ?? 0
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r bg-[hsl(var(--sidebar))] border-[hsl(var(--sidebar-border))]">
@@ -51,6 +60,11 @@ export function Sidebar() {
             >
               <Icon className="h-4 w-4 shrink-0" />
               {label}
+              {label === "Stuck" && stuckCount > 0 && (
+                <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500/90 px-1 text-[10px] font-medium text-white">
+                  {stuckCount}
+                </span>
+              )}
             </Link>
           )
         })}

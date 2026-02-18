@@ -70,7 +70,7 @@ export function RequestLogTable({ logs }: RequestLogTableProps) {
               filtered.map((log) => (
                 <TableRow key={log.id}>
                   <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                    {format(new Date(log.timestamp), "MMM d HH:mm:ss")}
+                    {format(new Date(/[TZ+-]/.test(log.timestamp) ? log.timestamp : log.timestamp + "Z"), "MMM d HH:mm:ss")}
                   </TableCell>
                   <TableCell className="text-xs">{log.model}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">

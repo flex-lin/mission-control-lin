@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,7 +16,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import type { Settings } from "@/types"
-import { Save } from "lucide-react"
+import { Save, Play, Square } from "lucide-react"
+
+interface ProxyStatus {
+  running: boolean
+  port: number
+  targetUrl: string
+}
 
 interface SettingsFormProps {
   initialSettings: Settings
@@ -25,6 +32,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const [settings, setSettings] = useState<Settings>(initialSettings)
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
+  const { setTheme } = useTheme()
 
   // Proxy fields
   const [proxyPort, setProxyPort] = useState(
@@ -33,6 +41,42 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const [proxyTarget, setProxyTarget] = useState(
     settings.proxyConfig?.targetUrl ?? "https://api.anthropic.com"
   )
+
+  // Proxy status
+  const [proxyStatus, setProxyStatus] = useState<ProxyStatus | null>(null)
+  const [proxyLoading, setProxyLoading] = useState(false)
+
+  const fetchProxyStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/proxy/status")
+      const json = (await res.json()) as { data?: ProxyStatus }
+      if (json.data) setProxyStatus(json.data)
+    } catch {
+      // ignore fetch errors
+    }
+  }, [])
+
+  useEffect(() => {
+    void fetchProxyStatus()
+  }, [fetchProxyStatus])
+
+  async function handleProxyControl(action: "start" | "stop") {
+    setProxyLoading(true)
+    try {
+      await fetch("/api/proxy/control", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      })
+      // Wait briefly for the process to start/stop before checking status
+      await new Promise((r) => setTimeout(r, 1000))
+      await fetchProxyStatus()
+    } catch {
+      // ignore
+    } finally {
+      setProxyLoading(false)
+    }
+  }
 
   // Indexed project dir input
   const [newProjectDir, setNewProjectDir] = useState("")
@@ -98,9 +142,11 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             </div>
             <Select
               value={settings.theme ?? "dark"}
-              onValueChange={(v) =>
-                setSettings((s) => ({ ...s, theme: v as Settings["theme"] }))
-              }
+              onValueChange={(v) => {
+                const theme = v as Settings["theme"]
+                setSettings((s) => ({ ...s, theme }))
+                setTheme(v)
+              }}
             >
               <SelectTrigger className="w-32">
                 <SelectValue />
@@ -140,7 +186,21 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       {/* Proxy Config */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">Proxy Configuration</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-semibold">Proxy Configuration</CardTitle>
+            <div className="flex items-center gap-2">
+              <span
+                className={`inline-block h-2.5 w-2.5 rounded-full ${
+                  proxyStatus?.running ? "bg-emerald-500" : "bg-red-500"
+                }`}
+              />
+              <span className="text-xs text-muted-foreground">
+                {proxyStatus?.running
+                  ? `Running on port ${proxyStatus.port}`
+                  : "Stopped"}
+              </span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
@@ -150,15 +210,38 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                 Intercept Anthropic API calls for logging
               </p>
             </div>
-            <Switch
-              checked={settings.proxyConfig?.enabled ?? false}
-              onCheckedChange={(v) =>
-                setSettings((s) => ({
-                  ...s,
-                  proxyConfig: { ...(s.proxyConfig ?? { port: 3001, targetUrl: "https://api.anthropic.com" }), enabled: v },
-                }))
-              }
-            />
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={proxyLoading}
+                onClick={() =>
+                  handleProxyControl(proxyStatus?.running ? "stop" : "start")
+                }
+                className="gap-1.5"
+              >
+                {proxyStatus?.running ? (
+                  <>
+                    <Square className="h-3 w-3" />
+                    {proxyLoading ? "Stopping…" : "Stop"}
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-3 w-3" />
+                    {proxyLoading ? "Starting…" : "Start"}
+                  </>
+                )}
+              </Button>
+              <Switch
+                checked={settings.proxyConfig?.enabled ?? false}
+                onCheckedChange={(v) =>
+                  setSettings((s) => ({
+                    ...s,
+                    proxyConfig: { ...(s.proxyConfig ?? { port: 3001, targetUrl: "https://api.anthropic.com" }), enabled: v },
+                  }))
+                }
+              />
+            </div>
           </div>
 
           <Separator />

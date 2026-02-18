@@ -12,11 +12,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 import { SendMessageForm } from "@/components/agent-teams/send-message-form"
 import { CreateTaskForm } from "@/components/agent-teams/create-task-form"
 import { ShutdownButton } from "@/components/agent-teams/shutdown-button"
 import { TeamHealthPanel } from "@/components/agent-teams/team-health-panel"
+import { Terminal, Copy, Play } from "lucide-react"
+import { toast } from "sonner"
 import type { Team, TeamTask } from "@/types"
+
+interface SessionInfo {
+  name: string
+  sessionName: string
+  alive: boolean
+  attachCmd: string
+}
 
 interface TeamDetailLiveProps {
   initialData: {
@@ -44,17 +54,43 @@ export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
     intervalMs: 3000,
   })
 
-  const team = liveData ? { ...liveData, tasks: undefined } as unknown as Team : initialData.team
+  const { data: sessionData } = useAutoRefresh<{ sessions: SessionInfo[] }>({
+    url: `/api/teams/${encodeURIComponent(initialData.team.name)}/sessions`,
+    intervalMs: 5000,
+  })
+
+  const sessionMap = new Map<string, SessionInfo>(
+    (sessionData?.sessions ?? []).map((s) => [s.name, s])
+  )
+
+  async function handleLaunchMember(memberName: string) {
+    try {
+      const res = await fetch(
+        `/api/teams/${encodeURIComponent(initialData.team.name)}/wake`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: `Wake up ${memberName} — check your tasks.` }),
+        }
+      )
+      if (res.ok) {
+        toast.success(`Launched ${memberName}`)
+      } else {
+        toast.error("Failed to launch member")
+      }
+    } catch {
+      toast.error("Network error")
+    }
+  }
+
   const tasks = liveData?.tasks ?? initialData.tasks
+  const teamForForms: Team = liveData
+    ? { name: liveData.name, members: liveData.members, description: liveData.description, createdAt: liveData.createdAt }
+    : initialData.team
 
   const activeTasks = tasks.filter((t) => t.status === "in_progress").length
   const pendingTasks = tasks.filter((t) => t.status === "pending").length
   const completedTasks = tasks.filter((t) => t.status === "completed").length
-
-  // Extract team without tasks for child components
-  const teamForForms: Team = liveData
-    ? { name: liveData.name, members: liveData.members, description: liveData.description, createdAt: liveData.createdAt }
-    : initialData.team
 
   return (
     <div className="space-y-6 p-6">
@@ -149,36 +185,61 @@ export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead></TableHead>
+                        <TableHead>tmux</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {teamForForms.members.map((member) => (
-                        <TableRow key={member.agentId}>
-                          <TableCell className="font-medium">{member.name}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {member.agentType}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                member.status === "active"
-                                  ? "success"
-                                  : member.status === "idle"
-                                  ? "secondary"
-                                  : "outline"
-                              }
-                              className="text-[10px]"
-                            >
-                              {member.status ?? "unknown"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <ShutdownButton teamName={teamForForms.name} memberName={member.name} />
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {teamForForms.members.map((member) => {
+                        const session = sessionMap.get(member.name)
+                        return (
+                          <TableRow key={member.agentId}>
+                            <TableCell className="font-medium">{member.name}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {member.agentType}
+                            </TableCell>
+                            <TableCell>
+                              {session?.alive ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 gap-1 px-1.5 text-[10px] text-emerald-400 hover:text-emerald-300"
+                                  onClick={() => {
+                                    navigator.clipboard?.writeText(session.attachCmd).then(
+                                      () => toast.success(`Copied: ${session.attachCmd}`),
+                                      () => toast.error("Failed to copy to clipboard"),
+                                    )
+                                  }}
+                                >
+                                  <Terminal className="h-3 w-3" />
+                                  running
+                                  <Copy className="h-2.5 w-2.5" />
+                                </Button>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px]">
+                                  stopped
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                {!session?.alive && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 gap-1 px-1.5 text-[10px]"
+                                    onClick={() => handleLaunchMember(member.name)}
+                                  >
+                                    <Play className="h-3 w-3" />
+                                    Launch
+                                  </Button>
+                                )}
+                                <ShutdownButton teamName={teamForForms.name} memberName={member.name} />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
                     </TableBody>
                   </Table>
                 </CardContent>

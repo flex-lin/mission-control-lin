@@ -8,16 +8,18 @@ datasource db {
 }
 
 model ProxyLog {
-  id           Int      @id @default(autoincrement())
-  timestamp    DateTime @default(now())
-  model        String
-  inputTokens  Int      @map("input_tokens")
-  outputTokens Int      @map("output_tokens")
-  teamName     String?  @map("team_name")
-  memberName   String?  @map("member_name")
-  endpoint     String
-  latencyMs    Int      @map("latency_ms")
-  statusCode   Int      @map("status_code")
+  id                    Int      @id @default(autoincrement())
+  timestamp             DateTime @default(now())
+  model                 String
+  inputTokens           Int      @map("input_tokens")
+  outputTokens          Int      @map("output_tokens")
+  cacheReadTokens       Int      @default(0) @map("cache_read_tokens")
+  cacheCreationTokens   Int      @default(0) @map("cache_creation_tokens")
+  teamName              String?  @map("team_name")
+  memberName            String?  @map("member_name")
+  endpoint              String
+  latencyMs             Int      @map("latency_ms")
+  statusCode            Int      @map("status_code")
 
   @@map("proxy_logs")
 }

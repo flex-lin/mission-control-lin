@@ -11,14 +11,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 import { TeamHealthBadge } from "@/components/agent-teams/team-health-badge"
 import { WakeButton } from "@/components/agent-teams/wake-button"
+import { StuckTasksFeed } from "@/components/agent-teams/stuck-tasks-feed"
+import { Terminal, Copy } from "lucide-react"
+import { toast } from "sonner"
 import type { TeamHealthStatus, TeamTask } from "@/types"
 
 interface MemberHealth {
   name: string
   status: TeamHealthStatus
   lastSeen: string | null
+  tmuxAlive?: boolean
+  attachCmd?: string
 }
 
 interface TeamHealthData {
@@ -99,7 +105,7 @@ export function TeamHealthPanel({ teamName }: TeamHealthPanelProps) {
               Last activity: {formatRelativeTime(data.lastActivity)}
             </span>
           </div>
-          {data.status === "asleep" && (
+          {data.status !== "exited" && (
             <WakeButton teamName={teamName} />
           )}
         </CardContent>
@@ -117,6 +123,7 @@ export function TeamHealthPanel({ teamName }: TeamHealthPanelProps) {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>tmux</TableHead>
                   <TableHead>Last Seen</TableHead>
                 </TableRow>
               </TableHeader>
@@ -126,6 +133,34 @@ export function TeamHealthPanel({ teamName }: TeamHealthPanelProps) {
                     <TableCell className="font-medium">{member.name}</TableCell>
                     <TableCell>
                       <TeamHealthBadge status={member.status} />
+                    </TableCell>
+                    <TableCell>
+                      {member.tmuxAlive ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 gap-1 px-1.5 text-[10px] text-emerald-400 hover:text-emerald-300"
+                          onClick={() => {
+                            const cmd = member.attachCmd ?? ""
+                            if (navigator.clipboard?.writeText) {
+                              navigator.clipboard.writeText(cmd).then(
+                                () => toast.success("Attach command copied!"),
+                                () => {
+                                  window.prompt("Copy this command:", cmd)
+                                }
+                              )
+                            } else {
+                              window.prompt("Copy this command:", cmd)
+                            }
+                          }}
+                        >
+                          <Terminal className="h-3 w-3" />
+                          running
+                          <Copy className="h-2.5 w-2.5" />
+                        </Button>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground">stopped</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {formatRelativeTime(member.lastSeen)}
@@ -138,48 +173,17 @@ export function TeamHealthPanel({ teamName }: TeamHealthPanelProps) {
         </Card>
       )}
 
-      {/* Stale tasks */}
-      {data.staleTasks.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-amber-400">
-              Stale Tasks ({data.staleTasks.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">#</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Owner</TableHead>
-                  <TableHead>Stuck</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.staleTasks.map((task) => (
-                  <TableRow key={task.id}>
-                    <TableCell className="text-muted-foreground">{task.id}</TableCell>
-                    <TableCell className="max-w-xs">
-                      <p className="truncate text-sm">{task.subject}</p>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {task.owner ?? "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="warning" className="text-[10px]">
-                        {task.metadata?.stuckSince
-                          ? `stuck ${formatRelativeTime(task.metadata.stuckSince as string)}`
-                          : "stuck"}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+      {/* Stuck tasks feed */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold text-amber-400">
+            Stuck Tasks
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <StuckTasksFeed teamName={teamName} />
+        </CardContent>
+      </Card>
     </div>
   )
 }

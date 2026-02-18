@@ -1,20 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ok, serverError } from "@/lib/api-helpers";
 import { computeCost } from "@/lib/pricing";
+import { getCutoffDate, UNTRACKED_TEAM_LABEL } from "@/lib/analytics-helpers";
 
 // GET /api/analytics/by-member?period=7d&team=teamName
-export async function GET(req: NextRequest): Promise<NextResponse> {
+export async function GET(req: NextRequest) {
   try {
     const period = req.nextUrl.searchParams.get("period") ?? "7d";
     const teamFilter = req.nextUrl.searchParams.get("team");
-
-    const now = new Date();
-    const cutoff = new Date(now);
-    if (period === "all") cutoff.setFullYear(2000);
-    else if (period === "30d") cutoff.setDate(now.getDate() - 30);
-    else if (period === "1m") cutoff.setMonth(now.getMonth() - 1);
-    else cutoff.setDate(now.getDate() - 7);
+    const cutoff = getCutoffDate(period);
 
     const where: Record<string, unknown> = {
       timestamp: { gte: cutoff },
@@ -25,7 +20,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const rows = await db.proxyLog.groupBy({
       by: ["memberName", "teamName", "model"],
       where,
-      _sum: { inputTokens: true, outputTokens: true },
+      _sum: { inputTokens: true, outputTokens: true, cacheReadTokens: true, cacheCreationTokens: true },
       _count: { id: true },
       _avg: { latencyMs: true },
     });
@@ -48,10 +43,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     >();
 
     for (const r of rows) {
-      const key = `${r.teamName ?? "unknown"}:${r.memberName ?? "unknown"}`;
+      const key = `${r.teamName ?? UNTRACKED_TEAM_LABEL}:${r.memberName ?? "unknown"}`;
       const existing = memberMap.get(key) ?? {
         memberName: r.memberName ?? "unknown",
-        teamName: r.teamName ?? "unknown",
+        teamName: r.teamName ?? UNTRACKED_TEAM_LABEL,
         totalInput: 0,
         totalOutput: 0,
         totalTokens: 0,
@@ -62,8 +57,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         latencyCount: 0,
       };
 
-      const input = r._sum.inputTokens ?? 0;
+      const baseInput = r._sum.inputTokens ?? 0;
       const output = r._sum.outputTokens ?? 0;
+      const cacheRead = r._sum.cacheReadTokens ?? 0;
+      const cacheCreate = r._sum.cacheCreationTokens ?? 0;
+      const input = baseInput + cacheRead + cacheCreate;
 
       existing.totalInput += input;
       existing.totalOutput += output;
@@ -71,7 +69,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       existing.requests += r._count.id;
       existing.latencySum += (r._avg.latencyMs ?? 0) * r._count.id;
       existing.latencyCount += r._count.id;
-      existing.estimatedCost += computeCost(r.model, input, output);
+      existing.estimatedCost += computeCost(r.model, baseInput, output, cacheRead, cacheCreate);
 
       memberMap.set(key, existing);
     }

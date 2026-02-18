@@ -6,6 +6,7 @@ import type { TeamHealthStatus } from "@/types"
 interface TeamHealthBadgeProps {
   status: TeamHealthStatus
   staleTaskCount?: number
+  stuckCount?: number
 }
 
 const statusConfig = {
@@ -23,7 +24,7 @@ const statusConfig = {
   },
 } as const
 
-export function TeamHealthBadge({ status, staleTaskCount }: TeamHealthBadgeProps) {
+export function TeamHealthBadge({ status, staleTaskCount, stuckCount }: TeamHealthBadgeProps) {
   const config = statusConfig[status]
 
   return (
@@ -32,7 +33,12 @@ export function TeamHealthBadge({ status, staleTaskCount }: TeamHealthBadgeProps
         <span className={`h-2 w-2 rounded-full ${config.dotClass}`} />
         <span className="text-xs text-muted-foreground">{config.label}</span>
       </span>
-      {staleTaskCount != null && staleTaskCount > 0 && (
+      {stuckCount != null && stuckCount > 0 && (
+        <Badge variant="destructive" className="h-4 min-w-4 px-1 text-[10px]">
+          {stuckCount} stuck
+        </Badge>
+      )}
+      {staleTaskCount != null && staleTaskCount > 0 && !stuckCount && (
         <Badge variant="destructive" className="h-4 min-w-4 px-1 text-[10px]">
           {staleTaskCount}
         </Badge>

@@ -1,11 +1,42 @@
 import http from "http"
 import https from "https"
 import path from "path"
+import fs from "fs"
 import Database from "better-sqlite3"
 
-const PROXY_PORT = parseInt(process.env.PROXY_PORT ?? "8787", 10)
-const TARGET_HOST = "api.anthropic.com"
-const TARGET_PORT = 443
+interface SettingsFile {
+  proxyConfig?: {
+    enabled?: boolean
+    port?: number
+    targetUrl?: string
+  }
+}
+
+function loadSettingsConfig(): { port: number; targetUrl: string } {
+  const settingsPath = path.join(process.env.HOME ?? "/root", ".claude", "settings.json")
+  let settings: SettingsFile = {}
+  try {
+    const raw = fs.readFileSync(settingsPath, "utf-8")
+    settings = JSON.parse(raw) as SettingsFile
+  } catch {
+    // settings file missing or malformed — use defaults
+  }
+
+  const port = parseInt(process.env.PROXY_PORT ?? "", 10) ||
+    settings.proxyConfig?.port ||
+    8787
+
+  const targetUrl = process.env.PROXY_TARGET_URL ??
+    settings.proxyConfig?.targetUrl ??
+    "https://api.anthropic.com"
+
+  return { port, targetUrl }
+}
+
+const { port: PROXY_PORT, targetUrl: PROXY_TARGET_URL } = loadSettingsConfig()
+const parsedTarget = new URL(PROXY_TARGET_URL)
+const TARGET_HOST = parsedTarget.hostname
+const TARGET_PORT = parsedTarget.port ? parseInt(parsedTarget.port, 10) : 443
 const DB_PATH = path.resolve(process.cwd(), "prisma/mission-control.db")
 
 // ─── DB Setup ─────────────────────────────────────────────────────────────────
@@ -26,11 +57,14 @@ function openDb(): Database.Database {
       status_code INTEGER NOT NULL DEFAULT 0
     )
   `)
-  // Migration: add member_name column if missing
-  try {
-    db.exec(`ALTER TABLE proxy_logs ADD COLUMN member_name TEXT`)
-  } catch {
-    // column already exists
+  // Migrations: add columns if missing
+  const migrations = [
+    `ALTER TABLE proxy_logs ADD COLUMN member_name TEXT`,
+    `ALTER TABLE proxy_logs ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE proxy_logs ADD COLUMN cache_creation_tokens INTEGER NOT NULL DEFAULT 0`,
+  ]
+  for (const sql of migrations) {
+    try { db.exec(sql) } catch { /* column already exists */ }
   }
   return db
 }
@@ -39,6 +73,8 @@ interface LogEntry {
   model: string
   inputTokens: number
   outputTokens: number
+  cacheReadTokens: number
+  cacheCreationTokens: number
   teamName?: string
   memberName?: string
   endpoint: string
@@ -48,13 +84,15 @@ interface LogEntry {
 
 function insertLog(db: Database.Database, entry: LogEntry): void {
   const stmt = db.prepare(`
-    INSERT INTO proxy_logs (timestamp, model, input_tokens, output_tokens, team_name, member_name, endpoint, latency_ms, status_code)
-    VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO proxy_logs (timestamp, model, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, team_name, member_name, endpoint, latency_ms, status_code)
+    VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     entry.model,
     entry.inputTokens,
     entry.outputTokens,
+    entry.cacheReadTokens,
+    entry.cacheCreationTokens,
     entry.teamName ?? null,
     entry.memberName ?? null,
     entry.endpoint,
@@ -65,32 +103,108 @@ function insertLog(db: Database.Database, entry: LogEntry): void {
 
 // ─── Token Extraction ──────────────────────────────────────────────────────────
 
-interface AnthropicUsage {
+export interface AnthropicUsage {
   input_tokens?: number
   output_tokens?: number
   cache_read_input_tokens?: number
   cache_creation_input_tokens?: number
 }
 
-interface AnthropicResponseBody {
+export interface AnthropicResponseBody {
   model?: string
   usage?: AnthropicUsage
   error?: { type: string; message: string }
 }
 
-function extractUsage(body: AnthropicResponseBody): {
+export function extractUsage(body: AnthropicResponseBody): {
   model: string
   inputTokens: number
   outputTokens: number
+  cacheReadTokens: number
+  cacheCreationTokens: number
 } {
   const usage = body.usage ?? {}
   return {
     model: body.model ?? "unknown",
-    inputTokens:
-      (usage.input_tokens ?? 0) +
-      (usage.cache_read_input_tokens ?? 0) +
-      (usage.cache_creation_input_tokens ?? 0),
+    inputTokens: usage.input_tokens ?? 0,
     outputTokens: usage.output_tokens ?? 0,
+    cacheReadTokens: usage.cache_read_input_tokens ?? 0,
+    cacheCreationTokens: usage.cache_creation_input_tokens ?? 0,
+  }
+}
+
+// ─── SSE Streaming Extraction ────────────────────────────────────────────────
+
+interface SSEUsageResult {
+  model: string
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheCreationTokens: number
+}
+
+/**
+ * Parse SSE event stream to extract model and token usage.
+ * Anthropic SSE format:
+ *   - message_start event contains model + input usage
+ *   - message_delta event contains output usage
+ */
+export function extractUsageFromSSE(sseText: string): SSEUsageResult | null {
+  let model = "unknown"
+  let inputTokens = 0
+  let outputTokens = 0
+  let cacheReadTokens = 0
+  let cacheCreationTokens = 0
+  let foundUsage = false
+
+  const events = sseText.split("\n\n")
+  for (const event of events) {
+    const dataLine = event.split("\n").find((line) => line.startsWith("data: "))
+    if (!dataLine) continue
+
+    const jsonStr = dataLine.slice(6) // strip "data: "
+    if (jsonStr === "[DONE]") continue
+
+    try {
+      const parsed = JSON.parse(jsonStr) as {
+        type?: string
+        message?: { model?: string; usage?: AnthropicUsage }
+        usage?: AnthropicUsage
+      }
+
+      if (parsed.type === "message_start" && parsed.message) {
+        model = parsed.message.model ?? model
+        const usage = parsed.message.usage
+        if (usage) {
+          inputTokens = usage.input_tokens ?? 0
+          cacheReadTokens = usage.cache_read_input_tokens ?? 0
+          cacheCreationTokens = usage.cache_creation_input_tokens ?? 0
+          foundUsage = true
+        }
+      }
+
+      if (parsed.type === "message_delta" && parsed.usage) {
+        outputTokens = parsed.usage.output_tokens ?? 0
+        foundUsage = true
+      }
+    } catch {
+      // Skip malformed JSON lines
+    }
+  }
+
+  return foundUsage ? { model, inputTokens, outputTokens, cacheReadTokens, cacheCreationTokens } : null
+}
+
+/**
+ * Check if the request body has stream:true set.
+ */
+export function isStreamingRequest(reqBody: Buffer): boolean {
+  if (reqBody.length === 0) return false
+  try {
+    const parsed = JSON.parse(reqBody.toString("utf-8")) as { stream?: boolean }
+    return parsed.stream === true
+  } catch {
+    return false
   }
 }
 
@@ -109,6 +223,7 @@ export function createProxyServer(): http.Server {
 
     clientReq.on("end", () => {
       const reqBody = Buffer.concat(reqChunks)
+      const streaming = isStreamingRequest(reqBody)
 
       // Extract team/member name from custom headers set by Claude Code
       const teamName =
@@ -145,14 +260,15 @@ export function createProxyServer(): http.Server {
 
           const latencyMs = Date.now() - startTime
           const statusCode = proxyRes.statusCode ?? 0
+          const resBody = Buffer.concat(resChunks).toString("utf-8")
 
-          // Try to parse response body for token usage
-          try {
-            const resBody = Buffer.concat(resChunks).toString("utf-8")
-            const parsed = JSON.parse(resBody) as AnthropicResponseBody
+          const contentType = proxyRes.headers["content-type"] ?? ""
+          const isSSE = streaming || contentType.includes("text/event-stream")
 
-            if (parsed.usage || parsed.model) {
-              const usage = extractUsage(parsed)
+          if (isSSE) {
+            // Parse SSE streaming response
+            const usage = extractUsageFromSSE(resBody)
+            if (usage) {
               insertLog(db, {
                 ...usage,
                 teamName,
@@ -161,19 +277,51 @@ export function createProxyServer(): http.Server {
                 latencyMs,
                 statusCode,
               })
+            } else {
+              // Streaming but couldn't extract usage — log with what we know
+              insertLog(db, {
+                model: "unknown",
+                inputTokens: 0,
+                outputTokens: 0,
+                cacheReadTokens: 0,
+                cacheCreationTokens: 0,
+                teamName,
+                memberName,
+                endpoint,
+                latencyMs,
+                statusCode,
+              })
             }
-          } catch {
-            // Non-JSON or streaming response — log with zeros
-            insertLog(db, {
-              model: "unknown",
-              inputTokens: 0,
-              outputTokens: 0,
-              teamName,
-              memberName,
-              endpoint,
-              latencyMs,
-              statusCode,
-            })
+          } else {
+            // Non-streaming: parse as JSON
+            try {
+              const parsed = JSON.parse(resBody) as AnthropicResponseBody
+              if (parsed.usage || parsed.model) {
+                const usage = extractUsage(parsed)
+                insertLog(db, {
+                  ...usage,
+                  teamName,
+                  memberName,
+                  endpoint,
+                  latencyMs,
+                  statusCode,
+                })
+              }
+            } catch {
+              // Non-JSON response — log basic info
+              insertLog(db, {
+                model: "unknown",
+                inputTokens: 0,
+                outputTokens: 0,
+                cacheReadTokens: 0,
+                cacheCreationTokens: 0,
+                teamName,
+                memberName,
+                endpoint,
+                latencyMs,
+                statusCode,
+              })
+            }
           }
         })
       })

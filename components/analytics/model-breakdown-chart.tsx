@@ -24,13 +24,9 @@ const TOOLTIP_STYLE = {
   },
 }
 
-// ── Model Pie Chart ────────────────────────────────────────────────────────────
+import type { ModelEntry, TeamEntry } from "@/types"
 
-interface ModelEntry {
-  model: string
-  totalTokens: number
-  estimatedCost: number
-}
+// ── Model Pie Chart ────────────────────────────────────────────────────────────
 
 interface ModelPieChartProps {
   data: ModelEntry[]
@@ -83,12 +79,6 @@ export function ModelPieChart({ data }: ModelPieChartProps) {
 }
 
 // ── Team Bar Chart ─────────────────────────────────────────────────────────────
-
-interface TeamEntry {
-  teamName: string
-  totalTokens: number
-  requests: number
-}
 
 interface TeamBarChartProps {
   data: TeamEntry[]

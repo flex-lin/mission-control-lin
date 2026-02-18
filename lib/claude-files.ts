@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { Team, TeamTask, Settings, Project, ProjectContext } from "@/types";
+import type { Team, Teammate, TeamTask, Settings, Project, ProjectContext } from "@/types";
 
 const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
 
@@ -59,12 +59,88 @@ function writeJson(filePath: string, data: unknown): void {
   fs.writeFileSync(resolved, JSON.stringify(data, null, 2), "utf-8");
 }
 
+// ── Member reconciliation ────────────────────────────────────────────────────
+// When a team is spawned via the dashboard, placeholder members are pre-populated
+// in the config (e.g. "analyst" with status "idle"). When the leader actually
+// spawns them via Claude Code's Task tool, they get added as new entries with a
+// "-N" suffix (e.g. "analyst-2") because the name is already taken. This results
+// in duplicates where placeholders show stale status and real members appear as
+// extras. reconcileMembers merges them: if a spawned member's base name matches
+// a placeholder, the placeholder is replaced by the spawned member using the
+// original name.
+
+function isSpawnedMember(m: Teammate): boolean {
+  // Spawned members have joinedAt set by Claude Code's team system
+  return "joinedAt" in m;
+}
+
+function getBaseName(name: string): string {
+  // Strip trailing "-N" suffix: "analyst-2" → "analyst", "frontend-dev-2" → "frontend-dev"
+  return name.replace(/-\d+$/, "");
+}
+
+function reconcileMembers(members: Teammate[]): Teammate[] {
+  const placeholders = new Map<string, number>(); // name → index
+  const spawned: { member: Teammate; index: number }[] = [];
+
+  // Classify each member
+  for (let i = 0; i < members.length; i++) {
+    const m = members[i];
+    if (isSpawnedMember(m)) {
+      spawned.push({ member: m, index: i });
+    } else {
+      placeholders.set(m.name, i);
+    }
+  }
+
+  // No spawned members → nothing to reconcile
+  if (spawned.length === 0) return members;
+
+  const removedIndices = new Set<number>();
+  const renamedSpawned = new Map<number, string>(); // spawned index → original name
+
+  for (const { member, index } of spawned) {
+    const baseName = getBaseName(member.name);
+    if (baseName !== member.name && placeholders.has(baseName)) {
+      // This spawned member corresponds to a placeholder
+      removedIndices.add(placeholders.get(baseName)!);
+      renamedSpawned.set(index, baseName);
+      placeholders.delete(baseName); // consume the placeholder
+    }
+  }
+
+  // Nothing to reconcile
+  if (removedIndices.size === 0) return members;
+
+  // Build reconciled list: keep order, remove placeholders, rename spawned
+  const result: Teammate[] = [];
+  for (let i = 0; i < members.length; i++) {
+    if (removedIndices.has(i)) continue; // skip consumed placeholder
+    const m = { ...members[i] };
+    const newName = renamedSpawned.get(i);
+    if (newName) {
+      m.name = newName;
+    }
+    // Derive status from spawned member's isActive field
+    if (isSpawnedMember(m) && "isActive" in m) {
+      m.status = (m as Teammate & { isActive?: boolean }).isActive ? "active" : "offline";
+    }
+    result.push(m);
+  }
+
+  return result;
+}
+
 // ── Team functions ────────────────────────────────────────────────────────────
 
 export function readTeamConfig(teamName: string): Team | null {
   const safe = safeName(teamName);
   const configPath = path.join(teamsDir(), safe, "config.json");
-  return readJson<Team>(configPath);
+  const team = readJson<Team>(configPath);
+  if (team && team.members) {
+    team.members = reconcileMembers(team.members);
+  }
+  return team;
 }
 
 export function listTeams(): Team[] {

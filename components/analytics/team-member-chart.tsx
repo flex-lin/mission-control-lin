@@ -11,6 +11,8 @@ import {
   ResponsiveContainer,
 } from "recharts"
 
+import type { MemberEntry } from "@/types"
+
 const TOOLTIP_STYLE = {
   contentStyle: {
     backgroundColor: "hsl(222.2 47.4% 6%)",
@@ -18,16 +20,6 @@ const TOOLTIP_STYLE = {
     borderRadius: "6px",
     fontSize: 12,
   },
-}
-
-interface MemberEntry {
-  memberName: string
-  teamName: string
-  totalInput: number
-  totalOutput: number
-  totalTokens: number
-  requests: number
-  estimatedCost: number
 }
 
 interface TeamMemberChartProps {
@@ -54,8 +46,8 @@ export function TeamMemberChart({ data }: TeamMemberChartProps) {
     }))
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 30 }}>
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 50 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(216 34% 17%)" />
         <XAxis
           dataKey="name"
@@ -69,10 +61,26 @@ export function TeamMemberChart({ data }: TeamMemberChartProps) {
         />
         <Tooltip
           {...TOOLTIP_STYLE}
-          formatter={(v, name) => [
-            `${Number(v).toLocaleString()} tokens`,
-            name === "input" ? "Input" : "Output",
-          ]}
+          content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null
+            const cost = payload[0]?.payload?.cost as number | undefined
+            return (
+              <div style={TOOLTIP_STYLE.contentStyle} className="p-2">
+                <p className="mb-1 font-medium text-foreground">{label}</p>
+                {payload.map((entry) => (
+                  <p key={entry.dataKey as string} style={{ color: entry.color }} className="text-xs">
+                    {entry.dataKey === "input" ? "Input" : "Output"}:{" "}
+                    {Number(entry.value).toLocaleString()} tokens
+                  </p>
+                ))}
+                {cost != null && (
+                  <p className="mt-1 text-xs text-emerald-400">
+                    Cost: ${cost.toFixed(4)}
+                  </p>
+                )}
+              </div>
+            )
+          }}
         />
         <Legend wrapperStyle={{ fontSize: 12, color: "hsl(215.4 16.3% 56.9%)" }} />
         <Bar dataKey="input" name="Input tokens" fill="#60a5fa" stackId="a" radius={[0, 0, 0, 0]} />

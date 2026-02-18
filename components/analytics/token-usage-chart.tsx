@@ -11,13 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import { format } from "date-fns"
-
-interface DailyEntry {
-  date: string
-  totalInput: number
-  totalOutput: number
-  estimatedCost: number
-}
+import type { DailyEntry } from "@/types"
 
 interface TokenUsageChartProps {
   data: DailyEntry[]

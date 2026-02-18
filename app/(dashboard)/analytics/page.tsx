@@ -3,93 +3,150 @@ export const dynamic = "force-dynamic"
 import { Topbar } from "@/components/layout/topbar"
 import { IngestButton } from "@/components/analytics/ingest-button"
 import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard"
-import type { ProxyLog } from "@/types"
+import { db } from "@/lib/db"
+import { computeCost } from "@/lib/pricing"
+import { getCutoffDate, UNTRACKED_TEAM_LABEL } from "@/lib/analytics-helpers"
+import type { DailyEntry, ModelEntry, TeamEntry, MemberEntry, ProxyLog } from "@/types"
 
-interface DailyEntry {
-  date: string
-  totalInput: number
-  totalOutput: number
-  estimatedCost: number
-}
+async function loadAnalytics() {
+  const cutoff = getCutoffDate("7d")
 
-interface ModelEntry {
-  model: string
-  totalInput: number
-  totalOutput: number
-  totalTokens: number
-  requests: number
-  avgLatencyMs: number
-  estimatedCost: number
-}
-
-interface TeamEntry {
-  teamName: string
-  totalInput: number
-  totalOutput: number
-  totalTokens: number
-  requests: number
-}
-
-interface MemberEntry {
-  memberName: string
-  teamName: string
-  totalInput: number
-  totalOutput: number
-  totalTokens: number
-  requests: number
-  estimatedCost: number
-}
-
-async function fetchAnalytics(base: string) {
-  const [dailyRes, modelRes, teamRes, memberRes, logsRes] = await Promise.allSettled([
-    fetch(`${base}/api/analytics?period=7d&groupBy=day`, { cache: "no-store" }),
-    fetch(`${base}/api/analytics/by-model?period=7d`, { cache: "no-store" }),
-    fetch(`${base}/api/analytics/by-team?period=7d`, { cache: "no-store" }),
-    fetch(`${base}/api/analytics/by-member?period=7d`, { cache: "no-store" }),
-    fetch(`${base}/api/proxy-logs?limit=500`, { cache: "no-store" }),
+  const [logs, modelRows, teamRows, memberRows, recentLogs] = await Promise.all([
+    db.proxyLog.findMany({
+      where: { timestamp: { gte: cutoff } },
+      select: { timestamp: true, model: true, inputTokens: true, outputTokens: true, cacheReadTokens: true, cacheCreationTokens: true },
+      orderBy: { timestamp: "asc" },
+    }),
+    db.proxyLog.groupBy({
+      by: ["model"],
+      where: { timestamp: { gte: cutoff } },
+      _sum: { inputTokens: true, outputTokens: true, cacheReadTokens: true, cacheCreationTokens: true },
+      _count: { id: true },
+      _avg: { latencyMs: true },
+    }),
+    db.proxyLog.groupBy({
+      by: ["teamName"],
+      where: { timestamp: { gte: cutoff } },
+      _sum: { inputTokens: true, outputTokens: true, cacheReadTokens: true, cacheCreationTokens: true },
+      _count: { id: true },
+    }),
+    db.proxyLog.groupBy({
+      by: ["memberName", "teamName", "model"],
+      where: { timestamp: { gte: cutoff }, memberName: { not: null } },
+      _sum: { inputTokens: true, outputTokens: true, cacheReadTokens: true, cacheCreationTokens: true },
+      _count: { id: true },
+      _avg: { latencyMs: true },
+    }),
+    db.proxyLog.findMany({
+      orderBy: { timestamp: "desc" },
+      take: 500,
+    }),
   ])
 
-  const daily: DailyEntry[] =
-    dailyRes.status === "fulfilled" && dailyRes.value.ok
-      ? ((await dailyRes.value.json()).data ?? [])
-      : []
+  // Aggregate daily entries
+  const byDate = new Map<string, DailyEntry>()
+  for (const log of logs) {
+    const date = log.timestamp.toISOString().slice(0, 10)
+    const existing = byDate.get(date) ?? { date, totalInput: 0, totalOutput: 0, cacheReadTokens: 0, cacheCreationTokens: 0, estimatedCost: 0 }
+    existing.totalInput += log.inputTokens + log.cacheReadTokens + log.cacheCreationTokens
+    existing.totalOutput += log.outputTokens
+    existing.cacheReadTokens += log.cacheReadTokens
+    existing.cacheCreationTokens += log.cacheCreationTokens
+    existing.estimatedCost += computeCost(log.model, log.inputTokens, log.outputTokens, log.cacheReadTokens, log.cacheCreationTokens)
+    byDate.set(date, existing)
+  }
+  const daily: DailyEntry[] = Array.from(byDate.values())
 
-  const byModel: ModelEntry[] =
-    modelRes.status === "fulfilled" && modelRes.value.ok
-      ? ((await modelRes.value.json()).data ?? [])
-      : []
+  // Model breakdown
+  const byModel: ModelEntry[] = modelRows.map((r) => {
+    const input = r._sum.inputTokens ?? 0
+    const output = r._sum.outputTokens ?? 0
+    const cacheRead = r._sum.cacheReadTokens ?? 0
+    const cacheCreate = r._sum.cacheCreationTokens ?? 0
+    return {
+      model: r.model,
+      totalInput: input + cacheRead + cacheCreate,
+      totalOutput: output,
+      cacheReadTokens: cacheRead,
+      cacheCreationTokens: cacheCreate,
+      totalTokens: input + cacheRead + cacheCreate + output,
+      requests: r._count.id,
+      avgLatencyMs: Math.round(r._avg.latencyMs ?? 0),
+      estimatedCost: computeCost(r.model, input, output, cacheRead, cacheCreate),
+    }
+  })
 
-  const byTeam: TeamEntry[] =
-    teamRes.status === "fulfilled" && teamRes.value.ok
-      ? ((await teamRes.value.json()).data ?? [])
-      : []
+  // Team breakdown
+  const byTeam: TeamEntry[] = teamRows.map((r) => {
+    const input = (r._sum.inputTokens ?? 0) + (r._sum.cacheReadTokens ?? 0) + (r._sum.cacheCreationTokens ?? 0)
+    const output = r._sum.outputTokens ?? 0
+    return {
+      teamName: r.teamName ?? UNTRACKED_TEAM_LABEL,
+      totalInput: input,
+      totalOutput: output,
+      totalTokens: input + output,
+      requests: r._count.id,
+    }
+  })
 
-  const byMember: MemberEntry[] =
-    memberRes.status === "fulfilled" && memberRes.value.ok
-      ? ((await memberRes.value.json()).data ?? [])
-      : []
+  // Member breakdown (aggregate across models)
+  const memberMap = new Map<string, MemberEntry>()
+  for (const r of memberRows) {
+    const key = `${r.teamName ?? UNTRACKED_TEAM_LABEL}:${r.memberName ?? "unknown"}`
+    const existing = memberMap.get(key) ?? {
+      memberName: r.memberName ?? "unknown",
+      teamName: r.teamName ?? UNTRACKED_TEAM_LABEL,
+      totalInput: 0,
+      totalOutput: 0,
+      totalTokens: 0,
+      requests: 0,
+      estimatedCost: 0,
+    }
+    const baseInput = r._sum.inputTokens ?? 0
+    const output = r._sum.outputTokens ?? 0
+    const cacheRead = r._sum.cacheReadTokens ?? 0
+    const cacheCreate = r._sum.cacheCreationTokens ?? 0
+    const input = baseInput + cacheRead + cacheCreate
+    existing.totalInput += input
+    existing.totalOutput += output
+    existing.totalTokens += input + output
+    existing.requests += r._count.id
+    existing.estimatedCost += computeCost(r.model, baseInput, output, cacheRead, cacheCreate)
+    memberMap.set(key, existing)
+  }
+  const byMember: MemberEntry[] = Array.from(memberMap.values())
 
-  const logs: ProxyLog[] =
-    logsRes.status === "fulfilled" && logsRes.value.ok
-      ? ((await logsRes.value.json()).data ?? [])
-      : []
+  // Map Prisma logs to ProxyLog type
+  const logsMapped: ProxyLog[] = recentLogs.map((l) => ({
+    id: l.id,
+    timestamp: l.timestamp.toISOString(),
+    model: l.model,
+    inputTokens: l.inputTokens,
+    outputTokens: l.outputTokens,
+    cacheReadTokens: l.cacheReadTokens,
+    cacheCreationTokens: l.cacheCreationTokens,
+    teamName: l.teamName ?? undefined,
+    memberName: l.memberName ?? undefined,
+    endpoint: l.endpoint,
+    latencyMs: l.latencyMs,
+    statusCode: l.statusCode,
+  }))
 
   const totalInput = byModel.reduce((s, m) => s + m.totalInput, 0)
   const totalOutput = byModel.reduce((s, m) => s + m.totalOutput, 0)
   const totalCost = byModel.reduce((s, m) => s + m.estimatedCost, 0)
   const totalRequests = byModel.reduce((s, m) => s + m.requests, 0)
 
-  return { daily, byModel, byTeam, byMember, logs, totalInput, totalOutput, totalCost, totalRequests }
+  return { daily, byModel, byTeam, byMember, logs: logsMapped, totalInput, totalOutput, totalCost, totalRequests }
 }
 
 export default async function AnalyticsPage() {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  const initialData = await fetchAnalytics(base).catch(() => ({
-    daily: [],
-    byModel: [],
-    byTeam: [],
-    byMember: [],
-    logs: [],
+  const initialData = await loadAnalytics().catch(() => ({
+    daily: [] as DailyEntry[],
+    byModel: [] as ModelEntry[],
+    byTeam: [] as TeamEntry[],
+    byMember: [] as MemberEntry[],
+    logs: [] as ProxyLog[],
     totalInput: 0,
     totalOutput: 0,
     totalCost: 0,

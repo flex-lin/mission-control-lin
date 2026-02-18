@@ -15,9 +15,15 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Sparkles, Loader2, ArrowLeft, Check } from "lucide-react"
+import { Sparkles, Loader2, ArrowLeft, Check, Terminal, Copy } from "lucide-react"
 import { toast } from "sonner"
 import type { TeamPlan } from "@/types"
+
+interface SpawnSession {
+  name: string
+  tmuxSession: string
+  attachCmd: string
+}
 
 type WizardStep = "goal" | "reviewing" | "done"
 
@@ -31,6 +37,7 @@ export function SmartCreateDialog() {
   const [spawning, setSpawning] = useState(false)
   const [plan, setPlan] = useState<TeamPlan | null>(null)
   const [createdTeamName, setCreatedTeamName] = useState("")
+  const [sessions, setSessions] = useState<SpawnSession[]>([])
 
   function resetState() {
     setStep("goal")
@@ -40,6 +47,7 @@ export function SmartCreateDialog() {
     setLoading(false)
     setSpawning(false)
     setCreatedTeamName("")
+    setSessions([])
   }
 
   async function handleGenerate() {
@@ -62,8 +70,17 @@ export function SmartCreateDialog() {
         return
       }
 
-      setPlan(json.data as TeamPlan)
+      const planData = json.data as TeamPlan & { _source?: string; _fallbackReason?: string }
+      const { _source, _fallbackReason, ...rest } = planData
+      setPlan(rest)
       setStep("reviewing")
+      if (_source === "local" && _fallbackReason === "insufficient_credits") {
+        toast.warning("Anthropic API credits are low — generated from templates. Add credits at console.anthropic.com/settings/billing")
+      } else if (_source === "local" && _fallbackReason === "invalid_key") {
+        toast.warning("API key is invalid — generated from templates. Check your key at console.anthropic.com/settings/keys")
+      } else if (_source === "local") {
+        toast.info("Generated from templates (no API key). Add ANTHROPIC_API_KEY to .env.local for AI-powered plans.")
+      }
     } catch {
       toast.error("Network error — please try again")
     } finally {
@@ -79,7 +96,7 @@ export function SmartCreateDialog() {
       const res = await fetch("/api/teams/spawn", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, projectPath: projectPath.trim() || undefined }),
       })
       const json = await res.json()
 
@@ -89,8 +106,9 @@ export function SmartCreateDialog() {
       }
 
       setCreatedTeamName(plan.teamName)
+      setSessions(json.data.sessions ?? [])
       setStep("done")
-      toast.success(`Team "${plan.teamName}" created with ${json.data.membersCreated} members`)
+      toast.success(`Team "${plan.teamName}" created with ${json.data.membersCreated} members — ${json.data.launched?.length ?? 0} launched in tmux`)
       router.refresh()
     } catch {
       toast.error("Network error — please try again")
@@ -252,13 +270,50 @@ export function SmartCreateDialog() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500" />
-                Team Created
+                Team Created & Launched
               </DialogTitle>
             </DialogHeader>
-            <p className="text-sm text-muted-foreground">
-              Your team <span className="font-medium text-foreground">{createdTeamName}</span> is
-              ready. View the team page to start managing agents and tasks.
-            </p>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Your team <span className="font-medium text-foreground">{createdTeamName}</span> is
+                running. Agents have been launched in tmux sessions.
+              </p>
+              {sessions.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-muted-foreground">Attach to agents:</p>
+                  <div className="space-y-1">
+                    {sessions.map((s) => (
+                      <div
+                        key={s.name}
+                        className="flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-1.5"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Terminal className="h-3 w-3 text-emerald-400" />
+                          <code className="text-xs">{s.attachCmd}</code>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-1.5"
+                          onClick={() => {
+                            if (navigator.clipboard?.writeText) {
+                              navigator.clipboard.writeText(s.attachCmd).then(
+                                () => toast.success("Copied!"),
+                                () => window.prompt("Copy this command:", s.attachCmd)
+                              )
+                            } else {
+                              window.prompt("Copy this command:", s.attachCmd)
+                            }
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <DialogFooter>
               <Button
                 variant="outline"

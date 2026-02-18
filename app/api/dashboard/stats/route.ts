@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { listTeams } from "@/lib/claude-files";
+import { computeCost } from "@/lib/pricing";
 import { ok, serverError } from "@/lib/api-helpers";
 
 // GET /api/dashboard/stats — overview stats for the dashboard
@@ -29,12 +30,10 @@ export async function GET(_req: NextRequest): Promise<NextResponse> {
       db.proxyLog.aggregate({
         where: { timestamp: { gte: weekAgo } },
         _avg: { latencyMs: true },
-        _sum: { inputTokens: true, outputTokens: true },
       }),
       db.proxyLog.aggregate({
         where: { timestamp: { gte: prevWeek, lt: weekAgo } },
         _avg: { latencyMs: true },
-        _sum: { inputTokens: true, outputTokens: true },
       }),
     ]);
 
@@ -42,16 +41,29 @@ export async function GET(_req: NextRequest): Promise<NextResponse> {
     const teams = listTeams();
     const activeTeams = teams.length;
 
-    // Estimate cost (this week)
-    const totalInputThisWeek = thisWeekStats._sum.inputTokens ?? 0;
-    const totalOutputThisWeek = thisWeekStats._sum.outputTokens ?? 0;
-    const estimatedCost =
-      (totalInputThisWeek / 1_000_000) * 3 +
-      (totalOutputThisWeek / 1_000_000) * 15;
+    // Estimate cost per model (this week vs last week)
+    const [thisWeekByModel, lastWeekByModel] = await Promise.all([
+      db.proxyLog.groupBy({
+        by: ["model"],
+        where: { timestamp: { gte: weekAgo } },
+        _sum: { inputTokens: true, outputTokens: true, cacheReadTokens: true, cacheCreationTokens: true },
+      }),
+      db.proxyLog.groupBy({
+        by: ["model"],
+        where: { timestamp: { gte: prevWeek, lt: weekAgo } },
+        _sum: { inputTokens: true, outputTokens: true, cacheReadTokens: true, cacheCreationTokens: true },
+      }),
+    ]);
 
-    const prevCost =
-      ((lastWeekStats._sum.inputTokens ?? 0) / 1_000_000) * 3 +
-      ((lastWeekStats._sum.outputTokens ?? 0) / 1_000_000) * 15;
+    const estimatedCost = thisWeekByModel.reduce(
+      (sum, g) => sum + computeCost(g.model, g._sum.inputTokens ?? 0, g._sum.outputTokens ?? 0, g._sum.cacheReadTokens ?? 0, g._sum.cacheCreationTokens ?? 0),
+      0,
+    );
+
+    const prevCost = lastWeekByModel.reduce(
+      (sum, g) => sum + computeCost(g.model, g._sum.inputTokens ?? 0, g._sum.outputTokens ?? 0, g._sum.cacheReadTokens ?? 0, g._sum.cacheCreationTokens ?? 0),
+      0,
+    );
 
     function pctChange(current: number, previous: number): number {
       if (previous === 0) return current > 0 ? 100 : 0;

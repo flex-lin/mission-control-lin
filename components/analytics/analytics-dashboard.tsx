@@ -1,48 +1,16 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TokenUsageChart } from "@/components/analytics/token-usage-chart"
 import { ModelPieChart, TeamBarChart } from "@/components/analytics/model-breakdown-chart"
 import { TeamMemberChart } from "@/components/analytics/team-member-chart"
 import { RequestLogTable } from "@/components/analytics/request-log-table"
-import type { ProxyLog } from "@/types"
-
-interface DailyEntry {
-  date: string
-  totalInput: number
-  totalOutput: number
-  estimatedCost: number
-}
-
-interface ModelEntry {
-  model: string
-  totalInput: number
-  totalOutput: number
-  totalTokens: number
-  requests: number
-  avgLatencyMs: number
-  estimatedCost: number
-}
-
-interface TeamEntry {
-  teamName: string
-  totalInput: number
-  totalOutput: number
-  totalTokens: number
-  requests: number
-}
-
-interface MemberEntry {
-  memberName: string
-  teamName: string
-  totalInput: number
-  totalOutput: number
-  totalTokens: number
-  requests: number
-  estimatedCost: number
-}
+import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
+import { useSettings } from "@/lib/settings-context"
+import type { ProxyLog, DailyEntry, ModelEntry, TeamEntry, MemberEntry } from "@/types"
 
 interface AnalyticsData {
   daily: DailyEntry[]
@@ -68,40 +36,41 @@ interface AnalyticsDashboardProps {
   initialData: AnalyticsData
 }
 
+async function fetchJson<T>(url: string, fallback: T): Promise<T> {
+  const res = await fetch(url, { cache: "no-store" })
+  if (!res.ok) throw new Error(`${url} returned ${res.status}`)
+  return ((await res.json()).data as T) ?? fallback
+}
+
 async function fetchAnalyticsData(period: Period): Promise<AnalyticsData> {
-  const periodParam = period
-  const [dailyRes, modelRes, teamRes, memberRes, logsRes] = await Promise.allSettled([
-    fetch(`/api/analytics?period=${periodParam}&groupBy=day`, { cache: "no-store" }),
-    fetch(`/api/analytics/by-model?period=${periodParam}`, { cache: "no-store" }),
-    fetch(`/api/analytics/by-team?period=${periodParam}`, { cache: "no-store" }),
-    fetch(`/api/analytics/by-member?period=${periodParam}`, { cache: "no-store" }),
-    fetch(`/api/proxy-logs?limit=500`, { cache: "no-store" }),
+  const errors: string[] = []
+
+  const [daily, byModel, byTeam, byMember, logs] = await Promise.all([
+    fetchJson<DailyEntry[]>(`/api/analytics?period=${period}&groupBy=day`, []).catch((e: Error) => {
+      errors.push(e.message)
+      return [] as DailyEntry[]
+    }),
+    fetchJson<ModelEntry[]>(`/api/analytics/by-model?period=${period}`, []).catch((e: Error) => {
+      errors.push(e.message)
+      return [] as ModelEntry[]
+    }),
+    fetchJson<TeamEntry[]>(`/api/analytics/by-team?period=${period}`, []).catch((e: Error) => {
+      errors.push(e.message)
+      return [] as TeamEntry[]
+    }),
+    fetchJson<MemberEntry[]>(`/api/analytics/by-member?period=${period}`, []).catch((e: Error) => {
+      errors.push(e.message)
+      return [] as MemberEntry[]
+    }),
+    fetchJson<ProxyLog[]>(`/api/proxy-logs?limit=500`, []).catch((e: Error) => {
+      errors.push(e.message)
+      return [] as ProxyLog[]
+    }),
   ])
 
-  const daily: DailyEntry[] =
-    dailyRes.status === "fulfilled" && dailyRes.value.ok
-      ? ((await dailyRes.value.json()).data ?? [])
-      : []
-
-  const byModel: ModelEntry[] =
-    modelRes.status === "fulfilled" && modelRes.value.ok
-      ? ((await modelRes.value.json()).data ?? [])
-      : []
-
-  const byTeam: TeamEntry[] =
-    teamRes.status === "fulfilled" && teamRes.value.ok
-      ? ((await teamRes.value.json()).data ?? [])
-      : []
-
-  const byMember: MemberEntry[] =
-    memberRes.status === "fulfilled" && memberRes.value.ok
-      ? ((await memberRes.value.json()).data ?? [])
-      : []
-
-  const logs: ProxyLog[] =
-    logsRes.status === "fulfilled" && logsRes.value.ok
-      ? ((await logsRes.value.json()).data ?? [])
-      : []
+  if (errors.length > 0) {
+    toast.error(`Failed to load some analytics data: ${errors[0]}`)
+  }
 
   const totalInput = byModel.reduce((s, m) => s + m.totalInput, 0)
   const totalOutput = byModel.reduce((s, m) => s + m.totalOutput, 0)
@@ -115,26 +84,35 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
   const [period, setPeriod] = useState<Period>("7d")
   const [data, setData] = useState<AnalyticsData>(initialData)
   const [loading, setLoading] = useState(false)
+  const { settings } = useSettings()
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const loadData = useCallback(async (p: Period) => {
-    if (p === "7d") {
-      setData(initialData)
-      return
-    }
     setLoading(true)
     try {
       const result = await fetchAnalyticsData(p)
       setData(result)
     } catch {
-      // Keep current data on error
+      toast.error("Failed to load analytics data")
     } finally {
       setLoading(false)
     }
-  }, [initialData])
+  }, [])
 
   useEffect(() => {
     loadData(period)
   }, [period, loadData])
+
+  // Auto-refresh based on settings
+  useEffect(() => {
+    const intervalMs = (settings.refreshInterval ?? 30) * 1000
+    intervalRef.current = setInterval(() => {
+      loadData(period)
+    }, intervalMs)
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [period, loadData, settings.refreshInterval])
 
   const { daily, byModel, byTeam, byMember, logs, totalInput, totalOutput, totalCost, totalRequests } = data
 
@@ -158,33 +136,46 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
 
       {/* Cost summary */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-xs text-muted-foreground">Total Requests</p>
-            <p className="text-2xl font-bold">{totalRequests.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-xs text-muted-foreground">Total Input Tokens</p>
-            <p className="text-2xl font-bold">{totalInput.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-xs text-muted-foreground">Total Output Tokens</p>
-            <p className="text-2xl font-bold">{totalOutput.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <p className="text-xs text-muted-foreground">Estimated Cost ({PERIOD_LABELS[period]})</p>
-            <p className="text-2xl font-bold text-emerald-400">${totalCost.toFixed(4)}</p>
-            <p className="mt-0.5 text-[10px] text-muted-foreground">
-              Based on Anthropic pricing
-            </p>
-          </CardContent>
-        </Card>
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="pt-4 space-y-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-8 w-32" />
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <>
+            <Card>
+              <CardContent className="pt-4">
+                <p className="text-xs text-muted-foreground">Total Requests</p>
+                <p className="text-2xl font-bold">{totalRequests.toLocaleString()}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <p className="text-xs text-muted-foreground">Total Input Tokens</p>
+                <p className="text-2xl font-bold">{totalInput.toLocaleString()}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <p className="text-xs text-muted-foreground">Total Output Tokens</p>
+                <p className="text-2xl font-bold">{totalOutput.toLocaleString()}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4">
+                <p className="text-xs text-muted-foreground">Estimated Cost ({PERIOD_LABELS[period]})</p>
+                <p className="text-2xl font-bold text-emerald-400">${totalCost.toFixed(4)}</p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                  Based on Anthropic pricing
+                </p>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Token usage line chart */}
@@ -195,7 +186,7 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <TokenUsageChart data={daily} />
+          {loading ? <Skeleton className="h-[280px] w-full" /> : <TokenUsageChart data={daily} />}
         </CardContent>
       </Card>
 
@@ -206,7 +197,7 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
             <CardTitle className="text-sm font-semibold">Tokens by Model</CardTitle>
           </CardHeader>
           <CardContent>
-            <ModelPieChart data={byModel} />
+            {loading ? <Skeleton className="h-[250px] w-full" /> : <ModelPieChart data={byModel} />}
           </CardContent>
         </Card>
         <Card>
@@ -214,7 +205,7 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
             <CardTitle className="text-sm font-semibold">Tokens by Team</CardTitle>
           </CardHeader>
           <CardContent>
-            <TeamBarChart data={byTeam} />
+            {loading ? <Skeleton className="h-[250px] w-full" /> : <TeamBarChart data={byTeam} />}
           </CardContent>
         </Card>
       </div>
@@ -225,7 +216,7 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
           <CardTitle className="text-sm font-semibold">Token Usage by Team Member</CardTitle>
         </CardHeader>
         <CardContent>
-          <TeamMemberChart data={byMember} />
+          {loading ? <Skeleton className="h-[300px] w-full" /> : <TeamMemberChart data={byMember} />}
         </CardContent>
       </Card>
 
@@ -319,7 +310,14 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <RequestLogTable logs={logs} />
+          {loading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-[384px] w-full" />
+            </div>
+          ) : (
+            <RequestLogTable logs={logs} />
+          )}
         </CardContent>
       </Card>
     </div>

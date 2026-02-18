@@ -6,7 +6,7 @@ import { ok, serverError } from "@/lib/api-helpers";
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = req.nextUrl;
-    const limit = Math.min(Number(searchParams.get("limit") ?? 50), 200);
+    const limit = Math.min(Number(searchParams.get("limit") ?? 50), 500);
     const offset = Number(searchParams.get("offset") ?? 0);
     const modelFilter = searchParams.get("model");
     const teamFilter = searchParams.get("team");

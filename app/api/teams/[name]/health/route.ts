@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { readTeamConfig, readTaskList, getTeamLastActivity } from "@/lib/claude-files";
 import { ok, notFound, serverError } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
+import { sessionExists, getSessionName, sessionProcessAlive } from "@/lib/tmux-manager";
+import { getLeaderSessionName } from "@/lib/agent-launcher";
 import type { TeamHealthStatus, TeamTask } from "@/types";
 import fs from "fs";
 import path from "path";
@@ -9,10 +11,12 @@ import path from "path";
 const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
 const STALENESS_MS = 5 * 60 * 1000;
 
-interface TeamMemberHealth {
+interface MemberHealth {
   name: string;
-  lastActivity: string | null;
+  lastSeen: string | null;
   status: TeamHealthStatus;
+  tmuxAlive: boolean;
+  attachCmd: string;
 }
 
 // GET /api/teams/[name]/health — computed health for a team
@@ -66,14 +70,29 @@ export async function GET(
       lastActivity = fsActivity ?? lastProxyActivity;
     }
 
+    // Check leader session (primary indicator)
+    const leaderSession = getLeaderSessionName(name);
+    const leaderTmuxAlive = sessionExists(leaderSession) && sessionProcessAlive(leaderSession);
+
+    // Also check individual member sessions (for legacy teams)
+    const anyMemberTmuxAlive = (team.members ?? []).some((member) => {
+      if (member.name === "leader") return false;
+      const sn = getSessionName(name, member.name);
+      return sessionExists(sn) && sessionProcessAlive(sn);
+    });
+
+    const anyTmuxAlive = leaderTmuxAlive || anyMemberTmuxAlive;
+
     // Determine status
     let status: TeamHealthStatus = "asleep";
-    if (lastActivity) {
+    if (anyTmuxAlive) {
+      status = "alive";
+    } else if (lastActivity) {
       const elapsed = now - new Date(lastActivity).getTime();
       status = elapsed < STALENESS_MS ? "alive" : "asleep";
     }
 
-    // Find stale in-progress tasks (file mtime > 5 minutes old)
+    // Find stale in-progress tasks
     const tasks = readTaskList(name);
     const staleTasks: TeamTask[] = [];
     const tasksBasePath = path.join(CLAUDE_DIR, "tasks", name);
@@ -90,7 +109,7 @@ export async function GET(
       }
     }
 
-    // Build member health
+    // Build member health with tmux info
     const proxyMap = new Map<string, string>();
     for (const log of proxyLogs) {
       if (log.memberName && log._max.timestamp) {
@@ -98,17 +117,43 @@ export async function GET(
       }
     }
 
-    const memberHealth: TeamMemberHealth[] = (team.members ?? []).map((member) => {
+    const memberHealth: MemberHealth[] = (team.members ?? []).map((member) => {
       const memberLastActivity = proxyMap.get(member.name) ?? null;
+
+      // For the leader, check the leader session; for others check individual sessions
+      let tmuxAlive = false;
+      let attachCmd = "";
+      if (member.name === "leader") {
+        tmuxAlive = leaderTmuxAlive;
+        attachCmd = `tmux attach -t ${leaderSession}`;
+      } else {
+        const tmuxSessionName = getSessionName(name, member.name);
+        const tmuxExists = sessionExists(tmuxSessionName);
+        tmuxAlive = tmuxExists && sessionProcessAlive(tmuxSessionName);
+        // For new-style teams, teammates run inside the leader's process
+        // Show leader session as the attach target
+        if (!tmuxAlive && leaderTmuxAlive) {
+          tmuxAlive = true; // they're subagents of the leader
+          attachCmd = `tmux attach -t ${leaderSession}`;
+        } else {
+          attachCmd = `tmux attach -t ${tmuxSessionName}`;
+        }
+      }
+
       let memberStatus: TeamHealthStatus = "asleep";
-      if (memberLastActivity) {
+      if (tmuxAlive) {
+        memberStatus = "alive";
+      } else if (memberLastActivity) {
         const elapsed = now - new Date(memberLastActivity).getTime();
         memberStatus = elapsed < STALENESS_MS ? "alive" : "asleep";
       }
+
       return {
         name: member.name,
-        lastActivity: memberLastActivity,
+        lastSeen: memberLastActivity,
         status: memberStatus,
+        tmuxAlive,
+        attachCmd,
       };
     });
 

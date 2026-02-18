@@ -8,6 +8,7 @@ export interface Teammate {
   agentType: string;
   model?: string;
   status?: "active" | "idle" | "offline";
+  tmuxSession?: string;
 }
 
 export interface Team {
@@ -29,7 +30,57 @@ export interface TeamTask {
   metadata?: Record<string, unknown>;
 }
 
+// ── Stuck Task Types ─────────────────────────────────────────────────────────
+
+export interface StuckTask extends TeamTask {
+  teamName: string;
+  blockerType?: "decision_needed" | "missing_info" | "dependency" | "error" | "permission";
+  blockerSummary?: string;
+  blockerDetails?: string;
+  blockerSince?: string;
+  blockerFrom?: string;
+}
+
 // ── Analytics Types ───────────────────────────────────────────────────────────
+
+export interface DailyEntry {
+  date: string;
+  totalInput: number;
+  totalOutput: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  estimatedCost: number;
+}
+
+export interface ModelEntry {
+  model: string;
+  totalInput: number;
+  totalOutput: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
+  totalTokens: number;
+  requests: number;
+  avgLatencyMs: number;
+  estimatedCost: number;
+}
+
+export interface TeamEntry {
+  teamName: string;
+  totalInput: number;
+  totalOutput: number;
+  totalTokens: number;
+  requests: number;
+}
+
+export interface MemberEntry {
+  memberName: string;
+  teamName: string;
+  totalInput: number;
+  totalOutput: number;
+  totalTokens: number;
+  requests: number;
+  estimatedCost: number;
+}
 
 export interface ProxyLog {
   id: number;
@@ -37,6 +88,8 @@ export interface ProxyLog {
   model: string;
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
   teamName?: string;
   memberName?: string;
   endpoint: string;
@@ -108,24 +161,30 @@ export interface ActivityEvent {
 // ── Smart Team Creation Types ────────────────────────────────────────────────
 
 export interface TeamPersona {
-  name: string
-  role: string
-  agentType: string
-  description: string
+  name: string;
+  role: string;
+  agentType: string;
+  description: string;
 }
 
 export interface TeamPlan {
-  teamName: string
-  description: string
-  personas: TeamPersona[]
-  initialTasks: { subject: string; description: string; assignTo?: string }[]
+  teamName: string;
+  description: string;
+  personas: TeamPersona[];
+  initialTasks: { subject: string; description: string; assignTo?: string }[];
 }
 
-export type TeamCreationStatus = "idle" | "generating" | "reviewing" | "spawning" | "done" | "error"
+export type TeamCreationStatus = "idle" | "generating" | "reviewing" | "spawning" | "done" | "error";
 
 // ── Team Health Types ────────────────────────────────────────────────────────
 
 export type TeamHealthStatus = "alive" | "asleep" | "exited";
+
+export interface TeamMemberHealth {
+  name: string;
+  status: "active" | "idle" | "offline";
+  lastSeen: string | null;
+}
 
 export interface TeamHealth {
   teamName: string;
@@ -134,6 +193,8 @@ export interface TeamHealth {
   memberCount: number;
   pendingTasks: number;
   activeTasks: number;
+  staleTasks: TeamTask[];
+  memberHealth: TeamMemberHealth[];
 }
 
 export interface WakeRequest {
