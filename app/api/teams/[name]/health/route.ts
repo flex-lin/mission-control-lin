@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readTeamConfig, readTaskList, getTeamLastActivity } from "@/lib/claude-files";
 import { ok, notFound, serverError } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
-import { sessionExists, getSessionName, sessionProcessAlive, anyTeamPaneAlive } from "@/lib/tmux-manager";
+import { sessionExists, getSessionName, sessionProcessAlive, anyTeamPaneAlive, killAllTeamSessions } from "@/lib/tmux-manager";
 import { getLeaderSessionName, resumeTeamAsLeader, personaToLaunchable } from "@/lib/agent-launcher";
 import {
   detectSleep,
@@ -107,6 +107,11 @@ export async function GET(
       status = "completed";
     } else if (tasks.length === 0 && !anyTmuxAlive) {
       status = "completed";
+    }
+
+    // Clean up lingering tmux sessions for completed teams
+    if (status === "completed") {
+      killAllTeamSessions(name);
     }
 
     // Find stale in-progress tasks

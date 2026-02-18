@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readTeamConfig } from "@/lib/claude-files";
 import { ok, notFound, err, serverError } from "@/lib/api-helpers";
+import { killAllTeamSessions } from "@/lib/tmux-manager";
 import fs from "fs";
 import path from "path";
 
@@ -20,7 +21,13 @@ export async function POST(
     const team = readTeamConfig(name);
     if (!team) return notFound(`Team "${name}" not found`);
 
-    const body = await req.json() as { recipient?: string; reason?: string };
+    const body = await req.json() as { recipient?: string; reason?: string; force?: boolean };
+
+    // Force mode: kill all tmux sessions for the team immediately
+    if (body.force) {
+      const killed = killAllTeamSessions(name);
+      return ok({ status: "force_killed", killed });
+    }
 
     if (!body.recipient || typeof body.recipient !== "string") {
       return err("recipient is required", "VALIDATION_ERROR");

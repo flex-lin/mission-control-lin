@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readTeamConfig, readTaskList } from "@/lib/claude-files";
 import { ok, notFound, serverError } from "@/lib/api-helpers";
+import { killAllTeamSessions } from "@/lib/tmux-manager";
 import fs from "fs";
 import path from "path";
 
@@ -45,6 +46,9 @@ export async function DELETE(
     if (!fs.existsSync(path.join(teamDir, "config.json"))) {
       return notFound(`Team "${name}" not found`);
     }
+
+    // Kill all tmux sessions for this team before removing files
+    killAllTeamSessions(safe);
 
     if (fs.existsSync(teamDir)) {
       fs.rmSync(teamDir, { recursive: true });

@@ -162,6 +162,42 @@ export function sendRawKey(sessionName: string, key: string): void {
   }
 }
 
+// ── Bulk cleanup helpers ────────────────────────────────────────────────────
+
+/**
+ * Kill all tmux sessions belonging to a team (members + leader).
+ * Returns the list of session names that were targeted.
+ */
+export function killAllTeamSessions(teamName: string): string[] {
+  const killed: string[] = [];
+  const liveSessions = listTeamSessions(teamName);
+  for (const s of liveSessions) {
+    killSession(s.sessionName);
+    killed.push(s.sessionName);
+  }
+  // Failsafe: also kill leader explicitly in case prefix didn't match
+  const leaderSession = getSessionName(teamName, "leader");
+  if (!killed.includes(leaderSession)) {
+    killSession(leaderSession);
+    killed.push(leaderSession);
+  }
+  return killed;
+}
+
+export async function killAllTeamSessionsAsync(teamName: string): Promise<string[]> {
+  const killed: string[] = [];
+  const liveSessions = await listTeamSessionsAsync(teamName);
+  for (const s of liveSessions) {
+    killed.push(s.sessionName);
+  }
+  const leaderSession = getSessionName(teamName, "leader");
+  if (!killed.includes(leaderSession)) {
+    killed.push(leaderSession);
+  }
+  await Promise.allSettled(killed.map((s) => killSessionAsync(s)));
+  return killed;
+}
+
 // ── Async variants (non-blocking, for API routes) ──────────────────────────
 
 export async function killSessionAsync(sessionName: string): Promise<void> {
