@@ -69,8 +69,10 @@ export async function GET(): Promise<NextResponse> {
       const leaderAlive = sessionExists(leaderSessionName) && sessionProcessAlive(leaderSessionName);
       if (leaderAlive) return true;
 
-      if (t.health.lastActivity) {
-        const elapsed = Date.now() - new Date(t.health.lastActivity).getTime();
+      // Determine staleness: use lastActivity if available, fall back to createdAt
+      const activityTime = t.health.lastActivity ?? t.createdAt;
+      if (activityTime) {
+        const elapsed = Date.now() - new Date(activityTime).getTime();
         if (elapsed > STALENESS_MS) {
           try {
             archiveTeam(t.name);
@@ -78,6 +80,14 @@ export async function GET(): Promise<NextResponse> {
           } catch {
             // archive failed, keep in list
           }
+        }
+      } else {
+        // No activity and no creation time — archive immediately
+        try {
+          archiveTeam(t.name);
+          return false;
+        } catch {
+          // archive failed, keep in list
         }
       }
       return true;

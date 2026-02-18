@@ -18,6 +18,8 @@ export interface Team {
   createdAt?: string;
 }
 
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
+
 export interface TeamTask {
   id: string;
   subject: string;
@@ -27,6 +29,8 @@ export interface TeamTask {
   blockedBy?: string[];
   blocks?: string[];
   activeForm?: string;
+  priority?: TaskPriority;
+  order?: number;
   metadata?: Record<string, unknown>;
 }
 

@@ -377,6 +377,13 @@ export function readTaskList(teamName: string): TeamTask[] {
   return tasks;
 }
 
+export function readTask(teamName: string, taskId: string): TeamTask | null {
+  const safe = safeName(teamName);
+  const safeId = safeName(String(taskId));
+  const filePath = path.join(tasksDir(safe), `${safeId}.json`);
+  return readJson<TeamTask>(filePath);
+}
+
 export function writeTask(teamName: string, task: TeamTask): void {
   const safe = safeName(teamName);
   const dir = tasksDir(safe);

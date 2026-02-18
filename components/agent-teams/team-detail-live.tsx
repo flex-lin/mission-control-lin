@@ -2,7 +2,6 @@
 
 import { useAutoRefresh } from "@/lib/hooks/use-auto-refresh"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Table,
@@ -18,6 +17,7 @@ import { CreateTaskForm } from "@/components/agent-teams/create-task-form"
 import { ShutdownButton } from "@/components/agent-teams/shutdown-button"
 import { TeamHealthPanel } from "@/components/agent-teams/team-health-panel"
 import { TmuxSessionBar } from "@/components/agent-teams/tmux-session-bar"
+import { TaskRowEditable } from "@/components/agent-teams/task-row-editable"
 import { AlertCircle, CheckCircle2, Play } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -39,15 +39,6 @@ interface TeamDetailLiveProps {
 
 interface TeamWithTasks extends Team {
   tasks: TeamTask[]
-}
-
-function statusBadgeVariant(status: TeamTask["status"]) {
-  switch (status) {
-    case "completed": return "success" as const
-    case "in_progress": return "default" as const
-    case "pending": return "warning" as const
-    case "deleted": return "outline" as const
-  }
 }
 
 export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
@@ -200,30 +191,28 @@ export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
                           <TableHead>Subject</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Owner</TableHead>
+                          <TableHead className="w-20">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {tasks.map((task) => (
-                          <TableRow key={task.id}>
-                            <TableCell className="text-muted-foreground">{task.id}</TableCell>
-                            <TableCell className="max-w-xs">
-                              <p className="truncate text-sm">{task.subject}</p>
-                              {task.description && (
-                                <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                                  {task.description}
-                                </p>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={statusBadgeVariant(task.status)} className="text-[10px]">
-                                {task.status.replace("_", " ")}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">
-                              {task.owner ?? "—"}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {(() => {
+                          const pendingIds = tasks.filter((t) => t.status === "pending").map((t) => t.id)
+                          return tasks.map((task) => {
+                            const pendingIdx = pendingIds.indexOf(task.id)
+                            return (
+                              <TaskRowEditable
+                                key={task.id}
+                                task={task}
+                                teamName={teamForForms.name}
+                                isFirst={pendingIdx === 0}
+                                isLast={pendingIdx === pendingIds.length - 1}
+                                canReorder={pendingIds.length > 1}
+                                pendingTaskIds={pendingIds}
+                                onUpdated={() => router.refresh()}
+                              />
+                            )
+                          })
+                        })()}
                       </TableBody>
                     </Table>
                   )}

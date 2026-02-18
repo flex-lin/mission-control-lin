@@ -19,7 +19,13 @@ export async function GET(
     if (!team) return notFound(`Team "${name}" not found`);
 
     const tasks = readTaskList(name);
-    const sorted = tasks.sort((a, b) => Number(a.id) - Number(b.id));
+    // Sort by explicit order if set, then by id as fallback
+    const sorted = tasks.sort((a, b) => {
+      const aOrder = a.order ?? Number(a.id);
+      const bOrder = b.order ?? Number(b.id);
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return Number(a.id) - Number(b.id);
+    });
     return ok(sorted, { count: sorted.length });
   } catch (e) {
     return serverError(e);
@@ -56,6 +62,8 @@ export async function POST(
       blockedBy: body.blockedBy ?? [],
       blocks: body.blocks ?? [],
       activeForm: body.activeForm,
+      priority: body.priority,
+      order: body.order,
       metadata: body.metadata,
     };
 

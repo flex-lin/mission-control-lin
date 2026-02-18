@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readTeamConfig, readTaskList, writeTask } from "@/lib/claude-files";
+import { readTeamConfig, readTask, writeTask } from "@/lib/claude-files";
 import { ok, notFound, err, serverError } from "@/lib/api-helpers";
 import fs from "fs";
 import path from "path";
@@ -16,8 +16,7 @@ export async function POST(
     const team = readTeamConfig(name);
     if (!team) return notFound(`Team "${name}" not found`);
 
-    const tasks = readTaskList(name);
-    const task = tasks.find((t) => t.id === id);
+    const task = readTask(name, id);
     if (!task) return notFound(`Task "${id}" not found in team "${name}"`);
 
     const body = (await req.json()) as {
