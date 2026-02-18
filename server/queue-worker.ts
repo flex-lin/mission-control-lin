@@ -1,6 +1,5 @@
 /**
- * Queue Worker — runs inside the Next.js process (via instrumentation.ts)
- * or standalone (via pnpm queue).
+ * Queue Worker — standalone process (via pnpm queue).
  *
  * Picks up queued tasks one at a time per repository. Spawns Claude teams,
  * monitors completion, then moves to the next task.
@@ -199,7 +198,8 @@ async function spawnTeamForQueue(
     description: string;
     personas: Array<{ name: string; role: string; agentType: string; description: string }>;
     initialTasks: Array<{ subject: string; description: string; assignTo?: string }>;
-  }
+  },
+  sourceTaskId?: number
 ): Promise<void> {
   const { launchTeamAsLeader, personaToLaunchable, getLeaderSessionName } = await import("../lib/agent-launcher");
   const teamDir = path.join(CLAUDE_DIR, "teams", teamName);
@@ -229,6 +229,7 @@ async function spawnTeamForQueue(
       members,
       projectPath,
       createdAt: new Date().toISOString(),
+      ...(sourceTaskId != null ? { sourceTaskId } : {}),
     }, null, 2),
     "utf-8"
   );
@@ -265,14 +266,126 @@ async function spawnTeamForQueue(
   );
 }
 
+// ── Team Monitoring ──────────────────────────────────────────────────────────
+
+/**
+ * Monitor an already-running team until completion, failure, or timeout.
+ * Used by both processTask() (after spawning) and crash recovery (for
+ * teams whose tmux leader is still alive after a worker restart).
+ *
+ * Returns the final status: "completed" or "failed".
+ */
+async function monitorTeam(
+  db: Database.Database,
+  taskId: number,
+  teamName: string,
+  startTime: number
+): Promise<"completed" | "failed"> {
+  const { sessionExists, sessionProcessAlive } = await import("../lib/tmux-manager");
+  const { getLeaderSessionName } = await import("../lib/agent-launcher");
+
+  while (true) {
+    await sleep(MONITOR_INTERVAL_MS);
+    writeHeartbeat();
+
+    const elapsed = Date.now() - startTime;
+    const taskState = getTaskCompletionState(teamName);
+    const leaderSession = getLeaderSessionName(teamName);
+
+    // Check if tasks are done (either all completed or team called TeamDelete)
+    if (taskState === "completed" || taskState === "cleaned_up" || taskState === "no_tasks") {
+      const reason = taskState === "cleaned_up"
+        ? "Team cleaned up (TeamDelete called)"
+        : "All tasks completed successfully";
+
+      if (taskState === "completed") {
+        // Tasks still on disk and all completed — give leader time to build/commit
+        console.log(`[queue] All tasks completed for team ${teamName}`);
+        await sleep(30_000);
+
+        if (sessionExists(leaderSession) && sessionProcessAlive(leaderSession)) {
+          console.log(`[queue] Leader still running (likely verifying/committing), waiting...`);
+          await sleep(60_000);
+        }
+      } else {
+        // Task dir gone or empty — team already cleaned up, brief grace period
+        console.log(`[queue] ${reason} for team ${teamName}`);
+        await sleep(5_000);
+      }
+
+      db.prepare(
+        `UPDATE queued_tasks SET status = 'completed', result = ?, completed_at = datetime('now') WHERE id = ?`
+      ).run(reason, taskId);
+
+      console.log(`[queue] Task #${taskId} completed: ${reason}`);
+      return "completed";
+    }
+
+    // Leader liveness: check both tmux session AND whether claude process is alive
+    // (tmux session can linger as a shell prompt after claude exits)
+    const leaderAlive = sessionExists(leaderSession) && sessionProcessAlive(leaderSession);
+
+    if (!leaderAlive) {
+      const fileTasks = readTeamTasks(teamName);
+      const pending = fileTasks.filter((t) => t.status === "pending" || t.status === "in_progress");
+
+      if (pending.length > 0) {
+        const msg = `Leader exited with ${pending.length} unfinished tasks`;
+        console.error(`[queue] ${msg} for team ${teamName}`);
+        db.prepare(
+          `UPDATE queued_tasks SET status = 'failed', result = ?, completed_at = datetime('now') WHERE id = ?`
+        ).run(msg, taskId);
+        return "failed";
+      } else {
+        db.prepare(
+          `UPDATE queued_tasks SET status = 'completed', result = ?, completed_at = datetime('now') WHERE id = ?`
+        ).run("All tasks completed, leader exited", taskId);
+        console.log(`[queue] Task #${taskId} completed (leader exited after finishing)`);
+        return "completed";
+      }
+    }
+
+    if (elapsed > TASK_TIMEOUT_MS) {
+      console.error(`[queue] Task #${taskId} timed out after ${Math.round(elapsed / 60000)} min`);
+      db.prepare(
+        `UPDATE queued_tasks SET status = 'failed', result = ?, completed_at = datetime('now') WHERE id = ?`
+      ).run(`Timed out after ${Math.round(elapsed / 60000)} minutes`, taskId);
+      return "failed";
+    }
+
+    console.log(`[queue] Task #${taskId} still running (${Math.round(elapsed / 60000)}min elapsed)`);
+  }
+}
+
 // ── Core Queue Processing ────────────────────────────────────────────────────
 
 async function processTask(db: Database.Database, task: QueuedTaskRow): Promise<void> {
   console.log(`[queue] Processing task #${task.id}: "${task.goal}"`);
 
-  db.prepare(
-    `UPDATE queued_tasks SET status = 'running', started_at = datetime('now') WHERE id = ?`
+  // One-team-per-task: atomically claim the task with a CAS (compare-and-swap).
+  // Only transitions pending→running; if another worker already claimed it, bail out.
+  const claimed = db.prepare(
+    `UPDATE queued_tasks SET status = 'running', started_at = datetime('now') WHERE id = ? AND status = 'pending'`
   ).run(task.id);
+  if (claimed.changes === 0) {
+    console.log(`[queue] Task #${task.id} already claimed by another worker, skipping`);
+    return;
+  }
+
+  // File-based duplicate check: if a team config already references this task ID, skip
+  try {
+    const { findTeamBySourceTaskId } = require("../lib/claude-files");
+    const existingTeam = findTeamBySourceTaskId(task.id);
+    if (existingTeam) {
+      console.log(`[queue] Task #${task.id} already has team "${existingTeam}" on disk, skipping`);
+      db.prepare(
+        `UPDATE queued_tasks SET status = 'failed', result = ?, completed_at = datetime('now') WHERE id = ?`
+      ).run(`Duplicate: team "${existingTeam}" already exists for this task`, task.id);
+      return;
+    }
+  } catch {
+    // Non-critical — file check is a safety net, DB CAS is the primary guard
+  }
 
   // Declared outside try so it's accessible in finally for cleanup
   let teamName: string | null = null;
@@ -294,83 +407,9 @@ async function processTask(db: Database.Database, task: QueuedTaskRow): Promise<
     ).run(teamName, task.id);
 
     console.log(`[queue] Spawning team ${teamName} at ${task.project_path}`);
-    await spawnTeamForQueue(teamName, task.goal, task.project_path, plan);
+    await spawnTeamForQueue(teamName, task.goal, task.project_path, plan, task.id);
 
-    const startTime = Date.now();
-    const { sessionExists, sessionProcessAlive } = await import("../lib/tmux-manager");
-    const { getLeaderSessionName } = await import("../lib/agent-launcher");
-
-    while (true) {
-      await sleep(MONITOR_INTERVAL_MS);
-      writeHeartbeat();
-
-      const elapsed = Date.now() - startTime;
-      const taskState = getTaskCompletionState(teamName);
-      const leaderSession = getLeaderSessionName(teamName);
-
-      // Check if tasks are done (either all completed or team called TeamDelete)
-      if (taskState === "completed" || taskState === "cleaned_up" || taskState === "no_tasks") {
-        const reason = taskState === "cleaned_up"
-          ? "Team cleaned up (TeamDelete called)"
-          : "All tasks completed successfully";
-
-        if (taskState === "completed") {
-          // Tasks still on disk and all completed — give leader time to build/commit
-          console.log(`[queue] All tasks completed for team ${teamName}`);
-          await sleep(30_000);
-
-          if (sessionExists(leaderSession) && sessionProcessAlive(leaderSession)) {
-            console.log(`[queue] Leader still running (likely verifying/committing), waiting...`);
-            await sleep(60_000);
-          }
-        } else {
-          // Task dir gone or empty — team already cleaned up, brief grace period
-          console.log(`[queue] ${reason} for team ${teamName}`);
-          await sleep(5_000);
-        }
-
-        db.prepare(
-          `UPDATE queued_tasks SET status = 'completed', result = ?, completed_at = datetime('now') WHERE id = ?`
-        ).run(reason, task.id);
-
-        console.log(`[queue] Task #${task.id} completed: ${reason}`);
-        break;
-      }
-
-      // Leader liveness: check both tmux session AND whether claude process is alive
-      // (tmux session can linger as a shell prompt after claude exits)
-      const leaderAlive = sessionExists(leaderSession) && sessionProcessAlive(leaderSession);
-
-      if (!leaderAlive) {
-        const fileTasks = readTeamTasks(teamName);
-        const pending = fileTasks.filter((t) => t.status === "pending" || t.status === "in_progress");
-
-        if (pending.length > 0) {
-          const msg = `Leader exited with ${pending.length} unfinished tasks`;
-          console.error(`[queue] ${msg} for team ${teamName}`);
-          db.prepare(
-            `UPDATE queued_tasks SET status = 'failed', result = ?, completed_at = datetime('now') WHERE id = ?`
-          ).run(msg, task.id);
-          break;
-        } else {
-          db.prepare(
-            `UPDATE queued_tasks SET status = 'completed', result = ?, completed_at = datetime('now') WHERE id = ?`
-          ).run("All tasks completed, leader exited", task.id);
-          console.log(`[queue] Task #${task.id} completed (leader exited after finishing)`);
-          break;
-        }
-      }
-
-      if (elapsed > TASK_TIMEOUT_MS) {
-        console.error(`[queue] Task #${task.id} timed out after ${Math.round(elapsed / 60000)} min`);
-        db.prepare(
-          `UPDATE queued_tasks SET status = 'failed', result = ?, completed_at = datetime('now') WHERE id = ?`
-        ).run(`Timed out after ${Math.round(elapsed / 60000)} minutes`, task.id);
-        break;
-      }
-
-      console.log(`[queue] Task #${task.id} still running (${Math.round(elapsed / 60000)}min elapsed)`);
-    }
+    await monitorTeam(db, task.id, teamName, Date.now());
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error(`[queue] Task #${task.id} failed: ${msg}`);
@@ -395,15 +434,57 @@ async function runQueueWorker(): Promise<void> {
   }
   workerRunning = true;
 
-  console.log("[queue] Queue worker starting (embedded in Next.js)...");
+  console.log("[queue] Queue worker starting (standalone)...");
   const db = openDb();
 
-  // Crash recovery: mark stuck running tasks as failed
+  // Crash recovery: check stuck 'running' tasks from before the restart.
+  // If their tmux leader is still alive, resume monitoring instead of killing them.
   const stuckTasks = db.prepare(
     `SELECT * FROM queued_tasks WHERE status = 'running'`
   ).all() as QueuedTaskRow[];
 
+  const recoveryPromises: Promise<void>[] = [];
+
   for (const stuck of stuckTasks) {
+    if (stuck.team_name) {
+      const { sessionExists, sessionProcessAlive } = await import("../lib/tmux-manager");
+      const { getLeaderSessionName } = await import("../lib/agent-launcher");
+      const leaderSession = getLeaderSessionName(stuck.team_name);
+      const leaderAlive = sessionExists(leaderSession) && sessionProcessAlive(leaderSession);
+
+      if (leaderAlive) {
+        // Leader is still running — resume monitoring it
+        console.log(`[queue] Task #${stuck.id} team "${stuck.team_name}" leader still alive, resuming monitoring`);
+        recoveryPromises.push(
+          monitorTeam(db, stuck.id, stuck.team_name, Date.now()).then((status) => {
+            console.log(`[queue] Recovered task #${stuck.id} finished with status: ${status}`);
+            console.log(`[queue] Cleaning up team ${stuck.team_name}`);
+            cleanupTeam(stuck.team_name!);
+          }).catch((e) => {
+            const msg = e instanceof Error ? e.message : String(e);
+            console.error(`[queue] Recovered task #${stuck.id} monitor failed: ${msg}`);
+            db.prepare(
+              `UPDATE queued_tasks SET status = 'failed', result = ?, completed_at = datetime('now') WHERE id = ?`
+            ).run(`Monitor failed after recovery: ${msg}`, stuck.id);
+            cleanupTeam(stuck.team_name!);
+          })
+        );
+        continue;
+      }
+
+      // Leader is dead — check task completion state
+      const taskState = getTaskCompletionState(stuck.team_name);
+      if (taskState === "completed" || taskState === "cleaned_up") {
+        console.log(`[queue] Task #${stuck.id} team "${stuck.team_name}" leader dead but tasks done, marking completed`);
+        db.prepare(
+          `UPDATE queued_tasks SET status = 'completed', result = ?, completed_at = datetime('now') WHERE id = ?`
+        ).run("All tasks completed (leader exited before worker restart)", stuck.id);
+        cleanupTeam(stuck.team_name);
+        continue;
+      }
+    }
+
+    // No team, or leader dead with pending tasks — mark as failed (original behavior)
     console.log(`[queue] Found stuck running task #${stuck.id}, marking as failed`);
     db.prepare(
       `UPDATE queued_tasks SET status = 'failed', result = ?, completed_at = datetime('now') WHERE id = ?`
@@ -411,7 +492,7 @@ async function runQueueWorker(): Promise<void> {
     if (stuck.team_name) cleanupTeam(stuck.team_name);
   }
 
-  // Main poll loop — runs forever alongside Next.js
+  // Main poll loop
   while (true) {
     writeHeartbeat();
 

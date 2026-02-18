@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ok, serverError } from "@/lib/api-helpers";
-import { getCutoffDate } from "@/lib/analytics-helpers";
+import { getCutoffDate, toLocalDateString } from "@/lib/analytics-helpers";
 import type { ClaudeCodeSummary } from "@/types";
 
 interface ModelBreakdownEntry {
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
       totalWriteRejected += m.writeToolRejected;
 
       // Daily
-      const date = m.date.toISOString().slice(0, 10);
+      const date = toLocalDateString(m.date);
       const daily = dailyMap.get(date) ?? { sessions: 0, linesAdded: 0, linesRemoved: 0, commits: 0, pullRequests: 0 };
       daily.sessions += m.numSessions;
       daily.linesAdded += m.linesAdded;

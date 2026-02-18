@@ -96,7 +96,7 @@ export function TeamBarChart({ data }: TeamBarChartProps) {
   const chartData = data
     .sort((a, b) => b.totalTokens - a.totalTokens)
     .slice(0, 8)
-    .map((d) => ({ name: d.teamName, tokens: d.totalTokens }))
+    .map((d) => ({ name: d.teamName, tokens: d.totalTokens, cost: d.estimatedCost }))
 
   return (
     <ResponsiveContainer width="100%" height={220}>
@@ -114,7 +114,18 @@ export function TeamBarChart({ data }: TeamBarChartProps) {
         />
         <Tooltip
           {...TOOLTIP_STYLE}
-          formatter={(v) => [`${Number(v).toLocaleString()} tokens`, "Tokens"]}
+          content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null
+            const tokens = Number(payload[0].value)
+            const cost = (payload[0].payload as { cost?: number }).cost ?? 0
+            return (
+              <div style={TOOLTIP_STYLE.contentStyle} className="px-3 py-2">
+                <p className="text-xs font-medium">{label}</p>
+                <p className="text-xs text-muted-foreground">{tokens.toLocaleString()} tokens</p>
+                <p className="text-xs text-emerald-400">${cost.toFixed(4)}</p>
+              </div>
+            )
+          }}
         />
         <Bar dataKey="tokens" fill="#60a5fa" radius={[3, 3, 0, 0]} />
       </BarChart>

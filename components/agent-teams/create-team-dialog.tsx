@@ -14,8 +14,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Sparkles, Loader2 } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Plus, Sparkles, Loader2, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
+import type { QueuedTask } from "@/types"
 
 interface CreateTeamDialogProps {
   triggerLabel?: string
@@ -28,6 +36,21 @@ export function CreateTeamDialog({ triggerLabel }: CreateTeamDialogProps) {
   const [description, setDescription] = useState("")
   const [loading, setLoading] = useState(false)
   const [suggesting, setSuggesting] = useState(false)
+  const [queuedTasks, setQueuedTasks] = useState<QueuedTask[]>([])
+  const [selectedTaskId, setSelectedTaskId] = useState<string>("")
+
+  const selectedTask = queuedTasks.find((t) => String(t.id) === selectedTaskId)
+  const taskAlreadyHasTeam = selectedTask?.teamName != null
+
+  async function loadQueuedTasks() {
+    try {
+      const res = await fetch("/api/queue?status=pending,running")
+      const json = await res.json()
+      setQueuedTasks(json.data ?? [])
+    } catch {
+      // Non-critical
+    }
+  }
 
   async function handleSuggestName() {
     if (!description.trim()) {
@@ -58,14 +81,20 @@ export function CreateTeamDialog({ triggerLabel }: CreateTeamDialogProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
+    if (taskAlreadyHasTeam) return
 
     setLoading(true)
 
     try {
+      const taskId = selectedTaskId && selectedTaskId !== "none" ? Number(selectedTaskId) : undefined
       const res = await fetch("/api/teams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), description: description.trim() }),
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim(),
+          queuedTaskId: taskId,
+        }),
       })
       const json = await res.json()
       if (!res.ok) {
@@ -85,7 +114,11 @@ export function CreateTeamDialog({ triggerLabel }: CreateTeamDialogProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => {
+      setOpen(v)
+      if (v) loadQueuedTasks()
+      if (!v) { setSelectedTaskId(""); setQueuedTasks([]) }
+    }}>
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1.5">
           <Plus className="h-3.5 w-3.5" />
@@ -135,11 +168,36 @@ export function CreateTeamDialog({ triggerLabel }: CreateTeamDialogProps) {
               rows={3}
             />
           </div>
+          {queuedTasks.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Link to queued task (optional)</Label>
+              <Select value={selectedTaskId} onValueChange={setSelectedTaskId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="No linked task" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No linked task</SelectItem>
+                  {queuedTasks.map((t) => (
+                    <SelectItem key={t.id} value={String(t.id)} disabled={t.teamName != null}>
+                      #{t.id}: {t.goal.slice(0, 50)}{t.goal.length > 50 ? "..." : ""}
+                      {t.teamName ? " (has team)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {taskAlreadyHasTeam && (
+                <div className="flex items-center gap-1.5 rounded-md bg-amber-500/10 px-2 py-1.5 text-xs text-amber-500">
+                  <AlertTriangle className="h-3 w-3 shrink-0" />
+                  This task already has team &ldquo;{selectedTask?.teamName}&rdquo; — only one team per task.
+                </div>
+              )}
+            </div>
+          )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !name.trim()}>
+            <Button type="submit" disabled={loading || !name.trim() || taskAlreadyHasTeam}>
               {loading ? "Creating…" : "Create Team"}
             </Button>
           </DialogFooter>

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ok, serverError } from "@/lib/api-helpers";
 import { computeCost } from "@/lib/pricing";
-import { getCutoffDate } from "@/lib/analytics-helpers";
+import { getCutoffDate, toLocalDateString } from "@/lib/analytics-helpers";
 import type { UsageDailySummary } from "@/types";
 
 // GET /api/usage/summary?period=7d|30d|1m|all&source=api|proxy|all
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       // Group by date
       const byDate = new Map<string, { uncached: number; cacheRead: number; cacheCreation: number; output: number }>();
       for (const r of usageRecords) {
-        const date = r.bucketStart.toISOString().slice(0, 10);
+        const date = toLocalDateString(r.bucketStart);
         const existing = byDate.get(date) ?? { uncached: 0, cacheRead: 0, cacheCreation: 0, output: 0 };
         existing.uncached += r.uncachedInputTokens;
         existing.cacheRead += r.cacheReadInputTokens;
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       });
       const costByDate = new Map<string, number>();
       for (const c of costRecords) {
-        const date = c.bucketStart.toISOString().slice(0, 10);
+        const date = toLocalDateString(c.bucketStart);
         costByDate.set(date, (costByDate.get(date) ?? 0) + c.amountCents);
       }
 
@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
 
       const byDate = new Map<string, { input: number; cacheRead: number; cacheCreation: number; output: number; cost: number }>();
       for (const log of logs) {
-        const date = log.timestamp.toISOString().slice(0, 10);
+        const date = toLocalDateString(log.timestamp);
         const existing = byDate.get(date) ?? { input: 0, cacheRead: 0, cacheCreation: 0, output: 0, cost: 0 };
         existing.input += log.inputTokens;
         existing.cacheRead += log.cacheReadTokens;

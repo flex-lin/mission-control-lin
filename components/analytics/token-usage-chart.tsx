@@ -34,7 +34,7 @@ export function TokenUsageChart({ data }: TokenUsageChartProps) {
           dataKey="date"
           tick={{ fill: "hsl(215.4 16.3% 56.9%)", fontSize: 11 }}
           tickFormatter={(v: string) => {
-            try { return format(new Date(v), "MMM d") } catch { return v }
+            try { return format(new Date(v + "T00:00:00"), "MMM d") } catch { return v }
           }}
         />
         <YAxis
@@ -51,7 +51,7 @@ export function TokenUsageChart({ data }: TokenUsageChartProps) {
           labelStyle={{ color: "hsl(213 31% 91%)" }}
           labelFormatter={(v) => {
             const s = String(v)
-            try { return format(new Date(s), "MMM d, yyyy") } catch { return s }
+            try { return format(new Date(s + "T00:00:00"), "MMM d, yyyy") } catch { return s }
           }}
         />
         <Legend wrapperStyle={{ fontSize: 12, color: "hsl(215.4 16.3% 56.9%)" }} />

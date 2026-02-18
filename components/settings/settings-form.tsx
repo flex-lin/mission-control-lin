@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useSettings } from "@/lib/settings-context"
 import type { Settings } from "@/types"
-import { Save, RotateCcw } from "lucide-react"
+import { Save, RotateCcw, Moon } from "lucide-react"
 
 const DEFAULT_PROXY_PORT = 8787
 const DEFAULT_PROXY_TARGET = "https://api.anthropic.com"
@@ -30,6 +30,10 @@ const defaultSettings: Settings = {
     enabled: false,
     port: DEFAULT_PROXY_PORT,
     targetUrl: DEFAULT_PROXY_TARGET,
+  },
+  backgroundExecution: {
+    enabled: false,
+    sleepPreventionMethod: "auto",
   },
   indexedProjects: [],
 }
@@ -304,6 +308,78 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Background Execution */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Moon className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-semibold">Background Execution</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Keep agent teams running when your computer goes to sleep. Uses system-level sleep
+            prevention to ensure long-running tasks complete uninterrupted.
+          </p>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Enable Sleep Prevention</Label>
+              <p className="text-xs text-muted-foreground">
+                Prevent system sleep while agent teams are active
+              </p>
+            </div>
+            <Switch
+              checked={settings.backgroundExecution?.enabled ?? false}
+              onCheckedChange={(checked) =>
+                setSettings((s) => ({
+                  ...s,
+                  backgroundExecution: {
+                    enabled: checked,
+                    sleepPreventionMethod: s.backgroundExecution?.sleepPreventionMethod ?? "auto",
+                  },
+                }))
+              }
+            />
+          </div>
+
+          {settings.backgroundExecution?.enabled && (
+            <>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Prevention Method</Label>
+                  <p className="text-xs text-muted-foreground">
+                    How to prevent the system from sleeping
+                  </p>
+                </div>
+                <Select
+                  value={settings.backgroundExecution?.sleepPreventionMethod ?? "auto"}
+                  onValueChange={(v) =>
+                    setSettings((s) => ({
+                      ...s,
+                      backgroundExecution: {
+                        enabled: s.backgroundExecution?.enabled ?? false,
+                        sleepPreventionMethod: v as "caffeinate" | "systemd-inhibit" | "auto",
+                      },
+                    }))
+                  }
+                >
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Auto-detect</SelectItem>
+                    <SelectItem value="caffeinate">caffeinate (macOS)</SelectItem>
+                    <SelectItem value="systemd-inhibit">systemd-inhibit (Linux)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

@@ -2,21 +2,55 @@ import { NextRequest, NextResponse } from "next/server";
 import { ok, err, created, serverError } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
 
+const ACTIVE_STATUSES = ["pending", "running"];
+const COMPLETED_STATUSES = ["completed", "failed", "cancelled"];
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(req.url);
     const statusFilter = searchParams.get("status");
+    const group = searchParams.get("group");
 
-    const where = statusFilter
-      ? { status: { in: statusFilter.split(",") } }
-      : {};
+    let where: Record<string, unknown> = {};
 
-    const tasks = await db.queuedTask.findMany({
-      where,
-      orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
-    });
+    if (group === "active") {
+      where = { status: { in: ACTIVE_STATUSES } };
+    } else if (group === "completed") {
+      where = { status: { in: COMPLETED_STATUSES } };
+    } else if (statusFilter) {
+      where = { status: { in: statusFilter.split(",") } };
+    }
 
-    return ok(tasks);
+    const orderBy =
+      group === "completed"
+        ? [{ completedAt: "desc" as const }, { createdAt: "desc" as const }]
+        : [{ priority: "desc" as const }, { createdAt: "asc" as const }];
+
+    const [tasks, counts] = await Promise.all([
+      db.queuedTask.findMany({ where, orderBy }),
+      db.queuedTask.groupBy({
+        by: ["status"],
+        _count: { status: true },
+      }),
+    ]);
+
+    const countMap = Object.fromEntries(
+      counts.map((c) => [c.status, c._count.status])
+    );
+
+    const meta = {
+      activeCounts: {
+        pending: countMap["pending"] ?? 0,
+        running: countMap["running"] ?? 0,
+      },
+      completedCounts: {
+        completed: countMap["completed"] ?? 0,
+        failed: countMap["failed"] ?? 0,
+        cancelled: countMap["cancelled"] ?? 0,
+      },
+    };
+
+    return ok(tasks, meta);
   } catch (e) {
     return serverError(e);
   }

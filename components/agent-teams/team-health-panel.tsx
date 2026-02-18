@@ -14,7 +14,9 @@ import { TeamHealthBadge } from "@/components/agent-teams/team-health-badge"
 import { WakeButton } from "@/components/agent-teams/wake-button"
 import { StuckTasksFeed } from "@/components/agent-teams/stuck-tasks-feed"
 import { TmuxAttachBar } from "@/components/agent-teams/tmux-attach-bar"
-import type { TeamHealthStatus, TeamTask } from "@/types"
+import { Badge } from "@/components/ui/badge"
+import { Moon } from "lucide-react"
+import type { BackgroundExecutionStatus, TeamHealthStatus, TeamTask } from "@/types"
 
 interface MemberHealth {
   name: string
@@ -30,12 +32,19 @@ interface LeaderSession {
   attachCmd: string
 }
 
+interface BackgroundExecutionInfo {
+  enabled: boolean
+  status: BackgroundExecutionStatus
+  sleepPrevented: boolean
+}
+
 interface TeamHealthData {
   status: TeamHealthStatus
   lastActivity: string | null
   staleTasks: TeamTask[]
   memberHealth: MemberHealth[]
   leaderSession?: LeaderSession
+  backgroundExecution?: BackgroundExecutionInfo
 }
 
 interface TeamHealthPanelProps {
@@ -109,6 +118,24 @@ export function TeamHealthPanel({ teamName }: TeamHealthPanelProps) {
               Last activity: {formatRelativeTime(data.lastActivity)}
             </span>
           </div>
+          {data.backgroundExecution?.enabled && (
+            <div className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2">
+              <div className="flex items-center gap-1.5">
+                <Moon className="h-3.5 w-3.5 text-indigo-400" />
+                <span className="text-xs text-muted-foreground">Background Execution</span>
+              </div>
+              <Badge
+                variant={data.backgroundExecution.sleepPrevented ? "default" : "secondary"}
+                className={`text-[10px] ${
+                  data.backgroundExecution.sleepPrevented
+                    ? "bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30"
+                    : ""
+                }`}
+              >
+                {data.backgroundExecution.sleepPrevented ? "Sleep prevented" : "Standby"}
+              </Badge>
+            </div>
+          )}
           {data.status !== "exited" && (
             <WakeButton teamName={teamName} />
           )}

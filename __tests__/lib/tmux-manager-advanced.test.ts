@@ -8,6 +8,11 @@ import { execSync } from "child_process";
 
 vi.mock("child_process", () => ({
   execSync: vi.fn(),
+  exec: vi.fn((cmd: string, opts: unknown, cb?: (err: Error | null, result: { stdout: string; stderr: string }) => void) => {
+    // Support both (cmd, cb) and (cmd, opts, cb) signatures
+    const callback = typeof opts === "function" ? opts : cb;
+    if (callback) callback(null, { stdout: "", stderr: "" });
+  }),
 }));
 
 const mockExecSync = vi.mocked(execSync);

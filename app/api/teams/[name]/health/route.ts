@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readTeamConfig, readTaskList, getTeamLastActivity } from "@/lib/claude-files";
 import { ok, notFound, serverError } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
-import { sessionExists, getSessionName, sessionProcessAlive } from "@/lib/tmux-manager";
+import { sessionExists, getSessionName, sessionProcessAlive, anyTeamPaneAlive } from "@/lib/tmux-manager";
 import { getLeaderSessionName, resumeTeamAsLeader, personaToLaunchable } from "@/lib/agent-launcher";
 import {
   detectSleep,
@@ -83,7 +83,13 @@ export async function GET(
       return sessionExists(sn) && sessionProcessAlive(sn);
     });
 
-    const anyTmuxAlive = leaderTmuxAlive || anyMemberTmuxAlive;
+    // Fallback: check pane IDs from config (for external/cross-repo teams)
+    let paneBasedAlive = false;
+    if (!leaderTmuxAlive && !anyMemberTmuxAlive && team.members?.length) {
+      paneBasedAlive = anyTeamPaneAlive(team.members);
+    }
+
+    const anyTmuxAlive = leaderTmuxAlive || anyMemberTmuxAlive || paneBasedAlive;
 
     // Determine status
     let status: TeamHealthStatus = "asleep";
@@ -99,7 +105,7 @@ export async function GET(
     const tasks = readTaskList(name);
     if (tasks.length > 0 && tasks.every((t) => t.status === "completed" || t.status === "deleted")) {
       status = "completed";
-    } else if (tasks.length === 0 && !leaderTmuxAlive) {
+    } else if (tasks.length === 0 && !anyTmuxAlive) {
       status = "completed";
     }
 

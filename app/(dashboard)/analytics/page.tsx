@@ -5,7 +5,7 @@ import { IngestButton } from "@/components/analytics/ingest-button"
 import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard"
 import { db } from "@/lib/db"
 import { computeCost } from "@/lib/pricing"
-import { getCutoffDate, UNTRACKED_TEAM_LABEL } from "@/lib/analytics-helpers"
+import { getCutoffDate, toLocalDateString, UNTRACKED_TEAM_LABEL } from "@/lib/analytics-helpers"
 import type { DailyEntry, ModelEntry, TeamEntry, MemberEntry, ProxyLog } from "@/types"
 
 async function loadAnalytics() {
@@ -25,7 +25,7 @@ async function loadAnalytics() {
       _avg: { latencyMs: true },
     }),
     db.proxyLog.groupBy({
-      by: ["teamName"],
+      by: ["teamName", "model"],
       where: { timestamp: { gte: cutoff } },
       _sum: { inputTokens: true, outputTokens: true, cacheReadTokens: true, cacheCreationTokens: true },
       _count: { id: true },
@@ -46,7 +46,7 @@ async function loadAnalytics() {
   // Aggregate daily entries
   const byDate = new Map<string, DailyEntry>()
   for (const log of logs) {
-    const date = log.timestamp.toISOString().slice(0, 10)
+    const date = toLocalDateString(log.timestamp)
     const existing = byDate.get(date) ?? { date, totalInput: 0, totalOutput: 0, cacheReadTokens: 0, cacheCreationTokens: 0, estimatedCost: 0 }
     existing.totalInput += log.inputTokens + log.cacheReadTokens + log.cacheCreationTokens
     existing.totalOutput += log.outputTokens
@@ -76,18 +76,31 @@ async function loadAnalytics() {
     }
   })
 
-  // Team breakdown
-  const byTeam: TeamEntry[] = teamRows.map((r) => {
-    const input = (r._sum.inputTokens ?? 0) + (r._sum.cacheReadTokens ?? 0) + (r._sum.cacheCreationTokens ?? 0)
+  // Team breakdown (aggregate across models for cost computation)
+  const teamAgg = new Map<string, { totalInput: number; totalOutput: number; requests: number; estimatedCost: number }>()
+  for (const r of teamRows) {
+    const name = r.teamName ?? UNTRACKED_TEAM_LABEL
+    const baseInput = r._sum.inputTokens ?? 0
     const output = r._sum.outputTokens ?? 0
-    return {
-      teamName: r.teamName ?? UNTRACKED_TEAM_LABEL,
-      totalInput: input,
-      totalOutput: output,
-      totalTokens: input + output,
-      requests: r._count.id,
-    }
-  })
+    const cacheRead = r._sum.cacheReadTokens ?? 0
+    const cacheCreate = r._sum.cacheCreationTokens ?? 0
+    const input = baseInput + cacheRead + cacheCreate
+
+    const existing = teamAgg.get(name) ?? { totalInput: 0, totalOutput: 0, requests: 0, estimatedCost: 0 }
+    existing.totalInput += input
+    existing.totalOutput += output
+    existing.requests += r._count.id
+    existing.estimatedCost += computeCost(r.model, baseInput, output, cacheRead, cacheCreate)
+    teamAgg.set(name, existing)
+  }
+  const byTeam: TeamEntry[] = Array.from(teamAgg.entries()).map(([teamName, v]) => ({
+    teamName,
+    totalInput: v.totalInput,
+    totalOutput: v.totalOutput,
+    totalTokens: v.totalInput + v.totalOutput,
+    requests: v.requests,
+    estimatedCost: v.estimatedCost,
+  }))
 
   // Member breakdown (aggregate across models)
   const memberMap = new Map<string, MemberEntry>()

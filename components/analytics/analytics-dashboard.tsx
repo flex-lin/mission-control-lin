@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TokenUsageChart } from "@/components/analytics/token-usage-chart"
 import { ModelPieChart, TeamBarChart } from "@/components/analytics/model-breakdown-chart"
-import { TeamMemberChart } from "@/components/analytics/team-member-chart"
 import { RequestLogTable } from "@/components/analytics/request-log-table"
+import { UsageLimitsCard } from "@/components/analytics/usage-limits-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { useSettings } from "@/lib/settings-context"
+import { RepoUsageChart } from "@/components/analytics/repo-usage-chart"
 import type { ProxyLog, DailyEntry, ModelEntry, TeamEntry, MemberEntry } from "@/types"
 
 interface AnalyticsData {
@@ -114,7 +115,7 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
     }
   }, [period, loadData, settings.refreshInterval])
 
-  const { daily, byModel, byTeam, byMember, logs, totalInput, totalOutput, totalCost, totalRequests } = data
+  const { daily, byModel, byTeam, logs, totalInput, totalOutput, totalCost, totalRequests } = data
 
   return (
     <div className="space-y-6 p-6">
@@ -133,6 +134,9 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
           <span className="text-xs text-muted-foreground animate-pulse">Loading…</span>
         )}
       </div>
+
+      {/* Usage limits */}
+      <UsageLimitsCard />
 
       {/* Cost summary */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -210,13 +214,13 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
         </Card>
       </div>
 
-      {/* Per-member token usage */}
+      {/* Usage by Repo */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">Token Usage by Team Member</CardTitle>
+          <CardTitle className="text-sm font-semibold">Usage by Repo</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? <Skeleton className="h-[300px] w-full" /> : <TeamMemberChart data={byMember} />}
+          {loading ? <Skeleton className="h-[300px] w-full" /> : <RepoUsageChart data={byTeam} />}
         </CardContent>
       </Card>
 
@@ -256,43 +260,15 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
           <CardContent>
             <div className="space-y-2">
               {byTeam
-                .sort((a, b) => b.totalTokens - a.totalTokens)
+                .sort((a, b) => b.estimatedCost - a.estimatedCost)
                 .map((t) => (
                   <div key={t.teamName} className="flex items-center justify-between text-xs">
                     <span className="font-medium text-foreground">{t.teamName}</span>
                     <div className="flex gap-6 text-right">
-                      <span className="text-muted-foreground">{t.requests.toLocaleString()} requests</span>
-                      <span className="text-blue-400">{t.totalInput.toLocaleString()} in</span>
-                      <span className="text-emerald-400">{t.totalOutput.toLocaleString()} out</span>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Per-member cost breakdown table */}
-      {byMember.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Cost by Team Member</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {byMember
-                .sort((a, b) => b.estimatedCost - a.estimatedCost)
-                .map((m) => (
-                  <div key={`${m.teamName}:${m.memberName}`} className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground">{m.memberName}</span>
-                      <span className="text-muted-foreground">({m.teamName})</span>
-                    </div>
-                    <div className="flex gap-6 text-right">
-                      <span className="text-muted-foreground">{m.requests.toLocaleString()} req</span>
-                      <span>{m.totalTokens.toLocaleString()} tokens</span>
+                      <span className="text-muted-foreground">{t.requests.toLocaleString()} req</span>
+                      <span>{t.totalTokens.toLocaleString()} tokens</span>
                       <span className="w-20 font-medium text-emerald-400">
-                        ${m.estimatedCost.toFixed(4)}
+                        ${t.estimatedCost.toFixed(4)}
                       </span>
                     </div>
                   </div>

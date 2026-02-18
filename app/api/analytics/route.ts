@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ok, serverError } from "@/lib/api-helpers";
 import { computeCost } from "@/lib/pricing";
-import { getCutoffDate } from "@/lib/analytics-helpers";
+import { getCutoffDate, toLocalDateString } from "@/lib/analytics-helpers";
 
 // GET /api/analytics?period=7d|30d|1m
 // Returns daily aggregated data only. Use /by-model, /by-team, /by-member for grouped views.
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     // Aggregate by date
     const byDate = new Map<string, { totalInput: number; totalOutput: number; cacheReadTokens: number; cacheCreationTokens: number; estimatedCost: number }>();
     for (const log of logs) {
-      const date = log.timestamp.toISOString().slice(0, 10);
+      const date = toLocalDateString(log.timestamp);
       const existing = byDate.get(date) ?? { totalInput: 0, totalOutput: 0, cacheReadTokens: 0, cacheCreationTokens: 0, estimatedCost: 0 };
       byDate.set(date, {
         totalInput: existing.totalInput + log.inputTokens + log.cacheReadTokens + log.cacheCreationTokens,
