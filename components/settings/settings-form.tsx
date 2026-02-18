@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useTheme } from "next-themes"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,8 +16,23 @@ import {
 } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import { useSettings } from "@/lib/settings-context"
 import type { Settings } from "@/types"
-import { Save, Play, Square } from "lucide-react"
+import { Save, RotateCcw } from "lucide-react"
+
+const DEFAULT_PROXY_PORT = 8787
+const DEFAULT_PROXY_TARGET = "https://api.anthropic.com"
+
+const defaultSettings: Settings = {
+  theme: "dark",
+  refreshInterval: 30,
+  proxyConfig: {
+    enabled: false,
+    port: DEFAULT_PROXY_PORT,
+    targetUrl: DEFAULT_PROXY_TARGET,
+  },
+  indexedProjects: [],
+}
 
 interface ProxyStatus {
   running: boolean
@@ -31,15 +47,15 @@ interface SettingsFormProps {
 export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const [settings, setSettings] = useState<Settings>(initialSettings)
   const [saving, setSaving] = useState(false)
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
   const { setTheme } = useTheme()
+  const { refetch: refetchContext } = useSettings()
 
   // Proxy fields
   const [proxyPort, setProxyPort] = useState(
-    String(settings.proxyConfig?.port ?? 3001)
+    String(settings.proxyConfig?.port ?? DEFAULT_PROXY_PORT)
   )
   const [proxyTarget, setProxyTarget] = useState(
-    settings.proxyConfig?.targetUrl ?? "https://api.anthropic.com"
+    settings.proxyConfig?.targetUrl ?? DEFAULT_PROXY_TARGET
   )
 
   // Proxy status
@@ -60,19 +76,33 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     void fetchProxyStatus()
   }, [fetchProxyStatus])
 
-  async function handleProxyControl(action: "start" | "stop") {
+  async function handleProxyToggle(enable: boolean) {
     setProxyLoading(true)
+    const action = enable ? "start" : "stop"
     try {
-      await fetch("/api/proxy/control", {
+      const res = await fetch("/api/proxy/control", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.error ?? `Failed to ${action} proxy`)
+        return
+      }
       // Wait briefly for the process to start/stop before checking status
       await new Promise((r) => setTimeout(r, 1000))
       await fetchProxyStatus()
+      setSettings((s) => ({
+        ...s,
+        proxyConfig: {
+          ...(s.proxyConfig ?? { port: DEFAULT_PROXY_PORT, targetUrl: DEFAULT_PROXY_TARGET }),
+          enabled: enable,
+        },
+      }))
+      toast.success(`Proxy ${enable ? "started" : "stopped"}`)
     } catch {
-      // ignore
+      toast.error(`Failed to ${action} proxy`)
     } finally {
       setProxyLoading(false)
     }
@@ -82,14 +112,27 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const [newProjectDir, setNewProjectDir] = useState("")
 
   async function handleSave() {
+    // Validate refresh interval
+    const interval = settings.refreshInterval ?? 30
+    if (interval < 5 || interval > 300) {
+      toast.error("Refresh interval must be between 5 and 300 seconds")
+      return
+    }
+
+    // Validate proxy port
+    const port = parseInt(proxyPort, 10)
+    if (isNaN(port) || port < 1 || port > 65535) {
+      toast.error("Proxy port must be between 1 and 65535")
+      return
+    }
+
     setSaving(true)
-    setResult(null)
     try {
       const body: Settings = {
         ...settings,
         proxyConfig: {
           enabled: settings.proxyConfig?.enabled ?? false,
-          port: parseInt(proxyPort, 10),
+          port,
           targetUrl: proxyTarget,
         },
       }
@@ -100,22 +143,41 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       })
       const json = await res.json()
       if (res.ok) {
-        setResult({ ok: true, message: "Settings saved" })
+        toast.success("Settings saved")
+        // Refresh the global settings context so other components pick up changes
+        await refetchContext()
       } else {
-        setResult({ ok: false, message: json.error ?? "Failed to save" })
+        toast.error(json.error ?? "Failed to save settings")
       }
     } catch {
-      setResult({ ok: false, message: "Network error" })
+      toast.error("Network error — could not save settings")
     } finally {
       setSaving(false)
     }
   }
 
+  function handleReset() {
+    setSettings(defaultSettings)
+    setProxyPort(String(DEFAULT_PROXY_PORT))
+    setProxyTarget(DEFAULT_PROXY_TARGET)
+    setTheme("dark")
+    toast.info("Settings reset to defaults — click Save to apply")
+  }
+
   function addProjectDir() {
-    if (!newProjectDir.trim()) return
+    const dir = newProjectDir.trim()
+    if (!dir) return
+    if (!dir.startsWith("/")) {
+      toast.error("Please enter an absolute path (starting with /)")
+      return
+    }
+    if ((settings.indexedProjects ?? []).includes(dir)) {
+      toast.error("This directory is already in the list")
+      return
+    }
     setSettings((s) => ({
       ...s,
-      indexedProjects: [...(s.indexedProjects ?? []), newProjectDir.trim()],
+      indexedProjects: [...(s.indexedProjects ?? []), dir],
     }))
     setNewProjectDir("")
   }
@@ -164,19 +226,19 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
           <div className="flex items-center justify-between">
             <div>
               <Label>Refresh Interval</Label>
-              <p className="text-xs text-muted-foreground">Auto-refresh data every N seconds</p>
+              <p className="text-xs text-muted-foreground">Auto-refresh data every N seconds (5–300)</p>
             </div>
             <Input
               type="number"
               min={5}
               max={300}
               value={settings.refreshInterval ?? 30}
-              onChange={(e) =>
-                setSettings((s) => ({
-                  ...s,
-                  refreshInterval: parseInt(e.target.value, 10),
-                }))
-              }
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10)
+                if (!isNaN(val)) {
+                  setSettings((s) => ({ ...s, refreshInterval: val }))
+                }
+              }}
               className="w-24"
             />
           </div>
@@ -207,41 +269,16 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
             <div>
               <Label>Enable Proxy</Label>
               <p className="text-xs text-muted-foreground">
-                Intercept Anthropic API calls for logging
+                {proxyLoading
+                  ? (proxyStatus?.running ? "Stopping proxy..." : "Starting proxy...")
+                  : "Intercept Anthropic API calls for logging"}
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={proxyLoading}
-                onClick={() =>
-                  handleProxyControl(proxyStatus?.running ? "stop" : "start")
-                }
-                className="gap-1.5"
-              >
-                {proxyStatus?.running ? (
-                  <>
-                    <Square className="h-3 w-3" />
-                    {proxyLoading ? "Stopping…" : "Stop"}
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-3 w-3" />
-                    {proxyLoading ? "Starting…" : "Start"}
-                  </>
-                )}
-              </Button>
-              <Switch
-                checked={settings.proxyConfig?.enabled ?? false}
-                onCheckedChange={(v) =>
-                  setSettings((s) => ({
-                    ...s,
-                    proxyConfig: { ...(s.proxyConfig ?? { port: 3001, targetUrl: "https://api.anthropic.com" }), enabled: v },
-                  }))
-                }
-              />
-            </div>
+            <Switch
+              checked={proxyStatus?.running ?? false}
+              disabled={proxyLoading}
+              onCheckedChange={handleProxyToggle}
+            />
           </div>
 
           <Separator />
@@ -254,7 +291,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                 type="number"
                 value={proxyPort}
                 onChange={(e) => setProxyPort(e.target.value)}
-                placeholder="3001"
+                placeholder={String(DEFAULT_PROXY_PORT)}
               />
             </div>
             <div className="space-y-1.5">
@@ -263,7 +300,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                 id="proxy-target"
                 value={proxyTarget}
                 onChange={(e) => setProxyTarget(e.target.value)}
-                placeholder="https://api.anthropic.com"
+                placeholder={DEFAULT_PROXY_TARGET}
               />
             </div>
           </div>
@@ -323,17 +360,16 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
         </CardContent>
       </Card>
 
-      {/* Save */}
+      {/* Save & Reset */}
       <div className="flex items-center gap-3">
         <Button onClick={handleSave} disabled={saving} className="gap-1.5">
           <Save className="h-3.5 w-3.5" />
-          {saving ? "Saving…" : "Save Settings"}
+          {saving ? "Saving..." : "Save Settings"}
         </Button>
-        {result && (
-          <p className={`text-xs ${result.ok ? "text-emerald-400" : "text-red-400"}`}>
-            {result.message}
-          </p>
-        )}
+        <Button variant="outline" onClick={handleReset} className="gap-1.5">
+          <RotateCcw className="h-3.5 w-3.5" />
+          Reset to Defaults
+        </Button>
       </div>
     </div>
   )
