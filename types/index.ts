@@ -208,6 +208,23 @@ export interface WakeResponse {
   message: string;
 }
 
+// ── Task Queue Types ────────────────────────────────────────────────────────
+
+export type QueuedTaskStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
+
+export interface QueuedTask {
+  id: number;
+  goal: string;
+  projectPath: string;
+  status: QueuedTaskStatus;
+  teamName?: string | null;
+  priority: number;
+  result?: string | null;
+  createdAt: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
+}
+
 // ── API Response Wrapper ──────────────────────────────────────────────────────
 
 export interface ApiResponse<T> {

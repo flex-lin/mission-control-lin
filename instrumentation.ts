@@ -8,5 +8,9 @@ export async function register() {
     if (!fileWatcher.running) {
       fileWatcher.start()
     }
+
+    // Start queue worker in the background — picks up queued tasks automatically
+    const { startQueueWorker } = await import("@/server/queue-worker")
+    startQueueWorker()
   }
 }

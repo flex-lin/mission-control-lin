@@ -10,6 +10,7 @@ import {
   Settings,
   Cpu,
   AlertTriangle,
+  ListOrdered,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAutoRefresh } from "@/lib/hooks/use-auto-refresh"
@@ -17,6 +18,7 @@ import type { StuckTask } from "@/types"
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/queue", label: "Task Queue", icon: ListOrdered },
   { href: "/stuck", label: "Stuck", icon: AlertTriangle },
   { href: "/agent-teams", label: "Agent Teams", icon: Users },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },

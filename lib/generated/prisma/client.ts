@@ -59,3 +59,8 @@ export type IndexedProject = Prisma.IndexedProjectModel
  * 
  */
 export type Preference = Prisma.PreferenceModel
+/**
+ * Model QueuedTask
+ * 
+ */
+export type QueuedTask = Prisma.QueuedTaskModel

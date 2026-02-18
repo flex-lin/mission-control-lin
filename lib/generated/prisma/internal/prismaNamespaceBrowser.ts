@@ -54,7 +54,8 @@ export const ModelName = {
   ProxyLog: 'ProxyLog',
   AnalyticsSnapshot: 'AnalyticsSnapshot',
   IndexedProject: 'IndexedProject',
-  Preference: 'Preference'
+  Preference: 'Preference',
+  QueuedTask: 'QueuedTask'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -117,6 +118,22 @@ export const PreferenceScalarFieldEnum = {
 } as const
 
 export type PreferenceScalarFieldEnum = (typeof PreferenceScalarFieldEnum)[keyof typeof PreferenceScalarFieldEnum]
+
+
+export const QueuedTaskScalarFieldEnum = {
+  id: 'id',
+  goal: 'goal',
+  projectPath: 'projectPath',
+  status: 'status',
+  teamName: 'teamName',
+  priority: 'priority',
+  result: 'result',
+  createdAt: 'createdAt',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt'
+} as const
+
+export type QueuedTaskScalarFieldEnum = (typeof QueuedTaskScalarFieldEnum)[keyof typeof QueuedTaskScalarFieldEnum]
 
 
 export const SortOrder = {

@@ -387,7 +387,8 @@ export const ModelName = {
   ProxyLog: 'ProxyLog',
   AnalyticsSnapshot: 'AnalyticsSnapshot',
   IndexedProject: 'IndexedProject',
-  Preference: 'Preference'
+  Preference: 'Preference',
+  QueuedTask: 'QueuedTask'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -403,7 +404,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "proxyLog" | "analyticsSnapshot" | "indexedProject" | "preference"
+    modelProps: "proxyLog" | "analyticsSnapshot" | "indexedProject" | "preference" | "queuedTask"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -703,6 +704,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    QueuedTask: {
+      payload: Prisma.$QueuedTaskPayload<ExtArgs>
+      fields: Prisma.QueuedTaskFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.QueuedTaskFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$QueuedTaskPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.QueuedTaskFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$QueuedTaskPayload>
+        }
+        findFirst: {
+          args: Prisma.QueuedTaskFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$QueuedTaskPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.QueuedTaskFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$QueuedTaskPayload>
+        }
+        findMany: {
+          args: Prisma.QueuedTaskFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$QueuedTaskPayload>[]
+        }
+        create: {
+          args: Prisma.QueuedTaskCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$QueuedTaskPayload>
+        }
+        createMany: {
+          args: Prisma.QueuedTaskCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.QueuedTaskCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$QueuedTaskPayload>[]
+        }
+        delete: {
+          args: Prisma.QueuedTaskDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$QueuedTaskPayload>
+        }
+        update: {
+          args: Prisma.QueuedTaskUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$QueuedTaskPayload>
+        }
+        deleteMany: {
+          args: Prisma.QueuedTaskDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.QueuedTaskUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.QueuedTaskUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$QueuedTaskPayload>[]
+        }
+        upsert: {
+          args: Prisma.QueuedTaskUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$QueuedTaskPayload>
+        }
+        aggregate: {
+          args: Prisma.QueuedTaskAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateQueuedTask>
+        }
+        groupBy: {
+          args: Prisma.QueuedTaskGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.QueuedTaskGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.QueuedTaskCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.QueuedTaskCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -786,6 +861,22 @@ export const PreferenceScalarFieldEnum = {
 } as const
 
 export type PreferenceScalarFieldEnum = (typeof PreferenceScalarFieldEnum)[keyof typeof PreferenceScalarFieldEnum]
+
+
+export const QueuedTaskScalarFieldEnum = {
+  id: 'id',
+  goal: 'goal',
+  projectPath: 'projectPath',
+  status: 'status',
+  teamName: 'teamName',
+  priority: 'priority',
+  result: 'result',
+  createdAt: 'createdAt',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt'
+} as const
+
+export type QueuedTaskScalarFieldEnum = (typeof QueuedTaskScalarFieldEnum)[keyof typeof QueuedTaskScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -936,6 +1027,7 @@ export type GlobalOmitConfig = {
   analyticsSnapshot?: Prisma.AnalyticsSnapshotOmit
   indexedProject?: Prisma.IndexedProjectOmit
   preference?: Prisma.PreferenceOmit
+  queuedTask?: Prisma.QueuedTaskOmit
 }
 
 /* Types for Logging */
