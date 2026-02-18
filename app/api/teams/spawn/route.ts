@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { ok, err, serverError } from "@/lib/api-helpers";
+import { launchTeamAsLeader, getLeaderSessionName, personaToLaunchable } from "@/lib/agent-launcher";
 import type { TeamPlan, Teammate, TeamTask } from "@/types";
 
 const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
@@ -22,8 +23,9 @@ function safeName(name: string): string {
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const body = (await req.json()) as { plan?: TeamPlan };
+    const body = (await req.json()) as { plan?: TeamPlan; projectPath?: string };
     const plan = body.plan;
+    const projectPath = body.projectPath?.trim() || undefined;
 
     if (!plan || !plan.teamName || !plan.personas || !Array.isArray(plan.personas)) {
       return err("Invalid plan: teamName and personas are required", "VALIDATION_ERROR");
@@ -34,18 +36,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const resolvedTeamDir = path.resolve(teamDir);
     assertSafePath(resolvedTeamDir);
 
-    // Map personas to Teammate format
-    const members: Teammate[] = plan.personas.map((p, i) => ({
-      name: safeName(p.name),
-      agentId: `${teamName}-${p.name}-${i}`,
-      agentType: p.agentType || "general-purpose",
-      status: "idle" as const,
-    }));
+    // Pre-populate ALL members in config so the UI shows them immediately.
+    // Leader is active (has tmux session), personas start as pending (spawned as subagents).
+    const leaderSessionName = getLeaderSessionName(teamName);
+    const members: Teammate[] = [
+      {
+        name: "leader",
+        agentId: `${teamName}-leader-0`,
+        agentType: "general-purpose",
+        status: "active" as const,
+        tmuxSession: leaderSessionName,
+      },
+      ...plan.personas.map((p, i) => ({
+        name: p.name,
+        agentId: `${teamName}-${p.name}-${i}`,
+        agentType: p.agentType ?? "general-purpose",
+        status: "idle" as const,
+      })),
+    ];
 
     const config = {
       name: teamName,
       description: plan.description ?? "",
       members,
+      projectPath,
       createdAt: new Date().toISOString(),
     };
 
@@ -63,10 +77,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     assertSafePath(resolvedTaskDir);
     fs.mkdirSync(taskDir, { recursive: true });
 
-    let tasksCreated = 0;
-    const tasks = plan.initialTasks ?? [];
-    for (let i = 0; i < tasks.length; i++) {
-      const t = tasks[i];
+    const tasks: TeamTask[] = [];
+    const initialTasks = plan.initialTasks ?? [];
+    for (let i = 0; i < initialTasks.length; i++) {
+      const t = initialTasks[i];
       const taskId = String(i + 1);
       const task: TeamTask = {
         id: taskId,
@@ -80,13 +94,32 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         JSON.stringify(task, null, 2),
         "utf-8"
       );
-      tasksCreated++;
+      tasks.push(task);
     }
+
+    // Launch a single leader session that will create and manage the team
+    const launchable = plan.personas.map(personaToLaunchable);
+    const result = await launchTeamAsLeader(
+      teamName,
+      plan.description ?? "",
+      launchable,
+      projectPath,
+      tasks
+    );
 
     return ok({
       teamName,
       membersCreated: members.length,
-      tasksCreated,
+      tasksCreated: tasks.length,
+      launched: result.launched ? ["leader"] : [],
+      alreadyRunning: result.launched ? [] : ["leader"],
+      sessions: [
+        {
+          name: "leader",
+          tmuxSession: result.sessionName,
+          attachCmd: `tmux attach -t ${result.sessionName}`,
+        },
+      ],
     });
   } catch (e) {
     return serverError(e);
