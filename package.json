@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3777",
+    "dev:all": "prisma generate && bash scripts/start-all.sh",
     "build": "next build",
     "start": "next start --port 3777",
     "lint": "eslint",
@@ -63,6 +64,7 @@
     "eslint-config-next": "16.1.6",
     "prisma": "^7.4.0",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.0.18"
   }
