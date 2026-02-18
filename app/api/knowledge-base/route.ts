@@ -6,6 +6,12 @@ import type { KnowledgeBaseEntry } from "@/types";
 import fs from "fs";
 import path from "path";
 
+async function getHiddenPaths(): Promise<Set<string>> {
+  const pref = await db.preference.findUnique({ where: { key: "kb_hidden_paths" } });
+  if (!pref) return new Set();
+  try { return new Set(JSON.parse(pref.value) as string[]); } catch { return new Set(); }
+}
+
 // GET /api/knowledge-base — list all knowledge base paths
 // Merges filesystem projects from ~/.claude/projects/ with DB IndexedProject records
 export async function GET(): Promise<NextResponse> {
@@ -14,15 +20,20 @@ export async function GET(): Promise<NextResponse> {
     const dbRecords = await db.indexedProject.findMany({
       orderBy: { id: "desc" },
     });
+    const hidden = await getHiddenPaths();
 
-    const dbByPath = new Map(dbRecords.map((r) => [r.path, r]));
-    const seenPaths = new Set<string>();
+    // Build a lookup from encoded directory name → filesystem project
+    // Encoding (path→dirName) is deterministic; decoding is lossy — so we
+    // always compare in the encoded domain to avoid hyphen-in-path mismatches.
+    const fsByDirName = new Map(fsProjects.map((p) => [p.id, p]));
+    const seenDirNames = new Set<string>();
     const entries: KnowledgeBaseEntry[] = [];
 
     // First, add all DB records (they have proper IDs)
     for (const rec of dbRecords) {
-      const fsMatch = fsProjects.find((p) => p.path === rec.path);
-      seenPaths.add(rec.path);
+      const dirName = rec.path.replace(/\//g, "-");
+      const fsMatch = fsByDirName.get(dirName);
+      seenDirNames.add(dirName);
       entries.push({
         id: rec.id,
         path: rec.path,
@@ -33,9 +44,10 @@ export async function GET(): Promise<NextResponse> {
       });
     }
 
-    // Then, add filesystem-only projects (not in DB)
+    // Then, add filesystem-only projects (not in DB), excluding hidden ones
     for (const proj of fsProjects) {
-      if (seenPaths.has(proj.path)) continue;
+      if (seenDirNames.has(proj.id)) continue;
+      if (hidden.has(proj.path)) continue;
       entries.push({
         id: -1, // no DB id — filesystem-only entry
         path: proj.path,

@@ -550,19 +550,63 @@ export function writeSettings(settings: Settings): void {
 
 // ── Project functions ─────────────────────────────────────────────────────────
 
+/**
+ * Decode a Claude projects directory name back to a real filesystem path.
+ *
+ * The encoding is lossy: `/` → `-`, so `-home-lin-mission-control-lin` could be
+ * `/home/lin/mission/control/lin` or `/home/lin/mission-control-lin`.
+ * We resolve ambiguity by greedily matching the longest existing path segment
+ * at each level, falling back to single-segment decode when nothing matches.
+ */
+function decodeProjectDirName(encoded: string): string {
+  // Strip leading dash to get segments: "-home-lin-foo" → ["home","lin","foo"]
+  const segments = encoded.replace(/^-/, "").split("-");
+  let current = "/";
+
+  let i = 0;
+  while (i < segments.length) {
+    // Read directory entries once per depth level instead of stat-ing every candidate
+    let children: Set<string>;
+    try {
+      children = new Set(fs.readdirSync(current));
+    } catch {
+      // Can't read directory — just concatenate remaining segments as singles
+      current = path.join(current, ...segments.slice(i));
+      break;
+    }
+
+    // Try longest possible segment first (greedy): join multiple parts with hyphens
+    let matched = false;
+    for (let j = segments.length; j > i; j--) {
+      const candidate = segments.slice(i, j).join("-");
+      if (children.has(candidate)) {
+        current = path.join(current, candidate);
+        i = j;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      // Nothing matched on disk — just use the single segment
+      current = path.join(current, segments[i]);
+      i++;
+    }
+  }
+
+  return current;
+}
+
 export function listProjects(): Project[] {
   const dir = projectsDir();
   if (!fs.existsSync(dir)) return [];
 
-  // Project dirs are encoded as path with hyphens replacing slashes
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   const projects: Project[] = [];
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    // Decode dir name: "-home-user-project" → "/home/user/project"
-    const decodedPath = entry.name.replace(/^-/, "/").replace(/-/g, "/");
-    const name = entry.name.split("-").pop() ?? entry.name;
+    const decodedPath = decodeProjectDirName(entry.name);
+    const name = path.basename(decodedPath);
     projects.push({
       id: entry.name,
       path: decodedPath,
