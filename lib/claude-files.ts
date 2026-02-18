@@ -292,10 +292,74 @@ const STATUS_PRIORITY: Record<string, number> = {
   deleted: 3,
 };
 
+/**
+ * Replace the internal team's task directory with a symlink to the MC directory.
+ * This is the definitive fix for the split-brain problem: after symlinking,
+ * all agent TaskUpdate/TaskCreate writes go directly to the MC files.
+ *
+ * Steps:
+ * 1. Merge any status updates from internal → MC (one-time reconciliation)
+ * 2. Remove the internal task directory
+ * 3. Create symlink: internal → MC
+ *
+ * After this runs once, no further reconciliation is needed for this team.
+ */
+function symlinkInternalTaskDir(mcDir: string, internalDir: string): void {
+  // Don't symlink if already a symlink
+  try {
+    const stat = fs.lstatSync(internalDir);
+    if (stat.isSymbolicLink()) return;
+  } catch {
+    return; // doesn't exist
+  }
+
+  // Step 1: Merge status from internal → MC before replacing
+  const internalFiles = fs.readdirSync(internalDir).filter((f) => f.endsWith(".json"));
+  for (const file of internalFiles) {
+    try {
+      const internalTask = JSON.parse(fs.readFileSync(path.join(internalDir, file), "utf-8"));
+      const mcFilePath = path.join(mcDir, file);
+      if (fs.existsSync(mcFilePath)) {
+        const mcTask = JSON.parse(fs.readFileSync(mcFilePath, "utf-8"));
+        const mcPriority = STATUS_PRIORITY[mcTask.status] ?? 0;
+        const internalPriority = STATUS_PRIORITY[internalTask.status] ?? 0;
+        if (internalPriority > mcPriority) {
+          mcTask.status = internalTask.status;
+          fs.writeFileSync(mcFilePath, JSON.stringify(mcTask, null, 2), "utf-8");
+        }
+      }
+    } catch {
+      // skip malformed
+    }
+  }
+
+  // Step 2+3: Replace internal dir with symlink to MC dir (atomic via rename)
+  const tmpLink = internalDir + ".symlink-tmp";
+  try {
+    // Remove any stale tmp link
+    try { fs.unlinkSync(tmpLink); } catch { /* ok */ }
+    // Create symlink at tmp path, then atomically move into place
+    fs.symlinkSync(mcDir, tmpLink);
+    fs.rmSync(internalDir, { recursive: true, force: true });
+    fs.renameSync(tmpLink, internalDir);
+  } catch {
+    // Clean up on failure
+    try { fs.unlinkSync(tmpLink); } catch { /* ok */ }
+  }
+}
+
 export function readTaskList(teamName: string): TeamTask[] {
   const safe = safeName(teamName);
   const dir = tasksDir(safe);
   if (!fs.existsSync(dir)) return [];
+
+  // Auto-symlink: on first detection of internal team, replace its task dir
+  // with a symlink to MC dir. After this, all agent writes go to MC files directly.
+  const internalTeamName = findInternalTeamName(safe);
+  if (internalTeamName) {
+    const internalDir = tasksDir(internalTeamName);
+    symlinkInternalTaskDir(dir, internalDir);
+  }
 
   const files = fs.readdirSync(dir).filter((f) => f.endsWith(".json"));
   const tasks: TeamTask[] = [];
@@ -307,38 +371,6 @@ export function readTaskList(teamName: string): TeamTask[] {
       if (task) tasks.push(task);
     } catch {
       // skip malformed
-    }
-  }
-
-  // Reconcile with Claude Code internal team's task directory
-  const internalTeamName = findInternalTeamName(safe);
-  if (internalTeamName) {
-    const internalDir = tasksDir(internalTeamName);
-    if (fs.existsSync(internalDir)) {
-      const internalFiles = fs.readdirSync(internalDir).filter((f) => f.endsWith(".json"));
-      const internalTasksById = new Map<string, TeamTask>();
-      for (const file of internalFiles) {
-        try {
-          const task = readJson<TeamTask>(path.join(internalDir, file));
-          if (task) internalTasksById.set(task.id, task);
-        } catch {
-          // skip malformed
-        }
-      }
-
-      // Merge: use the more advanced status for matching task IDs
-      for (const task of tasks) {
-        const internalTask = internalTasksById.get(task.id);
-        if (internalTask) {
-          const mcPriority = STATUS_PRIORITY[task.status] ?? 0;
-          const internalPriority = STATUS_PRIORITY[internalTask.status] ?? 0;
-          if (internalPriority > mcPriority) {
-            task.status = internalTask.status;
-            // Persist the reconciled status back to the MC task file
-            writeJson(path.join(dir, `${safeName(String(task.id))}.json`), task);
-          }
-        }
-      }
     }
   }
 

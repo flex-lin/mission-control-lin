@@ -160,7 +160,18 @@ function cleanupTeam(teamName: string): void {
       }
       const internalTaskDir = path.join(CLAUDE_DIR, "tasks", internalName);
       if (fs.existsSync(internalTaskDir)) {
-        fs.rmSync(internalTaskDir, { recursive: true, force: true });
+        // If it's a symlink (from our auto-symlink fix), just unlink it
+        // — don't follow into the MC directory and delete those files
+        try {
+          const stat = fs.lstatSync(internalTaskDir);
+          if (stat.isSymbolicLink()) {
+            fs.unlinkSync(internalTaskDir);
+          } else {
+            fs.rmSync(internalTaskDir, { recursive: true, force: true });
+          }
+        } catch {
+          fs.rmSync(internalTaskDir, { recursive: true, force: true });
+        }
       }
     }
   } catch {
