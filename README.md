@@ -1,13 +1,32 @@
-# Mission Control Lin
+# Mission Control
 
 A local dashboard for managing Claude Code agent teams, tracking API token usage, and monitoring costs. Runs entirely on your machine — no cloud services required.
 
-## What It Does
+![Dashboard](public/screenshots/dashboard.png)
 
-- **Agent Teams** — Create, spawn, monitor, and shut down Claude Code agent teams via tmux. AI-assisted team planning generates personas and task breakdowns from a goal description. Teams auto-detect completion when all tasks are done and auto-archive after a grace period.
-- **Analytics** — Track token usage, costs, and latency across models, teams, and individual agents. Ingest historical data from Claude Code session logs.
-- **API Proxy** — Transparent HTTP proxy that intercepts Anthropic API requests, extracts token counts from responses (JSON and SSE), and records them to a local SQLite database.
-- **Dashboard** — Overview of active teams, request volume, average latency, and estimated costs with trend comparisons.
+## Features
+
+### Agent Teams
+Create, spawn, monitor, and shut down Claude Code agent teams via tmux. AI-assisted "Smart Create" generates team personas and task breakdowns from a goal description. Teams auto-detect completion and auto-archive after a grace period.
+
+![Agent Teams](public/screenshots/agent-teams.png)
+
+### Analytics
+Track token usage, costs, and latency across models, teams, and individual agents. Import historical data from Claude Code session logs.
+
+![Analytics](public/screenshots/analytics.png)
+
+### Settings
+Configure theme, polling intervals, API proxy, sleep prevention, and indexed project directories.
+
+![Settings](public/screenshots/settings.png)
+
+### Additional Features
+- **Task Queue** — Submit tasks with file attachments that get routed to agent teams
+- **Stuck Task Detection** — Surface tasks that are blocked or stalled across all teams
+- **Knowledge Base** — Register and browse indexed project directories
+- **API Proxy** — Transparent HTTP proxy that intercepts Anthropic API requests, extracts token counts from responses (JSON and SSE), and records them to a local SQLite database
+- **Command Palette** — Quick keyboard-driven navigation across the app
 
 ## Prerequisites
 
@@ -19,17 +38,10 @@ A local dashboard for managing Claude Code agent teams, tracking API token usage
 ## Setup
 
 ```bash
-# Install dependencies
 pnpm install
-
-# Generate Prisma client
 npx prisma generate
-
-# Push database schema (first time only)
-pnpm db:push
-
-# Start the development server
-pnpm dev
+pnpm db:push          # first time only
+pnpm dev              # Next.js on :3777
 ```
 
 Open [http://localhost:3777](http://localhost:3777).
