@@ -158,7 +158,9 @@ describe("ensureUniqueName", () => {
     expect(ensureUniqueName("my-team")).toBe("my-team-2");
   });
 
-  it("appends -2 when base name exists in archive", () => {
+  it("does not check archive directory (archive removed)", () => {
+    // Only archive dir has the name — since we no longer check archive,
+    // the base name should be returned as-is
     fs.existsSync = vi.fn((p: fs.PathLike) => {
       const s = String(p);
       return s === archiveDir;
@@ -174,7 +176,7 @@ describe("ensureUniqueName", () => {
       return [] as unknown as fs.Dirent[];
     }) as unknown as typeof fs.readdirSync;
 
-    expect(ensureUniqueName("my-team")).toBe("my-team-2");
+    expect(ensureUniqueName("my-team")).toBe("my-team");
   });
 
   it("increments suffix when -2 is also taken", () => {
@@ -198,7 +200,7 @@ describe("ensureUniqueName", () => {
     expect(ensureUniqueName("my-team")).toBe("my-team-4");
   });
 
-  it("checks both active and archived teams", () => {
+  it("only checks active teams, not archive", () => {
     fs.existsSync = vi.fn(() => true) as unknown as typeof fs.existsSync;
 
     fs.readdirSync = vi.fn((p: fs.PathLike) => {
@@ -208,6 +210,7 @@ describe("ensureUniqueName", () => {
           { name: "my-team", isDirectory: () => true },
         ] as unknown as fs.Dirent[];
       }
+      // Archive has my-team-2 but should be ignored
       if (s === archiveDir) {
         return [
           { name: "my-team-2", isDirectory: () => true },
@@ -216,7 +219,8 @@ describe("ensureUniqueName", () => {
       return [] as unknown as fs.Dirent[];
     }) as unknown as typeof fs.readdirSync;
 
-    expect(ensureUniqueName("my-team")).toBe("my-team-3");
+    // Should be my-team-2 (not my-team-3) since archive is not checked
+    expect(ensureUniqueName("my-team")).toBe("my-team-2");
   });
 });
 

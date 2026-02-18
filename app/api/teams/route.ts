@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listTeams, readTaskList, getTeamLastActivity, archiveTeam } from "@/lib/claude-files";
-import { sessionExists, sessionProcessAlive } from "@/lib/tmux-manager";
-import { getLeaderSessionName } from "@/lib/agent-launcher";
+import { listTeams, readTaskList, getTeamLastActivity } from "@/lib/claude-files";
+import { readBackgroundConfig } from "@/lib/sleep-detector";
 import { ok, err, serverError } from "@/lib/api-helpers";
 import type { TeamHealthStatus } from "@/types";
 import fs from "fs";
@@ -53,47 +52,18 @@ export async function GET(): Promise<NextResponse> {
         inProgress: tasks.filter((task) => task.status === "in_progress").length,
       };
 
+      const bgConfig = readBackgroundConfig(t.name);
+
       return {
         ...t,
         members: t.members ?? [],
         health: { status, lastActivity, staleTaskCount },
         taskStats,
+        background: { persistent: bgConfig.persistent },
       };
     });
 
-    // Auto-archive completed teams with dead leader and stale activity
-    const teams = allTeams.filter((t) => {
-      if (t.health.status !== "completed") return true;
-
-      const leaderSessionName = getLeaderSessionName(t.name);
-      const leaderAlive = sessionExists(leaderSessionName) && sessionProcessAlive(leaderSessionName);
-      if (leaderAlive) return true;
-
-      // Determine staleness: use lastActivity if available, fall back to createdAt
-      const activityTime = t.health.lastActivity ?? t.createdAt;
-      if (activityTime) {
-        const elapsed = Date.now() - new Date(activityTime).getTime();
-        if (elapsed > STALENESS_MS) {
-          try {
-            archiveTeam(t.name);
-            return false; // exclude from response
-          } catch {
-            // archive failed, keep in list
-          }
-        }
-      } else {
-        // No activity and no creation time — archive immediately
-        try {
-          archiveTeam(t.name);
-          return false;
-        } catch {
-          // archive failed, keep in list
-        }
-      }
-      return true;
-    });
-
-    return ok(teams, { count: teams.length });
+    return ok(allTeams, { count: allTeams.length });
   } catch (e) {
     return serverError(e);
   }

@@ -156,24 +156,15 @@ export function deriveNameFromGoal(goal: string): string {
 }
 
 /**
- * Ensure a team name is unique by checking active teams and archived teams.
+ * Ensure a team name is unique by checking active teams.
  * Appends -2, -3, etc. if the name already exists.
  */
 export function ensureUniqueName(baseName: string): string {
   const existing = new Set<string>();
 
-  // Check active teams
   const teamsPath = path.join(CLAUDE_DIR, "teams");
   if (fs.existsSync(teamsPath)) {
     for (const entry of fs.readdirSync(teamsPath, { withFileTypes: true })) {
-      if (entry.isDirectory()) existing.add(entry.name);
-    }
-  }
-
-  // Check archived teams
-  const archivePath = path.join(CLAUDE_DIR, "teams-archive");
-  if (fs.existsSync(archivePath)) {
-    for (const entry of fs.readdirSync(archivePath, { withFileTypes: true })) {
       if (entry.isDirectory()) existing.add(entry.name);
     }
   }

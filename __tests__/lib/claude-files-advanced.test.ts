@@ -5,7 +5,7 @@ import os from "os";
 
 /**
  * Advanced tests for claude-files.ts — covers findInternalTeamName,
- * archiveTeam, symlinkInternalTaskDir, listProjects, readProjectContext.
+ * deleteTeam, symlinkInternalTaskDir, listProjects, readProjectContext.
  */
 
 let tmpDir: string;
@@ -26,84 +26,47 @@ describe("claude-files advanced", () => {
     return await import("@/lib/claude-files");
   }
 
-  // ── archiveTeam ──────────────────────────────────────────────────────────
+  // ── deleteTeam ───────────────────────────────────────────────────────────
 
-  describe("archiveTeam", () => {
-    it("moves team to archive directory", async () => {
+  describe("deleteTeam", () => {
+    it("removes team directory", async () => {
       const mod = await getModule();
-      const teamDir = path.join(tmpDir, ".claude", "teams", "arch-team");
+      const teamDir = path.join(tmpDir, ".claude", "teams", "del-team");
       fs.mkdirSync(teamDir, { recursive: true });
       fs.writeFileSync(
         path.join(teamDir, "config.json"),
-        JSON.stringify({ name: "arch-team", members: [] })
+        JSON.stringify({ name: "del-team", members: [] })
       );
 
-      mod.archiveTeam("arch-team");
+      mod.deleteTeam("del-team");
 
-      // Original should be gone
       expect(fs.existsSync(teamDir)).toBe(false);
-
-      // Archive should exist
-      const archivePath = path.join(tmpDir, ".claude", "teams-archive", "arch-team", "config.json");
-      expect(fs.existsSync(archivePath)).toBe(true);
-
-      const archived = JSON.parse(fs.readFileSync(archivePath, "utf-8"));
-      expect(archived.archivedAt).toBeDefined();
     });
 
-    it("archives tasks alongside team config", async () => {
+    it("removes tasks alongside team config", async () => {
       const mod = await getModule();
-      const teamDir = path.join(tmpDir, ".claude", "teams", "task-arch");
-      const taskDir = path.join(tmpDir, ".claude", "tasks", "task-arch");
+      const teamDir = path.join(tmpDir, ".claude", "teams", "task-del");
+      const taskDir = path.join(tmpDir, ".claude", "tasks", "task-del");
       fs.mkdirSync(teamDir, { recursive: true });
       fs.mkdirSync(taskDir, { recursive: true });
       fs.writeFileSync(
         path.join(teamDir, "config.json"),
-        JSON.stringify({ name: "task-arch", members: [] })
+        JSON.stringify({ name: "task-del", members: [] })
       );
       fs.writeFileSync(
         path.join(taskDir, "1.json"),
         JSON.stringify({ id: "1", subject: "Task", status: "completed" })
       );
 
-      mod.archiveTeam("task-arch");
+      mod.deleteTeam("task-del");
 
+      expect(fs.existsSync(teamDir)).toBe(false);
       expect(fs.existsSync(taskDir)).toBe(false);
-      const archivedTaskPath = path.join(tmpDir, ".claude", "tasks-archive", "task-arch", "1.json");
-      expect(fs.existsSync(archivedTaskPath)).toBe(true);
     });
 
     it("throws when team does not exist", async () => {
       const mod = await getModule();
-      expect(() => mod.archiveTeam("nonexistent")).toThrow("not found");
-    });
-
-    it("overwrites existing archive", async () => {
-      const mod = await getModule();
-
-      // Create archive first
-      const archiveDir = path.join(tmpDir, ".claude", "teams-archive", "dup-team");
-      fs.mkdirSync(archiveDir, { recursive: true });
-      fs.writeFileSync(
-        path.join(archiveDir, "config.json"),
-        JSON.stringify({ name: "dup-team", old: true })
-      );
-
-      // Create active team
-      const teamDir = path.join(tmpDir, ".claude", "teams", "dup-team");
-      fs.mkdirSync(teamDir, { recursive: true });
-      fs.writeFileSync(
-        path.join(teamDir, "config.json"),
-        JSON.stringify({ name: "dup-team", members: [], old: false })
-      );
-
-      mod.archiveTeam("dup-team");
-
-      const archived = JSON.parse(
-        fs.readFileSync(path.join(archiveDir, "config.json"), "utf-8")
-      );
-      expect(archived.old).toBe(false);
-      expect(archived.archivedAt).toBeDefined();
+      expect(() => mod.deleteTeam("nonexistent")).toThrow("not found");
     });
   });
 

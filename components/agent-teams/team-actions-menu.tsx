@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Archive, Trash2, ExternalLink } from "lucide-react"
+import { MoreHorizontal, Trash2, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 
 interface TeamActionsMenuProps {
@@ -26,27 +26,23 @@ interface TeamActionsMenuProps {
 
 export function TeamActionsMenu({ teamName }: TeamActionsMenuProps) {
   const router = useRouter()
-  const [confirmDialog, setConfirmDialog] = useState<"archive" | "delete" | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  async function handleAction(mode: "archive" | "delete") {
+  async function handleDelete() {
     setLoading(true)
     try {
       const res = await fetch(
-        `/api/teams/${encodeURIComponent(teamName)}?mode=${mode}`,
+        `/api/teams/${encodeURIComponent(teamName)}?mode=delete`,
         { method: "DELETE" }
       )
       const json = await res.json()
       if (!res.ok) {
-        toast.error(json.error ?? `Failed to ${mode} team`)
+        toast.error(json.error ?? "Failed to delete team")
         return
       }
-      toast.success(
-        mode === "archive"
-          ? `Team "${teamName}" archived`
-          : `Team "${teamName}" permanently deleted`
-      )
-      setConfirmDialog(null)
+      toast.success(`Team "${teamName}" permanently deleted`)
+      setConfirmOpen(false)
       router.refresh()
     } catch {
       toast.error("Network error")
@@ -80,19 +76,10 @@ export function TeamActionsMenu({ teamName }: TeamActionsMenuProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onClick={(e) => {
-              e.preventDefault()
-              setConfirmDialog("archive")
-            }}
-          >
-            <Archive className="mr-2 h-3.5 w-3.5" />
-            Archive Team
-          </DropdownMenuItem>
-          <DropdownMenuItem
             className="text-red-400 focus:text-red-300"
             onClick={(e) => {
               e.preventDefault()
-              setConfirmDialog("delete")
+              setConfirmOpen(true)
             }}
           >
             <Trash2 className="mr-2 h-3.5 w-3.5" />
@@ -101,32 +88,26 @@ export function TeamActionsMenu({ teamName }: TeamActionsMenuProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={confirmDialog !== null} onOpenChange={() => setConfirmDialog(null)}>
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {confirmDialog === "archive" ? "Archive" : "Delete"} team &ldquo;{teamName}&rdquo;?
+              Delete team &ldquo;{teamName}&rdquo;?
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            {confirmDialog === "archive"
-              ? "The team and its tasks will be moved to the archive. You can restore it later from the Past Teams section."
-              : "This will permanently delete the team and all its tasks. This action cannot be undone."}
+            This will permanently delete the team and all its tasks. This action cannot be undone.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDialog(null)}>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
               Cancel
             </Button>
             <Button
-              variant={confirmDialog === "delete" ? "destructive" : "default"}
-              onClick={() => confirmDialog && handleAction(confirmDialog)}
+              variant="destructive"
+              onClick={handleDelete}
               disabled={loading}
             >
-              {loading
-                ? "Processing..."
-                : confirmDialog === "archive"
-                ? "Archive Team"
-                : "Delete Permanently"}
+              {loading ? "Processing..." : "Delete Permanently"}
             </Button>
           </DialogFooter>
         </DialogContent>

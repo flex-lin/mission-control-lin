@@ -3,8 +3,15 @@ import { readTeamConfig, readTaskList, getTeamLastActivity } from "@/lib/claude-
 import { ok, notFound, serverError } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
 import { sessionExists, getSessionName, sessionProcessAlive } from "@/lib/tmux-manager";
-import { getLeaderSessionName } from "@/lib/agent-launcher";
-import type { TeamHealthStatus, TeamTask } from "@/types";
+import { getLeaderSessionName, resumeTeamAsLeader, personaToLaunchable } from "@/lib/agent-launcher";
+import {
+  detectSleep,
+  shouldAutoWake,
+  recordSleepEvent,
+  recordAutoWake,
+  readBackgroundConfig,
+} from "@/lib/sleep-detector";
+import type { TeamHealthStatus, TeamTask, TeamPersona } from "@/types";
 import fs from "fs";
 import path from "path";
 
@@ -32,17 +39,6 @@ export async function GET(
 ): Promise<NextResponse> {
   try {
     const { name } = await params;
-
-    // Check if team is archived
-    const archivePath = path.join(CLAUDE_DIR, "teams-archive", name, "config.json");
-    if (fs.existsSync(archivePath)) {
-      return ok({
-        status: "exited" as TeamHealthStatus,
-        lastActivity: null,
-        staleTasks: [],
-        memberHealth: [],
-      });
-    }
 
     const team = readTeamConfig(name);
     if (!team) return notFound(`Team "${name}" not found`);
@@ -171,9 +167,62 @@ export async function GET(
       };
     });
 
+    // ── Sleep detection & auto-wake ────────────────────────────────────────
+    const bgConfig = readBackgroundConfig(name);
+    let sleepDetected = false;
+    let autoWakeTriggered = false;
+
+    // Only run sleep detection for non-completed, non-exited teams
+    if (status !== "completed" && status !== "exited") {
+      sleepDetected = detectSleep(name);
+
+      if (sleepDetected && !anyTmuxAlive) {
+        // System likely slept and the tmux session died
+        recordSleepEvent(name);
+
+        const { shouldWake, reason } = shouldAutoWake(name);
+        if (shouldWake) {
+          // Attempt auto-wake: rebuild personas and relaunch leader
+          const hasPendingTasks = tasks.some(
+            (t) => t.status === "pending" || t.status === "in_progress"
+          );
+          if (hasPendingTasks) {
+            try {
+              const configPath = path.join(CLAUDE_DIR, "teams", name, "config.json");
+              let projectPath: string | undefined;
+              let description = "";
+              try {
+                const raw = fs.readFileSync(configPath, "utf-8");
+                const config = JSON.parse(raw) as { projectPath?: string; description?: string };
+                projectPath = config.projectPath;
+                description = config.description ?? "";
+              } catch { /* ignore */ }
+
+              const personas: TeamPersona[] = (team.members ?? [])
+                .filter((m) => m.name !== "leader")
+                .map((m) => ({
+                  name: m.name,
+                  role: m.agentType,
+                  agentType: m.agentType,
+                  description: `Team member on ${name}`,
+                }));
+
+              const launchable = personas.map(personaToLaunchable);
+              await resumeTeamAsLeader(name, description, launchable, projectPath, tasks);
+              recordAutoWake(name);
+              autoWakeTriggered = true;
+              status = "alive";
+            } catch {
+              // Auto-wake failed — will retry on next poll
+            }
+          }
+        }
+      }
+    }
+
     // Build leader session info for standalone tmux bar
     const leaderSessionInfo: LeaderSession = {
-      alive: leaderTmuxAlive,
+      alive: leaderTmuxAlive || autoWakeTriggered,
       sessionName: leaderSessionName,
       attachCmd: `tmux attach -t ${leaderSessionName}`,
     };
@@ -184,6 +233,15 @@ export async function GET(
       staleTasks,
       memberHealth,
       leaderSession: leaderSessionInfo,
+      background: {
+        persistent: bgConfig.persistent,
+        sleepDetected,
+        autoWakeTriggered,
+        wakeRetryCount: bgConfig.wakeRetryCount,
+        maxWakeRetries: bgConfig.maxWakeRetries,
+        lastSleepDetected: bgConfig.lastSleepDetected,
+        lastAutoWake: bgConfig.lastAutoWake,
+      },
     });
   } catch (e) {
     return serverError(e);

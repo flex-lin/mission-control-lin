@@ -16,6 +16,7 @@ import { SendMessageForm } from "@/components/agent-teams/send-message-form"
 import { CreateTaskForm } from "@/components/agent-teams/create-task-form"
 import { ShutdownButton } from "@/components/agent-teams/shutdown-button"
 import { TeamHealthPanel } from "@/components/agent-teams/team-health-panel"
+import { BackgroundConfigPanel } from "@/components/agent-teams/background-config-panel"
 import { TmuxSessionBar } from "@/components/agent-teams/tmux-session-bar"
 import { TaskRowEditable } from "@/components/agent-teams/task-row-editable"
 import { AlertCircle, CheckCircle2, Play } from "lucide-react"
@@ -88,51 +89,24 @@ export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
   const allTasksDone = tasks.length > 0 && tasks.every((t) => t.status === "completed" || t.status === "deleted")
   const noTasks = tasks.length === 0
 
-  async function handleArchive() {
-    try {
-      const res = await fetch(
-        `/api/teams/${encodeURIComponent(teamForForms.name)}?mode=archive`,
-        { method: "DELETE" }
-      )
-      if (res.ok) {
-        toast.success(`Archived ${teamForForms.name}`)
-        router.push("/agent-teams")
-      } else {
-        toast.error("Failed to archive team")
-      }
-    } catch {
-      toast.error("Network error")
-    }
-  }
-
   return (
     <div className="space-y-6 p-6">
       {/* No tasks banner — team will exit automatically */}
       {noTasks && (
-        <div className="flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-amber-500" />
-            <div>
-              <span className="text-sm font-medium text-amber-500">No tasks assigned</span>
-              <p className="text-xs text-amber-500/70">Team will exit automatically and clean up</p>
-            </div>
+        <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+          <AlertCircle className="h-5 w-5 text-amber-500" />
+          <div>
+            <span className="text-sm font-medium text-amber-500">No tasks assigned</span>
+            <p className="text-xs text-amber-500/70">Team will exit automatically and clean up</p>
           </div>
-          <Button variant="outline" size="sm" onClick={handleArchive}>
-            Archive Now
-          </Button>
         </div>
       )}
 
       {/* Completion banner */}
       {allTasksDone && (
-        <div className="flex items-center justify-between rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-green-500" />
-            <span className="text-sm font-medium text-green-500">All tasks completed</span>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleArchive}>
-            Archive Team
-          </Button>
+        <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3">
+          <CheckCircle2 className="h-5 w-5 text-green-500" />
+          <span className="text-sm font-medium text-green-500">All tasks completed</span>
         </div>
       )}
 
@@ -288,6 +262,8 @@ export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
               <CreateTaskForm team={teamForForms} />
             </CardContent>
           </Card>
+
+          <BackgroundConfigPanel teamName={teamForForms.name} />
         </div>
       </div>
     </div>

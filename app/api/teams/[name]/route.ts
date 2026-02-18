@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readTeamConfig, readTaskList, archiveTeam } from "@/lib/claude-files";
-import { ok, notFound, err, serverError } from "@/lib/api-helpers";
+import { readTeamConfig, readTaskList } from "@/lib/claude-files";
+import { ok, notFound, serverError } from "@/lib/api-helpers";
 import fs from "fs";
 import path from "path";
 
@@ -30,15 +30,14 @@ export async function GET(
   }
 }
 
-// DELETE /api/teams/[name]?mode=archive|delete — archive or permanently delete a team
+// DELETE /api/teams/[name] — permanently delete a team
 export async function DELETE(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ name: string }> }
 ): Promise<NextResponse> {
   try {
     const { name } = await params;
     const safe = safeName(name);
-    const mode = req.nextUrl.searchParams.get("mode") ?? "archive";
 
     const teamDir = path.join(CLAUDE_DIR, "teams", safe);
     const tasksDir = path.join(CLAUDE_DIR, "tasks", safe);
@@ -47,21 +46,13 @@ export async function DELETE(
       return notFound(`Team "${name}" not found`);
     }
 
-    if (mode === "archive") {
-      archiveTeam(safe);
-      return ok({ name: safe, action: "archived" });
-    } else if (mode === "delete") {
-      // Permanently delete
-      if (fs.existsSync(teamDir)) {
-        fs.rmSync(teamDir, { recursive: true });
-      }
-      if (fs.existsSync(tasksDir)) {
-        fs.rmSync(tasksDir, { recursive: true });
-      }
-      return ok({ name: safe, action: "deleted" });
-    } else {
-      return err("mode must be 'archive' or 'delete'", "VALIDATION_ERROR");
+    if (fs.existsSync(teamDir)) {
+      fs.rmSync(teamDir, { recursive: true });
     }
+    if (fs.existsSync(tasksDir)) {
+      fs.rmSync(tasksDir, { recursive: true });
+    }
+    return ok({ name: safe, action: "deleted" });
   } catch (e) {
     return serverError(e);
   }

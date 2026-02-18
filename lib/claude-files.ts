@@ -444,42 +444,22 @@ export function getTeamLastActivity(teamName: string): string | null {
   return latest > 0 ? new Date(latest).toISOString() : null;
 }
 
-// ── Archive functions ─────────────────────────────────────────────────────────
+// ── Delete functions ──────────────────────────────────────────────────────────
 
-export function archiveTeam(teamName: string): void {
+export function deleteTeam(teamName: string): void {
   const safe = safeName(teamName);
   const teamDir = path.join(teamsDir(), safe);
   const taskDir = tasksDir(safe);
-  const archiveTeamDir = path.join(CLAUDE_DIR, "teams-archive", safe);
-  const archiveTaskDir = path.join(CLAUDE_DIR, "tasks-archive", safe);
 
   if (!fs.existsSync(path.join(teamDir, "config.json"))) {
     throw new Error(`Team "${teamName}" not found`);
   }
 
-  // Add archivedAt timestamp to config
-  const configPath = path.join(teamDir, "config.json");
-  const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-  config.archivedAt = new Date().toISOString();
-
-  fs.mkdirSync(path.dirname(archiveTeamDir), { recursive: true });
-  if (fs.existsSync(archiveTeamDir)) {
-    fs.rmSync(archiveTeamDir, { recursive: true });
+  if (fs.existsSync(teamDir)) {
+    fs.rmSync(teamDir, { recursive: true });
   }
-  fs.renameSync(teamDir, archiveTeamDir);
-  fs.writeFileSync(
-    path.join(archiveTeamDir, "config.json"),
-    JSON.stringify(config, null, 2),
-    "utf-8"
-  );
-
-  // Archive tasks too
   if (fs.existsSync(taskDir)) {
-    fs.mkdirSync(path.dirname(archiveTaskDir), { recursive: true });
-    if (fs.existsSync(archiveTaskDir)) {
-      fs.rmSync(archiveTaskDir, { recursive: true });
-    }
-    fs.renameSync(taskDir, archiveTaskDir);
+    fs.rmSync(taskDir, { recursive: true });
   }
 }
 
