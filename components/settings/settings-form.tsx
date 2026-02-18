@@ -424,7 +424,7 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 px-2 text-xs text-red-400 hover:text-red-300"
+                    className="h-6 px-2 text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
                     onClick={() => removeProjectDir(dir)}
                   >
                     Remove

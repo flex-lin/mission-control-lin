@@ -17,8 +17,8 @@ const COLORS = ["#60a5fa", "#34d399", "#f59e0b", "#f87171", "#a78bfa", "#fb923c"
 
 const TOOLTIP_STYLE = {
   contentStyle: {
-    backgroundColor: "hsl(222.2 47.4% 6%)",
-    border: "1px solid hsl(216 34% 17%)",
+    backgroundColor: "hsl(var(--chart-tooltip-bg))",
+    border: "1px solid hsl(var(--chart-tooltip-border))",
     borderRadius: "6px",
     fontSize: 12,
   },
@@ -101,15 +101,15 @@ export function TeamBarChart({ data }: TeamBarChartProps) {
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 30 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(216 34% 17%)" />
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--chart-grid))" />
         <XAxis
           dataKey="name"
-          tick={{ fill: "hsl(215.4 16.3% 56.9%)", fontSize: 10 }}
+          tick={{ fill: "hsl(var(--chart-tick))", fontSize: 10 }}
           angle={-30}
           textAnchor="end"
         />
         <YAxis
-          tick={{ fill: "hsl(215.4 16.3% 56.9%)", fontSize: 10 }}
+          tick={{ fill: "hsl(var(--chart-tick))", fontSize: 10 }}
           tickFormatter={(v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
         />
         <Tooltip

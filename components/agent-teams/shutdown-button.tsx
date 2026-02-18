@@ -56,7 +56,7 @@ export function ShutdownButton({ teamName, memberName }: ShutdownButtonProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5 text-red-400 hover:text-red-300">
+        <Button variant="outline" size="sm" className="gap-1.5 text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300">
           <Power className="h-3.5 w-3.5" />
           Shutdown
         </Button>
