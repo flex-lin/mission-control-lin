@@ -32,7 +32,7 @@ pnpm db:push
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3777](http://localhost:3777).
 
 ### Optional: API Proxy
 
@@ -48,7 +48,7 @@ Point Claude Code at the proxy by setting `ANTHROPIC_BASE_URL=http://localhost:8
 
 | Command | Description |
 |---------|-------------|
-| `pnpm dev` | Start Next.js dev server (port 3000) |
+| `pnpm dev` | Start Next.js dev server (port 3777) |
 | `pnpm build` | Production build |
 | `pnpm start` | Start production server |
 | `pnpm proxy` | Start API proxy (port 8787) |
@@ -59,7 +59,7 @@ Point Claude Code at the proxy by setting `ANTHROPIC_BASE_URL=http://localhost:8
 ## Architecture
 
 ```
-Browser ──→ Next.js (port 3000)
+Browser ──→ Next.js (port 3777)
                ├── Dashboard pages (React Server Components)
                ├── API routes (team CRUD, analytics, settings)
                └── Reads/writes ~/.claude/ (team configs, tasks)

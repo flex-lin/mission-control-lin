@@ -73,7 +73,7 @@ export default function QueuePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!goal.trim() || !projectPath.trim()) return
+    if (!goal.trim()) return
 
     setSubmitting(true)
     setSubmitError(null)
@@ -82,7 +82,7 @@ export default function QueuePage() {
       const res = await fetch("/api/queue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal: goal.trim(), projectPath: projectPath.trim() }),
+        body: JSON.stringify({ goal: goal.trim(), ...(projectPath.trim() && { projectPath: projectPath.trim() }) }),
       })
       if (!res.ok) {
         const json = await res.json()
@@ -181,10 +181,10 @@ export default function QueuePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="projectPath">Project Path</Label>
+              <Label htmlFor="projectPath">Project Path <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <Input
                 id="projectPath"
-                placeholder="e.g. /home/user/my-project"
+                placeholder="defaults to current project"
                 value={projectPath}
                 onChange={(e) => setProjectPath(e.target.value)}
                 disabled={submitting}
@@ -194,7 +194,7 @@ export default function QueuePage() {
           {submitError && (
             <p className="text-sm text-destructive">{submitError}</p>
           )}
-          <Button type="submit" size="sm" disabled={submitting || !goal.trim() || !projectPath.trim()}>
+          <Button type="submit" size="sm" disabled={submitting || !goal.trim()}>
             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ListOrdered className="h-4 w-4 mr-2" />}
             Add to Queue
           </Button>

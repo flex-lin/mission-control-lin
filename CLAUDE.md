@@ -16,7 +16,7 @@ Local dashboard for managing Claude Code agent teams, tracking token usage, and 
 ```bash
 pnpm install
 npx prisma generate
-pnpm dev            # Next.js on :3000
+pnpm dev            # Next.js on :3777
 pnpm proxy          # API proxy on :8787 (optional)
 ```
 

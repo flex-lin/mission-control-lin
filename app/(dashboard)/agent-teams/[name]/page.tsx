@@ -9,7 +9,7 @@ interface TeamWithTasks extends Team {
 }
 
 async function getTeamWithTasks(name: string): Promise<TeamWithTasks | null> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
   try {
     const res = await fetch(`${base}/api/teams/${encodeURIComponent(name)}`, { cache: "no-store" })
     if (!res.ok) return null

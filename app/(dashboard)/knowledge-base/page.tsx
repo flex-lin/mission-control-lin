@@ -7,7 +7,7 @@ import { BookOpen, FolderOpen } from "lucide-react"
 import type { Project } from "@/types"
 
 async function getProjects(): Promise<Project[]> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
   try {
     const res = await fetch(`${base}/api/projects`, { cache: "no-store" })
     if (!res.ok) return []

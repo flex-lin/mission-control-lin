@@ -4,7 +4,7 @@ import { SettingsForm } from "@/components/settings/settings-form"
 import type { Settings } from "@/types"
 
 async function getSettings(): Promise<Settings> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
   try {
     const res = await fetch(`${base}/api/settings`, { cache: "no-store" })
     if (!res.ok) return {}

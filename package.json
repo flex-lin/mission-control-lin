@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3777",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --port 3777",
     "lint": "eslint",
     "proxy": "tsx --tsconfig tsconfig.server.json server/start-proxy.ts",
     "queue": "tsx --tsconfig tsconfig.server.json server/start-queue-worker.ts",

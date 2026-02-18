@@ -9,7 +9,7 @@ import type { Project, ProjectContext } from "@/types"
 import { FileText, FolderTree, BookOpen } from "lucide-react"
 
 async function getProjectWithContext(id: string): Promise<(Project & ProjectContext) | null> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
   try {
     const res = await fetch(`${base}/api/projects/${encodeURIComponent(id)}`, { cache: "no-store" })
     if (!res.ok) return null

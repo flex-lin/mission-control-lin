@@ -33,14 +33,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (!body.goal || typeof body.goal !== "string" || !body.goal.trim()) {
       return err("goal is required", "VALIDATION_ERROR");
     }
-    if (!body.projectPath || typeof body.projectPath !== "string" || !body.projectPath.trim()) {
-      return err("projectPath is required", "VALIDATION_ERROR");
-    }
+    const projectPath = (body.projectPath && typeof body.projectPath === "string" && body.projectPath.trim())
+      ? body.projectPath.trim()
+      : process.cwd();
 
     const task = await db.queuedTask.create({
       data: {
         goal: body.goal.trim(),
-        projectPath: body.projectPath.trim(),
+        projectPath,
         priority: body.priority ?? 0,
       },
     });
