@@ -121,6 +121,14 @@ function writeLeaderLauncher(teamName: string, projectPath: string): string {
   const systemPrompt = [
     `You are the team leader/coordinator for team "${teamName}" working in ${projectPath}.`,
     "",
+    "## NO TASKS — IMMEDIATE EXIT",
+    "If the setup message says \"(no tasks)\" or there are ZERO tasks listed:",
+    "1. Do NOT spawn any teammates",
+    "2. Do NOT call TeamCreate",
+    "3. Clean up: remove the team directory by running: rm -rf ~/.claude/teams/" + teamName + " ~/.claude/tasks/" + teamName,
+    "4. Say \"No tasks assigned. Team exiting immediately.\" and stop",
+    "This takes ABSOLUTE priority over all other instructions.",
+    "",
     "## INITIAL SETUP (do this ONCE, first turn only)",
     "1. Call TeamCreate with team_name=\"" + teamName + "\"",
     "2. Spawn ALL teammates listed in your first message using the Task tool — ALL in a single message, each with team_name=\"" + teamName + "\"",
@@ -195,6 +203,17 @@ function buildSetupMessage(
     })
     .join("\n");
 
+  // If no tasks, instruct immediate exit
+  if (!tasks || tasks.length === 0) {
+    return `NO TASKS for team "${teamName}".
+
+There are ZERO tasks assigned to this team. Follow the "NO TASKS — IMMEDIATE EXIT" protocol:
+1. Do NOT spawn any teammates
+2. Do NOT call TeamCreate
+3. Clean up: run: rm -rf ~/.claude/teams/${teamName} ~/.claude/tasks/${teamName}
+4. Say "No tasks assigned. Team exiting immediately." and stop`;
+  }
+
   return `ONE-TIME SETUP for team "${teamName}" (${description}):
 
 STEP 1: Call TeamCreate with team_name="${teamName}"
@@ -244,6 +263,26 @@ function buildResumeMessage(
       return `- name="${m.name}", subagent_type="general-purpose", mode="bypassPermissions", prompt="You are ${m.name} (${m.role}) on team ${teamName}. ${taskDesc}. cd ${projectPath} and start immediately."`;
     })
     .join("\n");
+
+  // If no tasks remain, instruct immediate exit
+  if (!tasks || tasks.length === 0) {
+    return `RESUME team "${teamName}" — but there are ZERO tasks remaining.
+
+Follow the "NO TASKS — IMMEDIATE EXIT" protocol:
+1. Do NOT spawn any teammates
+2. Clean up: run: rm -rf ~/.claude/teams/${teamName} ~/.claude/tasks/${teamName}
+3. Say "No tasks assigned. Team exiting immediately." and stop`;
+  }
+
+  // If all tasks are already completed/deleted, also exit
+  const allDone = tasks.every((t) => t.status === "completed" || t.status === "deleted");
+  if (allDone) {
+    return `RESUME team "${teamName}" — ALL tasks are already completed.
+
+Follow the "COMPLETION & CLEANUP" protocol:
+1. Clean up: run: rm -rf ~/.claude/teams/${teamName} ~/.claude/tasks/${teamName}
+2. Say "All tasks already complete. Team exiting." and stop`;
+  }
 
   return `RESUME team "${teamName}" (${description}):
 

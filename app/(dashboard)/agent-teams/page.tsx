@@ -115,7 +115,7 @@ export default async function AgentTeamsPage() {
                         </Badge>
                       )}
                     </div>
-                    {team.taskStats && team.taskStats.total > 0 && (
+                    {team.taskStats && team.taskStats.total > 0 ? (
                       <div className="mt-3 space-y-1">
                         <div className="flex items-center justify-between text-[10px]">
                           <span className="text-muted-foreground">
@@ -135,7 +135,11 @@ export default async function AgentTeamsPage() {
                           />
                         </div>
                       </div>
-                    )}
+                    ) : team.taskStats && team.taskStats.total === 0 ? (
+                      <div className="mt-3">
+                        <span className="text-[10px] text-amber-500">No tasks — exiting</span>
+                      </div>
+                    ) : null}
                     {team.createdAt && (
                       <p className="mt-2 text-[10px] text-muted-foreground">
                         Created {new Date(team.createdAt).toLocaleDateString()}

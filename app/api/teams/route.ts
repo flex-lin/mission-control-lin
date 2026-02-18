@@ -39,7 +39,10 @@ export async function GET(): Promise<NextResponse> {
       }
 
       // Check if all tasks are completed/deleted → override to "completed"
-      if (tasks.length > 0 && tasks.every((task) => task.status === "completed" || task.status === "deleted")) {
+      // Zero tasks also means team has nothing to do → "completed"
+      if (tasks.length === 0) {
+        status = "completed";
+      } else if (tasks.length > 0 && tasks.every((task) => task.status === "completed" || task.status === "deleted")) {
         status = "completed";
       }
 

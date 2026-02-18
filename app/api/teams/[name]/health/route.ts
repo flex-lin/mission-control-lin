@@ -99,8 +99,11 @@ export async function GET(
     }
 
     // Check if all tasks are completed/deleted → override to "completed"
+    // Also treat zero tasks + dead leader as "completed" (team had nothing to do)
     const tasks = readTaskList(name);
     if (tasks.length > 0 && tasks.every((t) => t.status === "completed" || t.status === "deleted")) {
+      status = "completed";
+    } else if (tasks.length === 0 && !leaderTmuxAlive) {
       status = "completed";
     }
 

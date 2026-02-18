@@ -18,7 +18,7 @@ import { CreateTaskForm } from "@/components/agent-teams/create-task-form"
 import { ShutdownButton } from "@/components/agent-teams/shutdown-button"
 import { TeamHealthPanel } from "@/components/agent-teams/team-health-panel"
 import { TmuxSessionBar } from "@/components/agent-teams/tmux-session-bar"
-import { CheckCircle2, Play } from "lucide-react"
+import { AlertCircle, CheckCircle2, Play } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import type { Team, TeamTask } from "@/types"
@@ -95,6 +95,7 @@ export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
   const pendingTasks = tasks.filter((t) => t.status === "pending").length
   const completedTasks = tasks.filter((t) => t.status === "completed").length
   const allTasksDone = tasks.length > 0 && tasks.every((t) => t.status === "completed" || t.status === "deleted")
+  const noTasks = tasks.length === 0
 
   async function handleArchive() {
     try {
@@ -115,6 +116,22 @@ export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
 
   return (
     <div className="space-y-6 p-6">
+      {/* No tasks banner — team will exit automatically */}
+      {noTasks && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-amber-500" />
+            <div>
+              <span className="text-sm font-medium text-amber-500">No tasks assigned</span>
+              <p className="text-xs text-amber-500/70">Team will exit automatically and clean up</p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleArchive}>
+            Archive Now
+          </Button>
+        </div>
+      )}
+
       {/* Completion banner */}
       {allTasksDone && (
         <div className="flex items-center justify-between rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3">
