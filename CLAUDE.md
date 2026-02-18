@@ -52,7 +52,8 @@ components/
 
 lib/
 ├── db.ts                     # Prisma client singleton
-├── claude-files.ts           # Read/write ~/.claude/ (teams, tasks, settings)
+├── claude-files.ts           # Read/write ~/.claude/ (teams, tasks, settings, archive)
+├── team-spawner.ts           # Team spawn logic (config + tasks + leader launch)
 ├── tmux-manager.ts           # tmux session lifecycle
 ├── agent-launcher.ts         # Build prompts, launch agents in tmux
 ├── pricing.ts                # MODEL_PRICING table, computeCost()
@@ -84,10 +85,17 @@ types/index.ts                # All shared interfaces (Team, Teammate, Analytics
 
 ### Agent Team Lifecycle
 1. **Plan**: `POST /api/teams/smart-create` — AI generates team plan (personas + tasks)
-2. **Spawn**: `POST /api/teams/spawn` — creates `~/.claude/teams/{name}/` config, launches tmux sessions
+2. **Spawn**: `POST /api/teams/spawn` — creates `~/.claude/teams/{name}/` config, launches leader tmux session
+   - Leader is the only tmux session; teammates are spawned as subagents inside the leader's process
+   - Setup message instructs leader to call `TeamCreate` then spawn all teammates via `Task` tool
 3. **Monitor**: `GET /api/teams/[name]/health` — checks tmux process liveness + task staleness
-4. **Wake**: `POST /api/teams/[name]/wake` — restarts dead sessions, sends messages
-5. **Shutdown**: `GET /api/teams/[name]/shutdown` — kills tmux sessions
+   - Health statuses: `alive` (tmux running or recent activity), `asleep` (no activity >5 min), `completed` (all tasks done), `exited` (archived)
+   - Returns `taskStats: { total, completed, pending, inProgress }` per team
+4. **Wake**: `POST /api/teams/[name]/wake` — restarts dead sessions, sends resume message
+5. **Complete**: When all tasks reach `completed`/`deleted` status, health auto-transitions to `"completed"`
+6. **Auto-archive**: Completed teams with dead leader + >5 min inactivity are auto-archived on next listing
+7. **Shutdown**: `GET /api/teams/[name]/shutdown` — sends shutdown request to teammates
+8. **Archive**: `DELETE /api/teams/[name]?mode=archive` — moves to `~/.claude/teams-archive/`
 
 ### Token Tracking
 - Proxy server (`server/proxy.ts`) intercepts Anthropic API requests on port 8787
@@ -98,7 +106,10 @@ types/index.ts                # All shared interfaces (Team, Teammate, Analytics
 ### File-Based State (not in DB)
 - Team configs: `~/.claude/teams/{name}/config.json`
 - Task lists: `~/.claude/tasks/{name}/`
+- Archived teams: `~/.claude/teams-archive/{name}/`
+- Archived tasks: `~/.claude/tasks-archive/{name}/`
 - Managed by `lib/claude-files.ts` with path traversal protection
+- Archive via `archiveTeam()` — copies config with `archivedAt` timestamp, moves dirs
 
 ### API Response Convention
 All API routes return: `{ data?, error?, meta? }` via helpers in `lib/api-helpers.ts`

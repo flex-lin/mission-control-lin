@@ -4,7 +4,7 @@ A local dashboard for managing Claude Code agent teams, tracking API token usage
 
 ## What It Does
 
-- **Agent Teams** — Create, spawn, monitor, and shut down Claude Code agent teams via tmux. AI-assisted team planning generates personas and task breakdowns from a goal description.
+- **Agent Teams** — Create, spawn, monitor, and shut down Claude Code agent teams via tmux. AI-assisted team planning generates personas and task breakdowns from a goal description. Teams auto-detect completion when all tasks are done and auto-archive after a grace period.
 - **Analytics** — Track token usage, costs, and latency across models, teams, and individual agents. Ingest historical data from Claude Code session logs.
 - **API Proxy** — Transparent HTTP proxy that intercepts Anthropic API requests, extracts token counts from responses (JSON and SSE), and records them to a local SQLite database.
 - **Dashboard** — Overview of active teams, request volume, average latency, and estimated costs with trend comparisons.
@@ -69,8 +69,9 @@ Claude CLI ──→ Proxy (port 8787) ──→ Anthropic API
 ```
 
 **Data storage:**
-- **SQLite** (`prisma/mission-control.db`) — proxy logs, analytics snapshots, settings
-- **Filesystem** (`~/.claude/teams/`, `~/.claude/tasks/`) — team configs, task lists
+- **SQLite** (`prisma/mission-control.db`) — proxy logs, analytics snapshots, task queue, settings
+- **Filesystem** (`~/.claude/teams/`, `~/.claude/tasks/`) — active team configs, task lists
+- **Filesystem** (`~/.claude/teams-archive/`, `~/.claude/tasks-archive/`) — archived teams
 
 ## Tech Stack
 
