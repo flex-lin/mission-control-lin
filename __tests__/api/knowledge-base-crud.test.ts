@@ -32,6 +32,10 @@ vi.mock("@/lib/db", () => ({
       update: (...args: unknown[]) => mockUpdate(...args),
       delete: (...args: unknown[]) => mockDelete(...args),
     },
+    preference: {
+      findUnique: vi.fn().mockResolvedValue(null),
+      upsert: vi.fn().mockResolvedValue(null),
+    },
   },
 }));
 
