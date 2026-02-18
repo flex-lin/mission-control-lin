@@ -5,6 +5,7 @@
 import fs from "fs";
 import path from "path";
 import { launchTeamAsLeader, getLeaderSessionName, personaToLaunchable } from "@/lib/agent-launcher";
+import { writeBackgroundConfig, DEFAULT_BACKGROUND_CONFIG } from "@/lib/sleep-detector";
 import type { TeamPlan, Teammate, TeamTask } from "@/types";
 
 const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
@@ -33,11 +34,17 @@ export interface SpawnResult {
 
 export async function spawnTeam(
   plan: TeamPlan,
-  projectPath?: string
+  projectPath?: string,
+  options?: { persistent?: boolean }
 ): Promise<SpawnResult> {
   const teamName = safeName(plan.teamName);
   const teamDir = path.join(CLAUDE_DIR, "teams", teamName);
   assertSafePath(path.resolve(teamDir));
+
+  // One-team-per-task guard: reject if team directory already exists (prevents duplicates)
+  if (fs.existsSync(path.join(teamDir, "config.json"))) {
+    throw new Error(`Team "${teamName}" already exists — cannot spawn duplicate`);
+  }
 
   // Pre-populate ALL members in config
   const leaderSessionName = getLeaderSessionName(teamName);
@@ -63,6 +70,7 @@ export async function spawnTeam(
     members,
     projectPath,
     createdAt: new Date().toISOString(),
+    ...(plan.sourceTaskId != null ? { sourceTaskId: plan.sourceTaskId } : {}),
   };
 
   // Write team config
@@ -72,6 +80,14 @@ export async function spawnTeam(
     JSON.stringify(config, null, 2),
     "utf-8"
   );
+
+  // Write background execution config if persistent flag is set
+  if (options?.persistent) {
+    writeBackgroundConfig(teamName, {
+      ...DEFAULT_BACKGROUND_CONFIG,
+      persistent: true,
+    });
+  }
 
   // Write initial tasks
   const taskDir = path.join(CLAUDE_DIR, "tasks", teamName);

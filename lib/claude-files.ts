@@ -39,6 +39,22 @@ function safeName(name: string): string {
   return name;
 }
 
+/**
+ * Get the leadSessionId from a team config (if present).
+ * External teams (spawned outside MC) store the Claude Code session UUID here.
+ */
+function getLeadSessionId(teamName: string): string | null {
+  try {
+    const configPath = path.join(teamsDir(), teamName, "config.json");
+    if (!fs.existsSync(configPath)) return null;
+    const raw = fs.readFileSync(configPath, "utf-8");
+    const config = JSON.parse(raw);
+    return config.leadSessionId ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ── JSON helpers ──────────────────────────────────────────────────────────────
 
 function readJson<T>(filePath: string): T | null {
@@ -260,6 +276,11 @@ export function findInternalTeamName(mcTeamName: string): string | null {
       const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
       if (!config.createdAt) continue;
 
+      // Guard: skip candidates that are intentionally named external teams.
+      // If config.name matches the directory name, it's an explicitly named team
+      // (not a Claude-generated whimsical name) — don't claim it as our internal team.
+      if (config.name && config.name === entry.name) continue;
+
       const createdAt = parseCreatedAt(config.createdAt);
       const timeDiff = Math.abs(createdAt - mcCreatedAt);
 
@@ -378,16 +399,36 @@ function symlinkInternalTaskDir(mcDir: string, internalDir: string): void {
 export function readTaskList(teamName: string): TeamTask[] {
   const safe = safeName(teamName);
   const dir = tasksDir(safe);
+
+  // Priority 1: Resolve tasks via leadSessionId (external/cross-repo teams)
+  // The team config may have a leadSessionId UUID pointing to the real task dir
+  const leadSessionId = getLeadSessionId(safe);
+  if (leadSessionId) {
+    const sessionTaskDir = path.join(CLAUDE_DIR, "tasks", leadSessionId);
+    if (fs.existsSync(sessionTaskDir)) {
+      const sessionFiles = fs.readdirSync(sessionTaskDir).filter((f) => f.endsWith(".json"));
+      if (sessionFiles.length > 0) {
+        // Ensure symlink: ~/.claude/tasks/{teamName} → ~/.claude/tasks/{leadSessionId}/
+        ensureTaskSymlink(dir, sessionTaskDir);
+        return readTasksFromDir(dir);
+      }
+    }
+  }
+
   if (!fs.existsSync(dir)) return [];
 
-  // Auto-symlink: on first detection of internal team, replace its task dir
-  // with a symlink to MC dir. After this, all agent writes go to MC files directly.
+  // Priority 2: Auto-symlink via internal team name heuristic (MC-spawned teams)
   const internalTeamName = findInternalTeamName(safe);
   if (internalTeamName) {
     const internalDir = tasksDir(internalTeamName);
     symlinkInternalTaskDir(dir, internalDir);
   }
 
+  return readTasksFromDir(dir);
+}
+
+/** Read all task JSON files from a directory */
+function readTasksFromDir(dir: string): TeamTask[] {
   const files = fs.readdirSync(dir).filter((f) => f.endsWith(".json"));
   const tasks: TeamTask[] = [];
 
@@ -402,6 +443,37 @@ export function readTaskList(teamName: string): TeamTask[] {
   }
 
   return tasks;
+}
+
+/**
+ * Ensure a symlink exists from linkPath → targetDir.
+ * If linkPath is already a symlink pointing to targetDir, no-op.
+ * If linkPath is a broken symlink or doesn't exist, create the symlink.
+ * If linkPath is a real directory, skip (don't destroy data).
+ */
+function ensureTaskSymlink(linkPath: string, targetDir: string): void {
+  try {
+    const stat = fs.lstatSync(linkPath);
+    if (stat.isSymbolicLink()) {
+      // Already a symlink — check if it points to the right place
+      const existing = fs.readlinkSync(linkPath);
+      if (path.resolve(existing) === path.resolve(targetDir)) return;
+      // Wrong target — replace it
+      fs.unlinkSync(linkPath);
+    } else if (stat.isDirectory()) {
+      // Real directory with potential data — don't destroy it
+      // Instead, try symlinkInternalTaskDir which merges first
+      return;
+    }
+  } catch {
+    // Doesn't exist — good, we'll create it
+  }
+
+  try {
+    fs.symlinkSync(targetDir, linkPath);
+  } catch {
+    // ignore symlink creation failure
+  }
 }
 
 export function readTask(teamName: string, taskId: string): TeamTask | null {

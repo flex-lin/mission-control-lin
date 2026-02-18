@@ -145,10 +145,11 @@ describe("ensureUniqueName", () => {
     expect(name).toBe("__test-unique-name__-3");
   });
 
-  it("checks archived teams for conflicts", () => {
+  it("does not check archived teams for conflicts (archive removed)", () => {
     fs.mkdirSync(testArchiveDir, { recursive: true });
     const name = ensureUniqueName("__test-archived-name__");
-    expect(name).toBe("__test-archived-name__-2");
+    // Archive is no longer checked, so base name should be returned
+    expect(name).toBe("__test-archived-name__");
   });
 
   it("handles missing teams directory gracefully", () => {
