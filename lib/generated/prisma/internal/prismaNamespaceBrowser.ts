@@ -59,7 +59,8 @@ export const ModelName = {
   UsageRecord: 'UsageRecord',
   CostRecord: 'CostRecord',
   ClaudeCodeDailyMetric: 'ClaudeCodeDailyMetric',
-  UsageSyncCursor: 'UsageSyncCursor'
+  UsageSyncCursor: 'UsageSyncCursor',
+  SessionCheckpoint: 'SessionCheckpoint'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -132,6 +133,7 @@ export const QueuedTaskScalarFieldEnum = {
   teamName: 'teamName',
   priority: 'priority',
   result: 'result',
+  attachments: 'attachments',
   createdAt: 'createdAt',
   startedAt: 'startedAt',
   completedAt: 'completedAt'
@@ -208,6 +210,17 @@ export const UsageSyncCursorScalarFieldEnum = {
 } as const
 
 export type UsageSyncCursorScalarFieldEnum = (typeof UsageSyncCursorScalarFieldEnum)[keyof typeof UsageSyncCursorScalarFieldEnum]
+
+
+export const SessionCheckpointScalarFieldEnum = {
+  id: 'id',
+  teamName: 'teamName',
+  checkpoint: 'checkpoint',
+  createdAt: 'createdAt',
+  resumedAt: 'resumedAt'
+} as const
+
+export type SessionCheckpointScalarFieldEnum = (typeof SessionCheckpointScalarFieldEnum)[keyof typeof SessionCheckpointScalarFieldEnum]
 
 
 export const SortOrder = {

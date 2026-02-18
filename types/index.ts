@@ -77,6 +77,7 @@ export interface TeamEntry {
   totalOutput: number;
   totalTokens: number;
   requests: number;
+  estimatedCost: number;
 }
 
 export interface MemberEntry {
@@ -417,6 +418,27 @@ export interface DaemonStatus {
   lastHeartbeat: string | null;
   lastSleepEvent: SleepEvent | null;
   resumeHistory: ResumeAction[];
+}
+
+// ── Usage Limits Types ───────────────────────────────────────────────────────
+
+export interface UsageLimits {
+  dailyTokens: number | null;
+  dailyCost: number | null;
+  monthlyTokens: number | null;
+  monthlyCost: number | null;
+}
+
+export interface UsageSummaryPeriod {
+  tokens: number;
+  cost: number;
+  tokenLimit: number | null;
+  costLimit: number | null;
+}
+
+export interface UsageSummary {
+  daily: UsageSummaryPeriod;
+  monthly: UsageSummaryPeriod;
 }
 
 // ── API Response Wrapper ──────────────────────────────────────────────────────

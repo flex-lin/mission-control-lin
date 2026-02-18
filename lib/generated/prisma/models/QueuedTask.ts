@@ -44,6 +44,7 @@ export type QueuedTaskMinAggregateOutputType = {
   teamName: string | null
   priority: number | null
   result: string | null
+  attachments: string | null
   createdAt: Date | null
   startedAt: Date | null
   completedAt: Date | null
@@ -57,6 +58,7 @@ export type QueuedTaskMaxAggregateOutputType = {
   teamName: string | null
   priority: number | null
   result: string | null
+  attachments: string | null
   createdAt: Date | null
   startedAt: Date | null
   completedAt: Date | null
@@ -70,6 +72,7 @@ export type QueuedTaskCountAggregateOutputType = {
   teamName: number
   priority: number
   result: number
+  attachments: number
   createdAt: number
   startedAt: number
   completedAt: number
@@ -95,6 +98,7 @@ export type QueuedTaskMinAggregateInputType = {
   teamName?: true
   priority?: true
   result?: true
+  attachments?: true
   createdAt?: true
   startedAt?: true
   completedAt?: true
@@ -108,6 +112,7 @@ export type QueuedTaskMaxAggregateInputType = {
   teamName?: true
   priority?: true
   result?: true
+  attachments?: true
   createdAt?: true
   startedAt?: true
   completedAt?: true
@@ -121,6 +126,7 @@ export type QueuedTaskCountAggregateInputType = {
   teamName?: true
   priority?: true
   result?: true
+  attachments?: true
   createdAt?: true
   startedAt?: true
   completedAt?: true
@@ -221,6 +227,7 @@ export type QueuedTaskGroupByOutputType = {
   teamName: string | null
   priority: number
   result: string | null
+  attachments: string
   createdAt: Date
   startedAt: Date | null
   completedAt: Date | null
@@ -257,6 +264,7 @@ export type QueuedTaskWhereInput = {
   teamName?: Prisma.StringNullableFilter<"QueuedTask"> | string | null
   priority?: Prisma.IntFilter<"QueuedTask"> | number
   result?: Prisma.StringNullableFilter<"QueuedTask"> | string | null
+  attachments?: Prisma.StringFilter<"QueuedTask"> | string
   createdAt?: Prisma.DateTimeFilter<"QueuedTask"> | Date | string
   startedAt?: Prisma.DateTimeNullableFilter<"QueuedTask"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableFilter<"QueuedTask"> | Date | string | null
@@ -270,6 +278,7 @@ export type QueuedTaskOrderByWithRelationInput = {
   teamName?: Prisma.SortOrderInput | Prisma.SortOrder
   priority?: Prisma.SortOrder
   result?: Prisma.SortOrderInput | Prisma.SortOrder
+  attachments?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -286,6 +295,7 @@ export type QueuedTaskWhereUniqueInput = Prisma.AtLeast<{
   teamName?: Prisma.StringNullableFilter<"QueuedTask"> | string | null
   priority?: Prisma.IntFilter<"QueuedTask"> | number
   result?: Prisma.StringNullableFilter<"QueuedTask"> | string | null
+  attachments?: Prisma.StringFilter<"QueuedTask"> | string
   createdAt?: Prisma.DateTimeFilter<"QueuedTask"> | Date | string
   startedAt?: Prisma.DateTimeNullableFilter<"QueuedTask"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableFilter<"QueuedTask"> | Date | string | null
@@ -299,6 +309,7 @@ export type QueuedTaskOrderByWithAggregationInput = {
   teamName?: Prisma.SortOrderInput | Prisma.SortOrder
   priority?: Prisma.SortOrder
   result?: Prisma.SortOrderInput | Prisma.SortOrder
+  attachments?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -320,6 +331,7 @@ export type QueuedTaskScalarWhereWithAggregatesInput = {
   teamName?: Prisma.StringNullableWithAggregatesFilter<"QueuedTask"> | string | null
   priority?: Prisma.IntWithAggregatesFilter<"QueuedTask"> | number
   result?: Prisma.StringNullableWithAggregatesFilter<"QueuedTask"> | string | null
+  attachments?: Prisma.StringWithAggregatesFilter<"QueuedTask"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"QueuedTask"> | Date | string
   startedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"QueuedTask"> | Date | string | null
   completedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"QueuedTask"> | Date | string | null
@@ -332,6 +344,7 @@ export type QueuedTaskCreateInput = {
   teamName?: string | null
   priority?: number
   result?: string | null
+  attachments?: string
   createdAt?: Date | string
   startedAt?: Date | string | null
   completedAt?: Date | string | null
@@ -345,6 +358,7 @@ export type QueuedTaskUncheckedCreateInput = {
   teamName?: string | null
   priority?: number
   result?: string | null
+  attachments?: string
   createdAt?: Date | string
   startedAt?: Date | string | null
   completedAt?: Date | string | null
@@ -357,6 +371,7 @@ export type QueuedTaskUpdateInput = {
   teamName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.IntFieldUpdateOperationsInput | number
   result?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachments?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -370,6 +385,7 @@ export type QueuedTaskUncheckedUpdateInput = {
   teamName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.IntFieldUpdateOperationsInput | number
   result?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachments?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -383,6 +399,7 @@ export type QueuedTaskCreateManyInput = {
   teamName?: string | null
   priority?: number
   result?: string | null
+  attachments?: string
   createdAt?: Date | string
   startedAt?: Date | string | null
   completedAt?: Date | string | null
@@ -395,6 +412,7 @@ export type QueuedTaskUpdateManyMutationInput = {
   teamName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.IntFieldUpdateOperationsInput | number
   result?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachments?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -408,6 +426,7 @@ export type QueuedTaskUncheckedUpdateManyInput = {
   teamName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.IntFieldUpdateOperationsInput | number
   result?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  attachments?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -421,6 +440,7 @@ export type QueuedTaskCountOrderByAggregateInput = {
   teamName?: Prisma.SortOrder
   priority?: Prisma.SortOrder
   result?: Prisma.SortOrder
+  attachments?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
@@ -439,6 +459,7 @@ export type QueuedTaskMaxOrderByAggregateInput = {
   teamName?: Prisma.SortOrder
   priority?: Prisma.SortOrder
   result?: Prisma.SortOrder
+  attachments?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
@@ -452,6 +473,7 @@ export type QueuedTaskMinOrderByAggregateInput = {
   teamName?: Prisma.SortOrder
   priority?: Prisma.SortOrder
   result?: Prisma.SortOrder
+  attachments?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   startedAt?: Prisma.SortOrder
   completedAt?: Prisma.SortOrder
@@ -472,6 +494,7 @@ export type QueuedTaskSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   teamName?: boolean
   priority?: boolean
   result?: boolean
+  attachments?: boolean
   createdAt?: boolean
   startedAt?: boolean
   completedAt?: boolean
@@ -485,6 +508,7 @@ export type QueuedTaskSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   teamName?: boolean
   priority?: boolean
   result?: boolean
+  attachments?: boolean
   createdAt?: boolean
   startedAt?: boolean
   completedAt?: boolean
@@ -498,6 +522,7 @@ export type QueuedTaskSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   teamName?: boolean
   priority?: boolean
   result?: boolean
+  attachments?: boolean
   createdAt?: boolean
   startedAt?: boolean
   completedAt?: boolean
@@ -511,12 +536,13 @@ export type QueuedTaskSelectScalar = {
   teamName?: boolean
   priority?: boolean
   result?: boolean
+  attachments?: boolean
   createdAt?: boolean
   startedAt?: boolean
   completedAt?: boolean
 }
 
-export type QueuedTaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "goal" | "projectPath" | "status" | "teamName" | "priority" | "result" | "createdAt" | "startedAt" | "completedAt", ExtArgs["result"]["queuedTask"]>
+export type QueuedTaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "goal" | "projectPath" | "status" | "teamName" | "priority" | "result" | "attachments" | "createdAt" | "startedAt" | "completedAt", ExtArgs["result"]["queuedTask"]>
 
 export type $QueuedTaskPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "QueuedTask"
@@ -529,6 +555,7 @@ export type $QueuedTaskPayload<ExtArgs extends runtime.Types.Extensions.Internal
     teamName: string | null
     priority: number
     result: string | null
+    attachments: string
     createdAt: Date
     startedAt: Date | null
     completedAt: Date | null
@@ -962,6 +989,7 @@ export interface QueuedTaskFieldRefs {
   readonly teamName: Prisma.FieldRef<"QueuedTask", 'String'>
   readonly priority: Prisma.FieldRef<"QueuedTask", 'Int'>
   readonly result: Prisma.FieldRef<"QueuedTask", 'String'>
+  readonly attachments: Prisma.FieldRef<"QueuedTask", 'String'>
   readonly createdAt: Prisma.FieldRef<"QueuedTask", 'DateTime'>
   readonly startedAt: Prisma.FieldRef<"QueuedTask", 'DateTime'>
   readonly completedAt: Prisma.FieldRef<"QueuedTask", 'DateTime'>

@@ -60,6 +60,7 @@ model QueuedTask {
   teamName    String?   @map("team_name")
   priority    Int       @default(0)
   result      String?
+  attachments String    @default("[]")         // JSON array of TaskAttachment objects
   createdAt   DateTime  @default(now()) @map("created_at")
   startedAt   DateTime? @map("started_at")
   completedAt DateTime? @map("completed_at")
@@ -143,4 +144,16 @@ model UsageSyncCursor {
   updatedAt  DateTime @default(now()) @map("updated_at")
 
   @@map("usage_sync_cursors")
+}
+
+/// Checkpoint captured before sleep or periodically, used for auto-resume
+model SessionCheckpoint {
+  id          Int       @id @default(autoincrement())
+  teamName    String    @map("team_name")
+  checkpoint  String    // JSON-encoded SessionCheckpointData
+  createdAt   DateTime  @default(now()) @map("created_at")
+  resumedAt   DateTime? @map("resumed_at")
+
+  @@index([teamName])
+  @@map("session_checkpoints")
 }

@@ -84,3 +84,8 @@ export type ClaudeCodeDailyMetric = Prisma.ClaudeCodeDailyMetricModel
  * Tracks sync state so we know what's already been fetched
  */
 export type UsageSyncCursor = Prisma.UsageSyncCursorModel
+/**
+ * Model SessionCheckpoint
+ * Checkpoint captured before sleep or periodically, used for auto-resume
+ */
+export type SessionCheckpoint = Prisma.SessionCheckpointModel
