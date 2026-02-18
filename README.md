@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mission Control Lin
 
-## Getting Started
+A local dashboard for managing Claude Code agent teams, tracking API token usage, and monitoring costs. Runs entirely on your machine — no cloud services required.
 
-First, run the development server:
+## What It Does
+
+- **Agent Teams** — Create, spawn, monitor, and shut down Claude Code agent teams via tmux. AI-assisted team planning generates personas and task breakdowns from a goal description.
+- **Analytics** — Track token usage, costs, and latency across models, teams, and individual agents. Ingest historical data from Claude Code session logs.
+- **API Proxy** — Transparent HTTP proxy that intercepts Anthropic API requests, extracts token counts from responses (JSON and SSE), and records them to a local SQLite database.
+- **Dashboard** — Overview of active teams, request volume, average latency, and estimated costs with trend comparisons.
+
+## Prerequisites
+
+- Node.js 18+
+- pnpm
+- tmux (for agent team spawning)
+- Claude Code CLI (`claude`) installed and authenticated
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# Install dependencies
+pnpm install
+
+# Generate Prisma client
+npx prisma generate
+
+# Push database schema (first time only)
+pnpm db:push
+
+# Start the development server
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Optional: API Proxy
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The proxy intercepts Anthropic API calls to record token usage per team/member:
 
-## Learn More
+```bash
+pnpm proxy   # Starts on port 8787
+```
 
-To learn more about Next.js, take a look at the following resources:
+Point Claude Code at the proxy by setting `ANTHROPIC_BASE_URL=http://localhost:8787`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start Next.js dev server (port 3000) |
+| `pnpm build` | Production build |
+| `pnpm start` | Start production server |
+| `pnpm proxy` | Start API proxy (port 8787) |
+| `pnpm db:push` | Push Prisma schema to SQLite |
+| `pnpm db:generate` | Regenerate Prisma client |
+| `pnpm lint` | Run ESLint |
 
-## Deploy on Vercel
+## Architecture
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+Browser ──→ Next.js (port 3000)
+               ├── Dashboard pages (React Server Components)
+               ├── API routes (team CRUD, analytics, settings)
+               └── Reads/writes ~/.claude/ (team configs, tasks)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Claude CLI ──→ Proxy (port 8787) ──→ Anthropic API
+               └── Logs tokens to SQLite
+```
+
+**Data storage:**
+- **SQLite** (`prisma/mission-control.db`) — proxy logs, analytics snapshots, settings
+- **Filesystem** (`~/.claude/teams/`, `~/.claude/tasks/`) — team configs, task lists
+
+## Tech Stack
+
+Next.js 16 | React 19 | TypeScript | Tailwind CSS 4 | shadcn/ui | Prisma + SQLite | Recharts | tmux | Anthropic SDK
