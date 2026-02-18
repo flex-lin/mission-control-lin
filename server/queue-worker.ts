@@ -83,6 +83,16 @@ function sleep(ms: number): Promise<void> {
 }
 
 function readTeamTasks(teamName: string): TaskFileData[] {
+  // Use the shared readTaskList which reconciles task status from
+  // Claude Code's internal team directory (which may have a different name)
+  try {
+    const { readTaskList } = require("../lib/claude-files");
+    const tasks = readTaskList(teamName) as TaskFileData[];
+    return tasks;
+  } catch {
+    // Fallback to direct file reading if import fails
+  }
+
   const taskDir = path.join(CLAUDE_DIR, "tasks", teamName);
   if (!fs.existsSync(taskDir)) return [];
 
@@ -137,6 +147,24 @@ function cleanupTeam(teamName: string): void {
     if (s.alive) {
       try { killSession(s.sessionName); } catch { /* ignore */ }
     }
+  }
+
+  // Also clean up Claude Code's internal team (different auto-generated name)
+  try {
+    const { findInternalTeamName } = require("../lib/claude-files");
+    const internalName = findInternalTeamName(teamName);
+    if (internalName) {
+      const internalTeamDir = path.join(CLAUDE_DIR, "teams", internalName);
+      if (fs.existsSync(internalTeamDir)) {
+        fs.rmSync(internalTeamDir, { recursive: true, force: true });
+      }
+      const internalTaskDir = path.join(CLAUDE_DIR, "tasks", internalName);
+      if (fs.existsSync(internalTaskDir)) {
+        fs.rmSync(internalTaskDir, { recursive: true, force: true });
+      }
+    }
+  } catch {
+    // Non-critical — internal team cleanup is best-effort
   }
 
   const teamDir = path.join(CLAUDE_DIR, "teams", teamName);

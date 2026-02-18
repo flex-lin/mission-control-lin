@@ -176,13 +176,17 @@ export function listTeams(): Team[] {
  * This function finds the internal team by scanning team configs for one that
  * shares the same projectPath AND was created within 10 minutes of the MC team.
  */
-function findInternalTeamName(mcTeamName: string): string | null {
+export function findInternalTeamName(mcTeamName: string): string | null {
   const mcConfig = readJson<Team & { projectPath?: string }>(
     path.join(teamsDir(), mcTeamName, "config.json")
   );
-  if (!mcConfig?.createdAt || !mcConfig?.projectPath) return null;
+  if (!mcConfig?.createdAt) return null;
 
   const mcCreatedAt = new Date(mcConfig.createdAt).getTime();
+  // Collect MC team member base names (without "-N" suffix) for matching
+  const mcMemberNames = new Set(
+    (mcConfig.members ?? []).map((m: Teammate) => m.name).filter((n: string) => n !== "leader")
+  );
   const dir = teamsDir();
   if (!fs.existsSync(dir)) return null;
 
@@ -195,11 +199,28 @@ function findInternalTeamName(mcTeamName: string): string | null {
       const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
       if (!config.createdAt) continue;
 
-      // Check projectPath match and creation time within 10 minutes
+      // Must be created within 10 minutes of the MC team
       const createdAt = new Date(config.createdAt).getTime();
       const timeDiff = Math.abs(createdAt - mcCreatedAt);
-      if (timeDiff < 10 * 60 * 1000 && config.projectPath === mcConfig.projectPath) {
-        return entry.name;
+      if (timeDiff >= 10 * 60 * 1000) continue;
+
+      // Match by projectPath if both have it
+      if (mcConfig.projectPath && config.projectPath) {
+        if (config.projectPath === mcConfig.projectPath) {
+          return entry.name;
+        }
+        continue; // Both have projectPath but they don't match
+      }
+
+      // Fallback: match by member name overlap (internal team has "-2" suffixed members)
+      if (config.members && mcMemberNames.size > 0) {
+        const internalBaseNames = (config.members as Teammate[])
+          .map((m) => m.name.replace(/-\d+$/, ""))
+          .filter((n) => n !== "leader" && n !== "team-lead");
+        const overlap = internalBaseNames.filter((n: string) => mcMemberNames.has(n));
+        if (overlap.length >= 2 || (overlap.length >= 1 && mcMemberNames.size <= 2)) {
+          return entry.name;
+        }
       }
     } catch {
       // skip malformed
