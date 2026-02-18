@@ -118,7 +118,7 @@ const TEMPLATES: TeamTemplate[] = [
   },
 ];
 
-function toKebabCase(s: string): string {
+export function toKebabCase(s: string): string {
   return s
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, "")
@@ -143,7 +143,7 @@ const STOP_WORDS = new Set([
  * Derive a meaningful kebab-case name from goal text by stripping
  * filler/stop words and keeping 3-5 descriptive terms.
  */
-function deriveNameFromGoal(goal: string): string {
+export function deriveNameFromGoal(goal: string): string {
   const words = goal
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, "")
