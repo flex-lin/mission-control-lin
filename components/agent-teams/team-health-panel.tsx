@@ -2,7 +2,6 @@
 
 import { useAutoRefresh } from "@/lib/hooks/use-auto-refresh"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import {
   Table,
   TableBody,
@@ -11,12 +10,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
 import { TeamHealthBadge } from "@/components/agent-teams/team-health-badge"
 import { WakeButton } from "@/components/agent-teams/wake-button"
 import { StuckTasksFeed } from "@/components/agent-teams/stuck-tasks-feed"
-import { Terminal, Copy } from "lucide-react"
-import { toast } from "sonner"
+import { TmuxAttachBar } from "@/components/agent-teams/tmux-attach-bar"
 import type { TeamHealthStatus, TeamTask } from "@/types"
 
 interface MemberHealth {
@@ -27,11 +24,18 @@ interface MemberHealth {
   attachCmd?: string
 }
 
+interface LeaderSession {
+  alive: boolean
+  sessionName: string
+  attachCmd: string
+}
+
 interface TeamHealthData {
   status: TeamHealthStatus
   lastActivity: string | null
   staleTasks: TeamTask[]
   memberHealth: MemberHealth[]
+  leaderSession?: LeaderSession
 }
 
 interface TeamHealthPanelProps {
@@ -111,6 +115,15 @@ export function TeamHealthPanel({ teamName }: TeamHealthPanelProps) {
         </CardContent>
       </Card>
 
+      {/* tmux attach bar */}
+      {data.leaderSession && (
+        <TmuxAttachBar
+          attachCmd={data.leaderSession.attachCmd}
+          alive={data.leaderSession.alive}
+          sessionName={data.leaderSession.sessionName}
+        />
+      )}
+
       {/* Member health table */}
       {data.memberHealth.length > 0 && (
         <Card>
@@ -123,7 +136,6 @@ export function TeamHealthPanel({ teamName }: TeamHealthPanelProps) {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>tmux</TableHead>
                   <TableHead>Last Seen</TableHead>
                 </TableRow>
               </TableHeader>
@@ -133,34 +145,6 @@ export function TeamHealthPanel({ teamName }: TeamHealthPanelProps) {
                     <TableCell className="font-medium">{member.name}</TableCell>
                     <TableCell>
                       <TeamHealthBadge status={member.status} />
-                    </TableCell>
-                    <TableCell>
-                      {member.tmuxAlive ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 gap-1 px-1.5 text-[10px] text-emerald-400 hover:text-emerald-300"
-                          onClick={() => {
-                            const cmd = member.attachCmd ?? ""
-                            if (navigator.clipboard?.writeText) {
-                              navigator.clipboard.writeText(cmd).then(
-                                () => toast.success("Attach command copied!"),
-                                () => {
-                                  window.prompt("Copy this command:", cmd)
-                                }
-                              )
-                            } else {
-                              window.prompt("Copy this command:", cmd)
-                            }
-                          }}
-                        >
-                          <Terminal className="h-3 w-3" />
-                          running
-                          <Copy className="h-2.5 w-2.5" />
-                        </Button>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground">stopped</span>
-                      )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {formatRelativeTime(member.lastSeen)}

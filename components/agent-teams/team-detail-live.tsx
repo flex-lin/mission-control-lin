@@ -17,7 +17,8 @@ import { SendMessageForm } from "@/components/agent-teams/send-message-form"
 import { CreateTaskForm } from "@/components/agent-teams/create-task-form"
 import { ShutdownButton } from "@/components/agent-teams/shutdown-button"
 import { TeamHealthPanel } from "@/components/agent-teams/team-health-panel"
-import { Terminal, Copy, Play } from "lucide-react"
+import { TmuxSessionBar } from "@/components/agent-teams/tmux-session-bar"
+import { Play } from "lucide-react"
 import { toast } from "sonner"
 import type { Team, TeamTask } from "@/types"
 
@@ -122,6 +123,9 @@ export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
         </Card>
       </div>
 
+      {/* Tmux sessions bar */}
+      <TmuxSessionBar sessions={sessionData?.sessions ?? []} />
+
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left: tabs for tasks + members */}
         <div className="lg:col-span-2">
@@ -185,7 +189,6 @@ export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Type</TableHead>
-                        <TableHead>tmux</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -197,29 +200,6 @@ export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
                             <TableCell className="font-medium">{member.name}</TableCell>
                             <TableCell className="text-xs text-muted-foreground">
                               {member.agentType}
-                            </TableCell>
-                            <TableCell>
-                              {session?.alive ? (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 gap-1 px-1.5 text-[10px] text-emerald-400 hover:text-emerald-300"
-                                  onClick={() => {
-                                    navigator.clipboard?.writeText(session.attachCmd).then(
-                                      () => toast.success(`Copied: ${session.attachCmd}`),
-                                      () => toast.error("Failed to copy to clipboard"),
-                                    )
-                                  }}
-                                >
-                                  <Terminal className="h-3 w-3" />
-                                  running
-                                  <Copy className="h-2.5 w-2.5" />
-                                </Button>
-                              ) : (
-                                <Badge variant="outline" className="text-[10px]">
-                                  stopped
-                                </Badge>
-                              )}
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">

@@ -11,6 +11,12 @@ import path from "path";
 const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
 const STALENESS_MS = 5 * 60 * 1000;
 
+interface LeaderSession {
+  alive: boolean;
+  sessionName: string;
+  attachCmd: string;
+}
+
 interface MemberHealth {
   name: string;
   lastSeen: string | null;
@@ -71,8 +77,8 @@ export async function GET(
     }
 
     // Check leader session (primary indicator)
-    const leaderSession = getLeaderSessionName(name);
-    const leaderTmuxAlive = sessionExists(leaderSession) && sessionProcessAlive(leaderSession);
+    const leaderSessionName = getLeaderSessionName(name);
+    const leaderTmuxAlive = sessionExists(leaderSessionName) && sessionProcessAlive(leaderSessionName);
 
     // Also check individual member sessions (for legacy teams)
     const anyMemberTmuxAlive = (team.members ?? []).some((member) => {
@@ -125,7 +131,7 @@ export async function GET(
       let attachCmd = "";
       if (member.name === "leader") {
         tmuxAlive = leaderTmuxAlive;
-        attachCmd = `tmux attach -t ${leaderSession}`;
+        attachCmd = `tmux attach -t ${leaderSessionName}`;
       } else {
         const tmuxSessionName = getSessionName(name, member.name);
         const tmuxExists = sessionExists(tmuxSessionName);
@@ -134,7 +140,7 @@ export async function GET(
         // Show leader session as the attach target
         if (!tmuxAlive && leaderTmuxAlive) {
           tmuxAlive = true; // they're subagents of the leader
-          attachCmd = `tmux attach -t ${leaderSession}`;
+          attachCmd = `tmux attach -t ${leaderSessionName}`;
         } else {
           attachCmd = `tmux attach -t ${tmuxSessionName}`;
         }
@@ -157,11 +163,19 @@ export async function GET(
       };
     });
 
+    // Build leader session info for standalone tmux bar
+    const leaderSessionInfo: LeaderSession = {
+      alive: leaderTmuxAlive,
+      sessionName: leaderSessionName,
+      attachCmd: `tmux attach -t ${leaderSessionName}`,
+    };
+
     return ok({
       status,
       lastActivity,
       staleTasks,
       memberHealth,
+      leaderSession: leaderSessionInfo,
     });
   } catch (e) {
     return serverError(e);
