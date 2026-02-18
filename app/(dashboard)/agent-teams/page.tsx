@@ -9,8 +9,15 @@ import { SubmitTaskDialog } from "@/components/agent-teams/submit-task-dialog"
 import { TeamActionsMenu } from "@/components/agent-teams/team-actions-menu"
 import { ArchivedTeams } from "@/components/agent-teams/archived-teams"
 import { TeamHealthBadge } from "@/components/agent-teams/team-health-badge"
-import { Users } from "lucide-react"
+import { CheckCircle2, Users } from "lucide-react"
 import type { Team, TeamHealthStatus } from "@/types"
+
+interface TaskStats {
+  total: number
+  completed: number
+  pending: number
+  inProgress: number
+}
 
 interface TeamWithHealth extends Team {
   health?: {
@@ -18,10 +25,11 @@ interface TeamWithHealth extends Team {
     lastActivity: string | null
     staleTaskCount: number
   }
+  taskStats?: TaskStats
 }
 
 async function getTeams(): Promise<TeamWithHealth[]> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
   try {
     const res = await fetch(`${base}/api/teams`, { cache: "no-store" })
     if (!res.ok) return []
@@ -107,6 +115,27 @@ export default async function AgentTeamsPage() {
                         </Badge>
                       )}
                     </div>
+                    {team.taskStats && team.taskStats.total > 0 && (
+                      <div className="mt-3 space-y-1">
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-muted-foreground">
+                            {team.taskStats.completed}/{team.taskStats.total} tasks
+                          </span>
+                          {team.taskStats.completed === team.taskStats.total && (
+                            <span className="inline-flex items-center gap-0.5 font-medium text-green-500">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Done
+                            </span>
+                          )}
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-emerald-500 transition-all"
+                            style={{ width: `${Math.round((team.taskStats.completed / team.taskStats.total) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                     {team.createdAt && (
                       <p className="mt-2 text-[10px] text-muted-foreground">
                         Created {new Date(team.createdAt).toLocaleDateString()}

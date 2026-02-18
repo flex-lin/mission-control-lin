@@ -178,7 +178,7 @@ export type TeamCreationStatus = "idle" | "generating" | "reviewing" | "spawning
 
 // ── Team Health Types ────────────────────────────────────────────────────────
 
-export type TeamHealthStatus = "alive" | "asleep" | "exited";
+export type TeamHealthStatus = "alive" | "asleep" | "exited" | "completed";
 
 export interface TeamMemberHealth {
   name: string;

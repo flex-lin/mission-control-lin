@@ -98,8 +98,13 @@ export async function GET(
       status = elapsed < STALENESS_MS ? "alive" : "asleep";
     }
 
-    // Find stale in-progress tasks
+    // Check if all tasks are completed/deleted → override to "completed"
     const tasks = readTaskList(name);
+    if (tasks.length > 0 && tasks.every((t) => t.status === "completed" || t.status === "deleted")) {
+      status = "completed";
+    }
+
+    // Find stale in-progress tasks
     const staleTasks: TeamTask[] = [];
     const tasksBasePath = path.join(CLAUDE_DIR, "tasks", name);
     for (const task of tasks) {

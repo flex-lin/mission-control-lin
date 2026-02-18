@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listTeams, readTaskList, getTeamLastActivity } from "@/lib/claude-files";
+import { listTeams, readTaskList, getTeamLastActivity, archiveTeam } from "@/lib/claude-files";
+import { sessionExists, sessionProcessAlive } from "@/lib/tmux-manager";
+import { getLeaderSessionName } from "@/lib/agent-launcher";
 import { ok, err, serverError } from "@/lib/api-helpers";
 import type { TeamHealthStatus } from "@/types";
 import fs from "fs";
@@ -11,7 +13,7 @@ const STALENESS_MS = 5 * 60 * 1000;
 // GET /api/teams — list all teams from ~/.claude/teams/
 export async function GET(): Promise<NextResponse> {
   try {
-    const teams = listTeams().map((t) => {
+    const allTeams = listTeams().map((t) => {
       const lastActivity = getTeamLastActivity(t.name);
       let status: TeamHealthStatus = "asleep";
       if (lastActivity) {
@@ -19,7 +21,7 @@ export async function GET(): Promise<NextResponse> {
         status = elapsed < STALENESS_MS ? "alive" : "asleep";
       }
 
-      // Count stale in-progress tasks
+      // Count stale in-progress tasks and compute task stats
       const tasks = readTaskList(t.name);
       const tasksBasePath = path.join(CLAUDE_DIR, "tasks", t.name);
       let staleTaskCount = 0;
@@ -36,12 +38,48 @@ export async function GET(): Promise<NextResponse> {
         }
       }
 
+      // Check if all tasks are completed/deleted → override to "completed"
+      if (tasks.length > 0 && tasks.every((task) => task.status === "completed" || task.status === "deleted")) {
+        status = "completed";
+      }
+
+      const taskStats = {
+        total: tasks.length,
+        completed: tasks.filter((task) => task.status === "completed").length,
+        pending: tasks.filter((task) => task.status === "pending").length,
+        inProgress: tasks.filter((task) => task.status === "in_progress").length,
+      };
+
       return {
         ...t,
         members: t.members ?? [],
         health: { status, lastActivity, staleTaskCount },
+        taskStats,
       };
     });
+
+    // Auto-archive completed teams with dead leader and stale activity
+    const teams = allTeams.filter((t) => {
+      if (t.health.status !== "completed") return true;
+
+      const leaderSessionName = getLeaderSessionName(t.name);
+      const leaderAlive = sessionExists(leaderSessionName) && sessionProcessAlive(leaderSessionName);
+      if (leaderAlive) return true;
+
+      if (t.health.lastActivity) {
+        const elapsed = Date.now() - new Date(t.health.lastActivity).getTime();
+        if (elapsed > STALENESS_MS) {
+          try {
+            archiveTeam(t.name);
+            return false; // exclude from response
+          } catch {
+            // archive failed, keep in list
+          }
+        }
+      }
+      return true;
+    });
+
     return ok(teams, { count: teams.length });
   } catch (e) {
     return serverError(e);

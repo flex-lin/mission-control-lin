@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readTeamConfig, readTaskList } from "@/lib/claude-files";
+import { readTeamConfig, readTaskList, archiveTeam } from "@/lib/claude-files";
 import { ok, notFound, err, serverError } from "@/lib/api-helpers";
 import fs from "fs";
 import path from "path";
@@ -48,35 +48,7 @@ export async function DELETE(
     }
 
     if (mode === "archive") {
-      // Move team to archive directory
-      const archiveTeamDir = path.join(CLAUDE_DIR, "teams-archive", safe);
-      const archiveTasksDir = path.join(CLAUDE_DIR, "tasks-archive", safe);
-
-      // Add archivedAt timestamp to config
-      const configPath = path.join(teamDir, "config.json");
-      const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-      config.archivedAt = new Date().toISOString();
-
-      fs.mkdirSync(path.dirname(archiveTeamDir), { recursive: true });
-      if (fs.existsSync(archiveTeamDir)) {
-        fs.rmSync(archiveTeamDir, { recursive: true });
-      }
-      fs.renameSync(teamDir, archiveTeamDir);
-      fs.writeFileSync(
-        path.join(archiveTeamDir, "config.json"),
-        JSON.stringify(config, null, 2),
-        "utf-8"
-      );
-
-      // Archive tasks too
-      if (fs.existsSync(tasksDir)) {
-        fs.mkdirSync(path.dirname(archiveTasksDir), { recursive: true });
-        if (fs.existsSync(archiveTasksDir)) {
-          fs.rmSync(archiveTasksDir, { recursive: true });
-        }
-        fs.renameSync(tasksDir, archiveTasksDir);
-      }
-
+      archiveTeam(safe);
       return ok({ name: safe, action: "archived" });
     } else if (mode === "delete") {
       // Permanently delete

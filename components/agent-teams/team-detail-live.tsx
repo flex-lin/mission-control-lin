@@ -18,8 +18,9 @@ import { CreateTaskForm } from "@/components/agent-teams/create-task-form"
 import { ShutdownButton } from "@/components/agent-teams/shutdown-button"
 import { TeamHealthPanel } from "@/components/agent-teams/team-health-panel"
 import { TmuxSessionBar } from "@/components/agent-teams/tmux-session-bar"
-import { Play } from "lucide-react"
+import { CheckCircle2, Play } from "lucide-react"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 import type { Team, TeamTask } from "@/types"
 
 interface SessionInfo {
@@ -50,6 +51,7 @@ function statusBadgeVariant(status: TeamTask["status"]) {
 }
 
 export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
+  const router = useRouter()
   const { data: liveData } = useAutoRefresh<TeamWithTasks>({
     url: `/api/teams/${encodeURIComponent(initialData.team.name)}`,
     intervalMs: 3000,
@@ -92,9 +94,40 @@ export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
   const activeTasks = tasks.filter((t) => t.status === "in_progress").length
   const pendingTasks = tasks.filter((t) => t.status === "pending").length
   const completedTasks = tasks.filter((t) => t.status === "completed").length
+  const allTasksDone = tasks.length > 0 && tasks.every((t) => t.status === "completed" || t.status === "deleted")
+
+  async function handleArchive() {
+    try {
+      const res = await fetch(
+        `/api/teams/${encodeURIComponent(teamForForms.name)}?mode=archive`,
+        { method: "DELETE" }
+      )
+      if (res.ok) {
+        toast.success(`Archived ${teamForForms.name}`)
+        router.push("/agent-teams")
+      } else {
+        toast.error("Failed to archive team")
+      }
+    } catch {
+      toast.error("Network error")
+    }
+  }
 
   return (
     <div className="space-y-6 p-6">
+      {/* Completion banner */}
+      {allTasksDone && (
+        <div className="flex items-center justify-between rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-green-500" />
+            <span className="text-sm font-medium text-green-500">All tasks completed</span>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleArchive}>
+            Archive Team
+          </Button>
+        </div>
+      )}
+
       {/* Summary row */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card>
