@@ -166,6 +166,16 @@ export function listTeams(): Team[] {
 // ── Task functions ────────────────────────────────────────────────────────────
 
 /**
+ * Parse createdAt from a team config. Claude Code uses numeric timestamps
+ * (e.g. 1771441724059) while MC uses ISO strings. Handle both.
+ */
+function parseCreatedAt(value: unknown): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") return new Date(value).getTime();
+  return 0;
+}
+
+/**
  * Find the Claude Code internal team name that corresponds to an MC team.
  *
  * When a team is spawned via Mission Control, the leader calls Claude Code's
@@ -173,60 +183,105 @@ export function listTeams(): Team[] {
  * instead of the MC name "my-team"). The leader's TaskUpdate writes to the
  * internal team's task directory, causing MC's task files to stay stale.
  *
- * This function finds the internal team by scanning team configs for one that
- * shares the same projectPath AND was created within 10 minutes of the MC team.
+ * Matching strategy (in priority order):
+ * 1. projectPath match + creation time within 10 minutes
+ * 2. Task subject overlap (compares task files in both directories)
+ * 3. Creation time proximity (within 2 minutes, as last resort)
  */
 export function findInternalTeamName(mcTeamName: string): string | null {
-  const mcConfig = readJson<Team & { projectPath?: string }>(
-    path.join(teamsDir(), mcTeamName, "config.json")
-  );
+  const mcConfigPath = path.join(teamsDir(), mcTeamName, "config.json");
+  if (!fs.existsSync(mcConfigPath)) return null;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mcConfig: any;
+  try {
+    mcConfig = JSON.parse(fs.readFileSync(mcConfigPath, "utf-8"));
+  } catch { return null; }
   if (!mcConfig?.createdAt) return null;
 
-  const mcCreatedAt = new Date(mcConfig.createdAt).getTime();
-  // Collect MC team member base names (without "-N" suffix) for matching
-  const mcMemberNames = new Set(
-    (mcConfig.members ?? []).map((m: Teammate) => m.name).filter((n: string) => n !== "leader")
-  );
+  const mcCreatedAt = parseCreatedAt(mcConfig.createdAt);
+  const mcTaskDir = tasksDir(mcTeamName);
+
+  // Read MC task subjects for content-based matching
+  const mcTaskSubjects = new Set<string>();
+  if (fs.existsSync(mcTaskDir)) {
+    for (const f of fs.readdirSync(mcTaskDir).filter((f) => f.endsWith(".json"))) {
+      try {
+        const t = JSON.parse(fs.readFileSync(path.join(mcTaskDir, f), "utf-8"));
+        if (t.subject) mcTaskSubjects.add(t.subject.toLowerCase().slice(0, 30));
+      } catch { /* skip */ }
+    }
+  }
+
   const dir = teamsDir();
   if (!fs.existsSync(dir)) return null;
+
+  let bestMatch: string | null = null;
+  let bestScore = 0;
 
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
     if (!entry.isDirectory() || entry.name === mcTeamName) continue;
+    // Skip other MC teams (queue-spawned teams start with "q-")
+    if (entry.name.startsWith("q-")) continue;
+    // Skip "default" team
+    if (entry.name === "default") continue;
+
     try {
       const configPath = path.join(dir, entry.name, "config.json");
       if (!fs.existsSync(configPath)) continue;
       const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
       if (!config.createdAt) continue;
 
-      // Must be created within 10 minutes of the MC team
-      const createdAt = new Date(config.createdAt).getTime();
+      const createdAt = parseCreatedAt(config.createdAt);
       const timeDiff = Math.abs(createdAt - mcCreatedAt);
+
+      // Must be created within 10 minutes
       if (timeDiff >= 10 * 60 * 1000) continue;
 
-      // Match by projectPath if both have it
-      if (mcConfig.projectPath && config.projectPath) {
-        if (config.projectPath === mcConfig.projectPath) {
-          return entry.name;
-        }
-        continue; // Both have projectPath but they don't match
+      let score = 0;
+
+      // Strong signal: projectPath match
+      if (mcConfig.projectPath && config.projectPath &&
+          config.projectPath === mcConfig.projectPath) {
+        score += 100;
       }
 
-      // Fallback: match by member name overlap (internal team has "-2" suffixed members)
-      if (config.members && mcMemberNames.size > 0) {
-        const internalBaseNames = (config.members as Teammate[])
-          .map((m) => m.name.replace(/-\d+$/, ""))
-          .filter((n) => n !== "leader" && n !== "team-lead");
-        const overlap = internalBaseNames.filter((n: string) => mcMemberNames.has(n));
-        if (overlap.length >= 2 || (overlap.length >= 1 && mcMemberNames.size <= 2)) {
-          return entry.name;
+      // Strong signal: task subject overlap
+      if (mcTaskSubjects.size > 0) {
+        const internalTaskDir = tasksDir(entry.name);
+        if (fs.existsSync(internalTaskDir)) {
+          let subjectMatches = 0;
+          const files = fs.readdirSync(internalTaskDir).filter((f) => f.endsWith(".json"));
+          for (const f of files) {
+            try {
+              const t = JSON.parse(fs.readFileSync(path.join(internalTaskDir, f), "utf-8"));
+              if (t.subject && mcTaskSubjects.has(t.subject.toLowerCase().slice(0, 30))) {
+                subjectMatches++;
+              }
+            } catch { /* skip */ }
+          }
+          // Each matching task subject is a strong signal
+          score += subjectMatches * 50;
         }
+      }
+
+      // Weak signal: time proximity (closer = better)
+      if (timeDiff < 2 * 60 * 1000) {
+        score += 10;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = entry.name;
       }
     } catch {
       // skip malformed
     }
   }
-  return null;
+
+  // Require at least some confidence (subject match or projectPath)
+  return bestScore >= 10 ? bestMatch : null;
 }
 
 /** Status priority for reconciliation: higher = more advanced */
