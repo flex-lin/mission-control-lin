@@ -165,6 +165,57 @@ export function listTeams(): Team[] {
 
 // ── Task functions ────────────────────────────────────────────────────────────
 
+/**
+ * Find the Claude Code internal team name that corresponds to an MC team.
+ *
+ * When a team is spawned via Mission Control, the leader calls Claude Code's
+ * TeamCreate which generates a different internal name (e.g. "woolly-forging-eich"
+ * instead of the MC name "my-team"). The leader's TaskUpdate writes to the
+ * internal team's task directory, causing MC's task files to stay stale.
+ *
+ * This function finds the internal team by scanning team configs for one that
+ * shares the same projectPath AND was created within 10 minutes of the MC team.
+ */
+function findInternalTeamName(mcTeamName: string): string | null {
+  const mcConfig = readJson<Team & { projectPath?: string }>(
+    path.join(teamsDir(), mcTeamName, "config.json")
+  );
+  if (!mcConfig?.createdAt || !mcConfig?.projectPath) return null;
+
+  const mcCreatedAt = new Date(mcConfig.createdAt).getTime();
+  const dir = teamsDir();
+  if (!fs.existsSync(dir)) return null;
+
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name === mcTeamName) continue;
+    try {
+      const configPath = path.join(dir, entry.name, "config.json");
+      if (!fs.existsSync(configPath)) continue;
+      const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      if (!config.createdAt) continue;
+
+      // Check projectPath match and creation time within 10 minutes
+      const createdAt = new Date(config.createdAt).getTime();
+      const timeDiff = Math.abs(createdAt - mcCreatedAt);
+      if (timeDiff < 10 * 60 * 1000 && config.projectPath === mcConfig.projectPath) {
+        return entry.name;
+      }
+    } catch {
+      // skip malformed
+    }
+  }
+  return null;
+}
+
+/** Status priority for reconciliation: higher = more advanced */
+const STATUS_PRIORITY: Record<string, number> = {
+  pending: 0,
+  in_progress: 1,
+  completed: 2,
+  deleted: 3,
+};
+
 export function readTaskList(teamName: string): TeamTask[] {
   const safe = safeName(teamName);
   const dir = tasksDir(safe);
@@ -180,6 +231,38 @@ export function readTaskList(teamName: string): TeamTask[] {
       if (task) tasks.push(task);
     } catch {
       // skip malformed
+    }
+  }
+
+  // Reconcile with Claude Code internal team's task directory
+  const internalTeamName = findInternalTeamName(safe);
+  if (internalTeamName) {
+    const internalDir = tasksDir(internalTeamName);
+    if (fs.existsSync(internalDir)) {
+      const internalFiles = fs.readdirSync(internalDir).filter((f) => f.endsWith(".json"));
+      const internalTasksById = new Map<string, TeamTask>();
+      for (const file of internalFiles) {
+        try {
+          const task = readJson<TeamTask>(path.join(internalDir, file));
+          if (task) internalTasksById.set(task.id, task);
+        } catch {
+          // skip malformed
+        }
+      }
+
+      // Merge: use the more advanced status for matching task IDs
+      for (const task of tasks) {
+        const internalTask = internalTasksById.get(task.id);
+        if (internalTask) {
+          const mcPriority = STATUS_PRIORITY[task.status] ?? 0;
+          const internalPriority = STATUS_PRIORITY[internalTask.status] ?? 0;
+          if (internalPriority > mcPriority) {
+            task.status = internalTask.status;
+            // Persist the reconciled status back to the MC task file
+            writeJson(path.join(dir, `${safeName(String(task.id))}.json`), task);
+          }
+        }
+      }
     }
   }
 
