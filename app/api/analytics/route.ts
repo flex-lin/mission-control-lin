@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { ok, serverError } from "@/lib/api-helpers";
+import { computeCost } from "@/lib/pricing";
 
 // GET /api/analytics?period=7d|30d|1m&groupBy=day|model|team
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -12,12 +13,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // Compute cutoff date
     const now = new Date();
     const cutoff = new Date(now);
-    if (period === "7d") cutoff.setDate(now.getDate() - 7);
+    if (period === "all") cutoff.setFullYear(2000);
     else if (period === "30d") cutoff.setDate(now.getDate() - 30);
     else if (period === "1m") cutoff.setMonth(now.getMonth() - 1);
     else cutoff.setDate(now.getDate() - 7);
-
-    const cutoffIso = cutoff.toISOString();
 
     if (groupBy === "model") {
       const rows = await db.proxyLog.groupBy({
@@ -58,20 +57,22 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       return ok(data);
     }
 
-    // Default: group by day using analytics_snapshots
-    const snapshots = await db.analyticsSnapshot.findMany({
-      where: { date: { gte: cutoffIso.slice(0, 10) } },
-      orderBy: { date: "asc" },
+    // Default: group by day from proxy_logs
+    const logs = await db.proxyLog.findMany({
+      where: { timestamp: { gte: cutoff } },
+      select: { timestamp: true, model: true, inputTokens: true, outputTokens: true },
+      orderBy: { timestamp: "asc" },
     });
 
-    // Aggregate by date across all models
+    // Aggregate by date
     const byDate = new Map<string, { totalInput: number; totalOutput: number; estimatedCost: number }>();
-    for (const s of snapshots) {
-      const existing = byDate.get(s.date) ?? { totalInput: 0, totalOutput: 0, estimatedCost: 0 };
-      byDate.set(s.date, {
-        totalInput: existing.totalInput + s.totalInput,
-        totalOutput: existing.totalOutput + s.totalOutput,
-        estimatedCost: existing.estimatedCost + s.estimatedCost,
+    for (const log of logs) {
+      const date = log.timestamp.toISOString().slice(0, 10);
+      const existing = byDate.get(date) ?? { totalInput: 0, totalOutput: 0, estimatedCost: 0 };
+      byDate.set(date, {
+        totalInput: existing.totalInput + log.inputTokens,
+        totalOutput: existing.totalOutput + log.outputTokens,
+        estimatedCost: existing.estimatedCost + computeCost(log.model, log.inputTokens, log.outputTokens),
       });
     }
 
@@ -80,7 +81,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       ...vals,
     }));
 
-    // Also compute overall stats from proxy_logs
+    // Also compute overall stats
     const stats = await db.proxyLog.aggregate({
       where: { timestamp: { gte: cutoff } },
       _sum: { inputTokens: true, outputTokens: true },
@@ -97,15 +98,4 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   } catch (e) {
     return serverError(e);
   }
-}
-
-function computeCost(model: string, inputTokens: number, outputTokens: number): number {
-  // Rough pricing per 1M tokens (USD)
-  const pricing: Record<string, { input: number; output: number }> = {
-    "claude-opus-4-6": { input: 15, output: 75 },
-    "claude-sonnet-4-6": { input: 3, output: 15 },
-    "claude-haiku-4-5-20251001": { input: 0.8, output: 4 },
-  };
-  const p = pricing[model] ?? { input: 3, output: 15 };
-  return (inputTokens / 1_000_000) * p.input + (outputTokens / 1_000_000) * p.output;
 }

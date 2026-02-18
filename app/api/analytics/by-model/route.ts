@@ -1,17 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { ok, serverError } from "@/lib/api-helpers";
-
-const PRICING: Record<string, { input: number; output: number }> = {
-  "claude-opus-4-6": { input: 15, output: 75 },
-  "claude-sonnet-4-6": { input: 3, output: 15 },
-  "claude-haiku-4-5-20251001": { input: 0.8, output: 4 },
-};
-
-function computeCost(model: string, input: number, output: number): number {
-  const p = PRICING[model] ?? { input: 3, output: 15 };
-  return (input / 1_000_000) * p.input + (output / 1_000_000) * p.output;
-}
+import { computeCost } from "@/lib/pricing";
 
 // GET /api/analytics/by-model?period=7d|30d|1m
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -20,7 +10,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     const now = new Date();
     const cutoff = new Date(now);
-    if (period === "30d") cutoff.setDate(now.getDate() - 30);
+    if (period === "all") cutoff.setFullYear(2000);
+    else if (period === "30d") cutoff.setDate(now.getDate() - 30);
     else if (period === "1m") cutoff.setMonth(now.getMonth() - 1);
     else cutoff.setDate(now.getDate() - 7);
 

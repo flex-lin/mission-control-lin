@@ -58,7 +58,20 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="border-t border-[hsl(var(--sidebar-border))] p-3">
-        <p className="px-3 text-xs text-[hsl(var(--muted-foreground))]">
+        <button
+          onClick={() =>
+            document.dispatchEvent(
+              new KeyboardEvent("keydown", { key: "k", metaKey: true })
+            )
+          }
+          className="flex w-full items-center justify-between rounded-md px-3 py-2 text-xs text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] transition-colors"
+        >
+          <span>Search...</span>
+          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--muted))] px-1.5 font-mono text-[10px] font-medium text-[hsl(var(--muted-foreground))]">
+            ⌘K
+          </kbd>
+        </button>
+        <p className="mt-2 px-3 text-xs text-[hsl(var(--muted-foreground))]">
           Mission Control Lin
         </p>
       </div>

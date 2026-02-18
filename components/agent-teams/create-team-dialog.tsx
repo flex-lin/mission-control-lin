@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus } from "lucide-react"
+import { toast } from "sonner"
 
 interface CreateTeamDialogProps {
   triggerLabel?: string
@@ -26,14 +27,12 @@ export function CreateTeamDialog({ triggerLabel }: CreateTeamDialogProps) {
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
 
     setLoading(true)
-    setError(null)
 
     try {
       const res = await fetch("/api/teams", {
@@ -43,15 +42,16 @@ export function CreateTeamDialog({ triggerLabel }: CreateTeamDialogProps) {
       })
       const json = await res.json()
       if (!res.ok) {
-        setError(json.error ?? "Failed to create team")
+        toast.error(json.error ?? "Failed to create team")
         return
       }
+      toast.success(`Team "${name.trim()}" created`)
       setOpen(false)
       setName("")
       setDescription("")
       router.refresh()
     } catch {
-      setError("Network error — please try again")
+      toast.error("Network error — please try again")
     } finally {
       setLoading(false)
     }
@@ -90,7 +90,6 @@ export function CreateTeamDialog({ triggerLabel }: CreateTeamDialogProps) {
               rows={3}
             />
           </div>
-          {error && <p className="text-xs text-red-400">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel

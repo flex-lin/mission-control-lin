@@ -46,6 +46,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       inputTokens?: number;
       outputTokens?: number;
       teamName?: string;
+      memberName?: string;
       endpoint?: string;
       latencyMs?: number;
       statusCode?: number;
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         inputTokens: body.inputTokens ?? 0,
         outputTokens: body.outputTokens ?? 0,
         teamName: body.teamName ?? null,
+        memberName: body.memberName ?? null,
         endpoint: body.endpoint ?? "/v1/messages",
         latencyMs: body.latencyMs ?? 0,
         statusCode: body.statusCode ?? 200,

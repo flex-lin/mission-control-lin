@@ -20,11 +20,18 @@ function openDb(): Database.Database {
       input_tokens INTEGER NOT NULL DEFAULT 0,
       output_tokens INTEGER NOT NULL DEFAULT 0,
       team_name TEXT,
+      member_name TEXT,
       endpoint TEXT NOT NULL DEFAULT '',
       latency_ms INTEGER NOT NULL DEFAULT 0,
       status_code INTEGER NOT NULL DEFAULT 0
     )
   `)
+  // Migration: add member_name column if missing
+  try {
+    db.exec(`ALTER TABLE proxy_logs ADD COLUMN member_name TEXT`)
+  } catch {
+    // column already exists
+  }
   return db
 }
 
@@ -33,6 +40,7 @@ interface LogEntry {
   inputTokens: number
   outputTokens: number
   teamName?: string
+  memberName?: string
   endpoint: string
   latencyMs: number
   statusCode: number
@@ -40,14 +48,15 @@ interface LogEntry {
 
 function insertLog(db: Database.Database, entry: LogEntry): void {
   const stmt = db.prepare(`
-    INSERT INTO proxy_logs (timestamp, model, input_tokens, output_tokens, team_name, endpoint, latency_ms, status_code)
-    VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO proxy_logs (timestamp, model, input_tokens, output_tokens, team_name, member_name, endpoint, latency_ms, status_code)
+    VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     entry.model,
     entry.inputTokens,
     entry.outputTokens,
     entry.teamName ?? null,
+    entry.memberName ?? null,
     entry.endpoint,
     entry.latencyMs,
     entry.statusCode
@@ -101,10 +110,13 @@ export function createProxyServer(): http.Server {
     clientReq.on("end", () => {
       const reqBody = Buffer.concat(reqChunks)
 
-      // Extract team name from custom header set by Claude Code
+      // Extract team/member name from custom headers set by Claude Code
       const teamName =
         clientReq.headers["x-claude-team"] as string | undefined ??
         clientReq.headers["x-team-name"] as string | undefined
+      const memberName =
+        clientReq.headers["x-claude-member"] as string | undefined ??
+        clientReq.headers["x-member-name"] as string | undefined
 
       // Build options for proxied request
       const options: https.RequestOptions = {
@@ -144,6 +156,7 @@ export function createProxyServer(): http.Server {
               insertLog(db, {
                 ...usage,
                 teamName,
+                memberName,
                 endpoint,
                 latencyMs,
                 statusCode,
@@ -156,6 +169,7 @@ export function createProxyServer(): http.Server {
               inputTokens: 0,
               outputTokens: 0,
               teamName,
+              memberName,
               endpoint,
               latencyMs,
               statusCode,

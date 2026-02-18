@@ -28,6 +28,7 @@ export function RequestLogTable({ logs }: RequestLogTableProps) {
         (l) =>
           l.model.toLowerCase().includes(filter.toLowerCase()) ||
           (l.teamName ?? "").toLowerCase().includes(filter.toLowerCase()) ||
+          (l.memberName ?? "").toLowerCase().includes(filter.toLowerCase()) ||
           l.endpoint.toLowerCase().includes(filter.toLowerCase())
       )
     : logs
@@ -37,7 +38,7 @@ export function RequestLogTable({ logs }: RequestLogTableProps) {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Filter by model, team, or endpoint…"
+          placeholder="Filter by model, team, member, or endpoint…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           className="pl-9 text-xs"
@@ -51,6 +52,7 @@ export function RequestLogTable({ logs }: RequestLogTableProps) {
               <TableHead>Time</TableHead>
               <TableHead>Model</TableHead>
               <TableHead>Team</TableHead>
+              <TableHead>Member</TableHead>
               <TableHead className="text-right">Input</TableHead>
               <TableHead className="text-right">Output</TableHead>
               <TableHead className="text-right">Latency</TableHead>
@@ -60,7 +62,7 @@ export function RequestLogTable({ logs }: RequestLogTableProps) {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-xs text-muted-foreground">
+                <TableCell colSpan={8} className="py-8 text-center text-xs text-muted-foreground">
                   {filter ? "No matching requests" : "No proxy logs yet"}
                 </TableCell>
               </TableRow>
@@ -73,6 +75,9 @@ export function RequestLogTable({ logs }: RequestLogTableProps) {
                   <TableCell className="text-xs">{log.model}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {log.teamName ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {log.memberName ?? "—"}
                   </TableCell>
                   <TableCell className="text-right text-xs">
                     {log.inputTokens.toLocaleString()}

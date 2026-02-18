@@ -117,6 +117,32 @@ export function writeTask(teamName: string, task: TeamTask): void {
   writeJson(filePath, task);
 }
 
+// ── Team health helpers ──────────────────────────────────────────────────────
+
+export function getTeamLastActivity(teamName: string): string | null {
+  const safe = safeName(teamName);
+  const dir = tasksDir(safe);
+  if (!fs.existsSync(dir)) return null;
+
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".json"));
+  if (files.length === 0) return null;
+
+  let latest = 0;
+  for (const file of files) {
+    const filePath = path.join(dir, file);
+    try {
+      const stat = fs.statSync(filePath);
+      if (stat.mtimeMs > latest) {
+        latest = stat.mtimeMs;
+      }
+    } catch {
+      // skip inaccessible files
+    }
+  }
+
+  return latest > 0 ? new Date(latest).toISOString() : null;
+}
+
 // ── Settings functions ────────────────────────────────────────────────────────
 
 export function readSettings(): Settings {

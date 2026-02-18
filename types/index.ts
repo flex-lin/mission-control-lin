@@ -38,6 +38,7 @@ export interface ProxyLog {
   inputTokens: number;
   outputTokens: number;
   teamName?: string;
+  memberName?: string;
   endpoint: string;
   latencyMs: number;
   statusCode: number;
@@ -102,6 +103,48 @@ export interface ActivityEvent {
   team?: string;
   description: string;
   metadata?: Record<string, unknown>;
+}
+
+// ── Smart Team Creation Types ────────────────────────────────────────────────
+
+export interface TeamPersona {
+  name: string
+  role: string
+  agentType: string
+  description: string
+}
+
+export interface TeamPlan {
+  teamName: string
+  description: string
+  personas: TeamPersona[]
+  initialTasks: { subject: string; description: string; assignTo?: string }[]
+}
+
+export type TeamCreationStatus = "idle" | "generating" | "reviewing" | "spawning" | "done" | "error"
+
+// ── Team Health Types ────────────────────────────────────────────────────────
+
+export type TeamHealthStatus = "alive" | "asleep" | "exited";
+
+export interface TeamHealth {
+  teamName: string;
+  status: TeamHealthStatus;
+  lastActivity: string | null;
+  memberCount: number;
+  pendingTasks: number;
+  activeTasks: number;
+}
+
+export interface WakeRequest {
+  taskId?: string;
+  message?: string;
+}
+
+export interface WakeResponse {
+  teamName: string;
+  woken: boolean;
+  message: string;
 }
 
 // ── API Response Wrapper ──────────────────────────────────────────────────────

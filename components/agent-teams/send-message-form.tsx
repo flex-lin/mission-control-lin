@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select"
 import type { Team } from "@/types"
 import { Send } from "lucide-react"
+import { toast } from "sonner"
 
 interface SendMessageFormProps {
   team: Team
@@ -23,14 +24,12 @@ export function SendMessageForm({ team, onSuccess }: SendMessageFormProps) {
   const [recipient, setRecipient] = useState("__broadcast__")
   const [content, setContent] = useState("")
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!content.trim()) return
 
     setLoading(true)
-    setResult(null)
 
     try {
       const res = await fetch(`/api/teams/${encodeURIComponent(team.name)}/message`, {
@@ -45,14 +44,14 @@ export function SendMessageForm({ team, onSuccess }: SendMessageFormProps) {
       })
       const json = await res.json()
       if (res.ok) {
-        setResult({ ok: true, message: "Message sent" })
+        toast.success("Message sent")
         setContent("")
         onSuccess?.()
       } else {
-        setResult({ ok: false, message: json.error ?? "Failed to send message" })
+        toast.error(json.error ?? "Failed to send message")
       }
     } catch {
-      setResult({ ok: false, message: "Network error" })
+      toast.error("Network error")
     } finally {
       setLoading(false)
     }
@@ -88,12 +87,6 @@ export function SendMessageForm({ team, onSuccess }: SendMessageFormProps) {
           required
         />
       </div>
-
-      {result && (
-        <p className={`text-xs ${result.ok ? "text-emerald-400" : "text-red-400"}`}>
-          {result.message}
-        </p>
-      )}
 
       <Button type="submit" disabled={loading || !content.trim()} className="gap-1.5">
         <Send className="h-3.5 w-3.5" />

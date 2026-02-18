@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readTaskList, writeTask, readTeamConfig } from "@/lib/claude-files";
+import { readTaskList, writeTask, readTeamConfig, getTeamLastActivity } from "@/lib/claude-files";
 import { ok, created, notFound, err, serverError } from "@/lib/api-helpers";
 import type { TeamTask } from "@/types";
+import fs from "fs";
+import path from "path";
+
+const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
+const STALENESS_MS = 5 * 60 * 1000;
 
 // GET /api/teams/[name]/tasks — list tasks for a team
 export async function GET(
@@ -55,7 +60,34 @@ export async function POST(
     };
 
     writeTask(name, task);
-    return created(task);
+
+    // Wake-on-task: if the team is asleep, send a wake message
+    let woken = false;
+    const lastActivity = getTeamLastActivity(name);
+    const isAsleep = !lastActivity || (Date.now() - new Date(lastActivity).getTime()) > STALENESS_MS;
+
+    if (isAsleep) {
+      const inboxDir = path.join(CLAUDE_DIR, "teams", name, "inbox");
+      fs.mkdirSync(inboxDir, { recursive: true });
+
+      const wakeMessage = {
+        type: "message",
+        sender: "mission-control",
+        recipient: "team-lead",
+        content: `New task submitted: "${task.subject}". Please check your task list with TaskList.`,
+        timestamp: new Date().toISOString(),
+      };
+
+      const filename = `wake-${Date.now()}.json`;
+      fs.writeFileSync(
+        path.join(inboxDir, filename),
+        JSON.stringify(wakeMessage, null, 2),
+        "utf-8"
+      );
+      woken = true;
+    }
+
+    return created({ ...task, woken });
   } catch (e) {
     return serverError(e);
   }

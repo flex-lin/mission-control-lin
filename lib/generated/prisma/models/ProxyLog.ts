@@ -49,6 +49,7 @@ export type ProxyLogMinAggregateOutputType = {
   inputTokens: number | null
   outputTokens: number | null
   teamName: string | null
+  memberName: string | null
   endpoint: string | null
   latencyMs: number | null
   statusCode: number | null
@@ -61,6 +62,7 @@ export type ProxyLogMaxAggregateOutputType = {
   inputTokens: number | null
   outputTokens: number | null
   teamName: string | null
+  memberName: string | null
   endpoint: string | null
   latencyMs: number | null
   statusCode: number | null
@@ -73,6 +75,7 @@ export type ProxyLogCountAggregateOutputType = {
   inputTokens: number
   outputTokens: number
   teamName: number
+  memberName: number
   endpoint: number
   latencyMs: number
   statusCode: number
@@ -103,6 +106,7 @@ export type ProxyLogMinAggregateInputType = {
   inputTokens?: true
   outputTokens?: true
   teamName?: true
+  memberName?: true
   endpoint?: true
   latencyMs?: true
   statusCode?: true
@@ -115,6 +119,7 @@ export type ProxyLogMaxAggregateInputType = {
   inputTokens?: true
   outputTokens?: true
   teamName?: true
+  memberName?: true
   endpoint?: true
   latencyMs?: true
   statusCode?: true
@@ -127,6 +132,7 @@ export type ProxyLogCountAggregateInputType = {
   inputTokens?: true
   outputTokens?: true
   teamName?: true
+  memberName?: true
   endpoint?: true
   latencyMs?: true
   statusCode?: true
@@ -226,6 +232,7 @@ export type ProxyLogGroupByOutputType = {
   inputTokens: number
   outputTokens: number
   teamName: string | null
+  memberName: string | null
   endpoint: string
   latencyMs: number
   statusCode: number
@@ -261,6 +268,7 @@ export type ProxyLogWhereInput = {
   inputTokens?: Prisma.IntFilter<"ProxyLog"> | number
   outputTokens?: Prisma.IntFilter<"ProxyLog"> | number
   teamName?: Prisma.StringNullableFilter<"ProxyLog"> | string | null
+  memberName?: Prisma.StringNullableFilter<"ProxyLog"> | string | null
   endpoint?: Prisma.StringFilter<"ProxyLog"> | string
   latencyMs?: Prisma.IntFilter<"ProxyLog"> | number
   statusCode?: Prisma.IntFilter<"ProxyLog"> | number
@@ -273,6 +281,7 @@ export type ProxyLogOrderByWithRelationInput = {
   inputTokens?: Prisma.SortOrder
   outputTokens?: Prisma.SortOrder
   teamName?: Prisma.SortOrderInput | Prisma.SortOrder
+  memberName?: Prisma.SortOrderInput | Prisma.SortOrder
   endpoint?: Prisma.SortOrder
   latencyMs?: Prisma.SortOrder
   statusCode?: Prisma.SortOrder
@@ -288,6 +297,7 @@ export type ProxyLogWhereUniqueInput = Prisma.AtLeast<{
   inputTokens?: Prisma.IntFilter<"ProxyLog"> | number
   outputTokens?: Prisma.IntFilter<"ProxyLog"> | number
   teamName?: Prisma.StringNullableFilter<"ProxyLog"> | string | null
+  memberName?: Prisma.StringNullableFilter<"ProxyLog"> | string | null
   endpoint?: Prisma.StringFilter<"ProxyLog"> | string
   latencyMs?: Prisma.IntFilter<"ProxyLog"> | number
   statusCode?: Prisma.IntFilter<"ProxyLog"> | number
@@ -300,6 +310,7 @@ export type ProxyLogOrderByWithAggregationInput = {
   inputTokens?: Prisma.SortOrder
   outputTokens?: Prisma.SortOrder
   teamName?: Prisma.SortOrderInput | Prisma.SortOrder
+  memberName?: Prisma.SortOrderInput | Prisma.SortOrder
   endpoint?: Prisma.SortOrder
   latencyMs?: Prisma.SortOrder
   statusCode?: Prisma.SortOrder
@@ -320,6 +331,7 @@ export type ProxyLogScalarWhereWithAggregatesInput = {
   inputTokens?: Prisma.IntWithAggregatesFilter<"ProxyLog"> | number
   outputTokens?: Prisma.IntWithAggregatesFilter<"ProxyLog"> | number
   teamName?: Prisma.StringNullableWithAggregatesFilter<"ProxyLog"> | string | null
+  memberName?: Prisma.StringNullableWithAggregatesFilter<"ProxyLog"> | string | null
   endpoint?: Prisma.StringWithAggregatesFilter<"ProxyLog"> | string
   latencyMs?: Prisma.IntWithAggregatesFilter<"ProxyLog"> | number
   statusCode?: Prisma.IntWithAggregatesFilter<"ProxyLog"> | number
@@ -331,6 +343,7 @@ export type ProxyLogCreateInput = {
   inputTokens: number
   outputTokens: number
   teamName?: string | null
+  memberName?: string | null
   endpoint: string
   latencyMs: number
   statusCode: number
@@ -343,6 +356,7 @@ export type ProxyLogUncheckedCreateInput = {
   inputTokens: number
   outputTokens: number
   teamName?: string | null
+  memberName?: string | null
   endpoint: string
   latencyMs: number
   statusCode: number
@@ -354,6 +368,7 @@ export type ProxyLogUpdateInput = {
   inputTokens?: Prisma.IntFieldUpdateOperationsInput | number
   outputTokens?: Prisma.IntFieldUpdateOperationsInput | number
   teamName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  memberName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   endpoint?: Prisma.StringFieldUpdateOperationsInput | string
   latencyMs?: Prisma.IntFieldUpdateOperationsInput | number
   statusCode?: Prisma.IntFieldUpdateOperationsInput | number
@@ -366,6 +381,7 @@ export type ProxyLogUncheckedUpdateInput = {
   inputTokens?: Prisma.IntFieldUpdateOperationsInput | number
   outputTokens?: Prisma.IntFieldUpdateOperationsInput | number
   teamName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  memberName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   endpoint?: Prisma.StringFieldUpdateOperationsInput | string
   latencyMs?: Prisma.IntFieldUpdateOperationsInput | number
   statusCode?: Prisma.IntFieldUpdateOperationsInput | number
@@ -378,6 +394,7 @@ export type ProxyLogCreateManyInput = {
   inputTokens: number
   outputTokens: number
   teamName?: string | null
+  memberName?: string | null
   endpoint: string
   latencyMs: number
   statusCode: number
@@ -389,6 +406,7 @@ export type ProxyLogUpdateManyMutationInput = {
   inputTokens?: Prisma.IntFieldUpdateOperationsInput | number
   outputTokens?: Prisma.IntFieldUpdateOperationsInput | number
   teamName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  memberName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   endpoint?: Prisma.StringFieldUpdateOperationsInput | string
   latencyMs?: Prisma.IntFieldUpdateOperationsInput | number
   statusCode?: Prisma.IntFieldUpdateOperationsInput | number
@@ -401,6 +419,7 @@ export type ProxyLogUncheckedUpdateManyInput = {
   inputTokens?: Prisma.IntFieldUpdateOperationsInput | number
   outputTokens?: Prisma.IntFieldUpdateOperationsInput | number
   teamName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  memberName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   endpoint?: Prisma.StringFieldUpdateOperationsInput | string
   latencyMs?: Prisma.IntFieldUpdateOperationsInput | number
   statusCode?: Prisma.IntFieldUpdateOperationsInput | number
@@ -413,6 +432,7 @@ export type ProxyLogCountOrderByAggregateInput = {
   inputTokens?: Prisma.SortOrder
   outputTokens?: Prisma.SortOrder
   teamName?: Prisma.SortOrder
+  memberName?: Prisma.SortOrder
   endpoint?: Prisma.SortOrder
   latencyMs?: Prisma.SortOrder
   statusCode?: Prisma.SortOrder
@@ -433,6 +453,7 @@ export type ProxyLogMaxOrderByAggregateInput = {
   inputTokens?: Prisma.SortOrder
   outputTokens?: Prisma.SortOrder
   teamName?: Prisma.SortOrder
+  memberName?: Prisma.SortOrder
   endpoint?: Prisma.SortOrder
   latencyMs?: Prisma.SortOrder
   statusCode?: Prisma.SortOrder
@@ -445,6 +466,7 @@ export type ProxyLogMinOrderByAggregateInput = {
   inputTokens?: Prisma.SortOrder
   outputTokens?: Prisma.SortOrder
   teamName?: Prisma.SortOrder
+  memberName?: Prisma.SortOrder
   endpoint?: Prisma.SortOrder
   latencyMs?: Prisma.SortOrder
   statusCode?: Prisma.SortOrder
@@ -487,6 +509,7 @@ export type ProxyLogSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   inputTokens?: boolean
   outputTokens?: boolean
   teamName?: boolean
+  memberName?: boolean
   endpoint?: boolean
   latencyMs?: boolean
   statusCode?: boolean
@@ -499,6 +522,7 @@ export type ProxyLogSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   inputTokens?: boolean
   outputTokens?: boolean
   teamName?: boolean
+  memberName?: boolean
   endpoint?: boolean
   latencyMs?: boolean
   statusCode?: boolean
@@ -511,6 +535,7 @@ export type ProxyLogSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   inputTokens?: boolean
   outputTokens?: boolean
   teamName?: boolean
+  memberName?: boolean
   endpoint?: boolean
   latencyMs?: boolean
   statusCode?: boolean
@@ -523,12 +548,13 @@ export type ProxyLogSelectScalar = {
   inputTokens?: boolean
   outputTokens?: boolean
   teamName?: boolean
+  memberName?: boolean
   endpoint?: boolean
   latencyMs?: boolean
   statusCode?: boolean
 }
 
-export type ProxyLogOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "timestamp" | "model" | "inputTokens" | "outputTokens" | "teamName" | "endpoint" | "latencyMs" | "statusCode", ExtArgs["result"]["proxyLog"]>
+export type ProxyLogOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "timestamp" | "model" | "inputTokens" | "outputTokens" | "teamName" | "memberName" | "endpoint" | "latencyMs" | "statusCode", ExtArgs["result"]["proxyLog"]>
 
 export type $ProxyLogPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ProxyLog"
@@ -540,6 +566,7 @@ export type $ProxyLogPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     inputTokens: number
     outputTokens: number
     teamName: string | null
+    memberName: string | null
     endpoint: string
     latencyMs: number
     statusCode: number
@@ -972,6 +999,7 @@ export interface ProxyLogFieldRefs {
   readonly inputTokens: Prisma.FieldRef<"ProxyLog", 'Int'>
   readonly outputTokens: Prisma.FieldRef<"ProxyLog", 'Int'>
   readonly teamName: Prisma.FieldRef<"ProxyLog", 'String'>
+  readonly memberName: Prisma.FieldRef<"ProxyLog", 'String'>
   readonly endpoint: Prisma.FieldRef<"ProxyLog", 'String'>
   readonly latencyMs: Prisma.FieldRef<"ProxyLog", 'Int'>
   readonly statusCode: Prisma.FieldRef<"ProxyLog", 'Int'>

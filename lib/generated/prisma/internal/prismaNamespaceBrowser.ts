@@ -77,6 +77,7 @@ export const ProxyLogScalarFieldEnum = {
   inputTokens: 'inputTokens',
   outputTokens: 'outputTokens',
   teamName: 'teamName',
+  memberName: 'memberName',
   endpoint: 'endpoint',
   latencyMs: 'latencyMs',
   statusCode: 'statusCode'

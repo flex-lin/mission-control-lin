@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -22,11 +23,9 @@ export function ShutdownButton({ teamName, memberName }: ShutdownButtonProps) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   async function handleShutdown() {
     setLoading(true)
-    setError(null)
     try {
       const res = await fetch(
         `/api/teams/${encodeURIComponent(teamName)}/shutdown`,
@@ -41,13 +40,14 @@ export function ShutdownButton({ teamName, memberName }: ShutdownButtonProps) {
       )
       const json = await res.json()
       if (!res.ok) {
-        setError(json.error ?? "Failed to send shutdown request")
+        toast.error(json.error ?? "Failed to send shutdown request")
         return
       }
+      toast.success("Shutdown request sent")
       setOpen(false)
       router.refresh()
     } catch {
-      setError("Network error")
+      toast.error("Network error")
     } finally {
       setLoading(false)
     }
@@ -70,7 +70,6 @@ export function ShutdownButton({ teamName, memberName }: ShutdownButtonProps) {
           <strong className="text-foreground">{memberName}</strong>.
           The teammate can reject if they are still working on a task.
         </p>
-        {error && <p className="text-xs text-red-400">{error}</p>}
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel

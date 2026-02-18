@@ -1,18 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listTeams } from "@/lib/claude-files";
+import { listTeams, readTaskList, getTeamLastActivity } from "@/lib/claude-files";
 import { ok, err, serverError } from "@/lib/api-helpers";
+import type { TeamHealthStatus } from "@/types";
 import fs from "fs";
 import path from "path";
 
 const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
+const STALENESS_MS = 5 * 60 * 1000;
 
 // GET /api/teams — list all teams from ~/.claude/teams/
 export async function GET(): Promise<NextResponse> {
   try {
-    const teams = listTeams().map((t) => ({
-      ...t,
-      members: t.members ?? [],
-    }));
+    const teams = listTeams().map((t) => {
+      const lastActivity = getTeamLastActivity(t.name);
+      let status: TeamHealthStatus = "asleep";
+      if (lastActivity) {
+        const elapsed = Date.now() - new Date(lastActivity).getTime();
+        status = elapsed < STALENESS_MS ? "alive" : "asleep";
+      }
+
+      // Count stale in-progress tasks
+      const tasks = readTaskList(t.name);
+      const tasksBasePath = path.join(CLAUDE_DIR, "tasks", t.name);
+      let staleTaskCount = 0;
+      for (const task of tasks) {
+        if (task.status !== "in_progress") continue;
+        try {
+          const taskFile = path.join(tasksBasePath, `${task.id}.json`);
+          const stat = fs.statSync(taskFile);
+          if (Date.now() - stat.mtimeMs > STALENESS_MS) {
+            staleTaskCount++;
+          }
+        } catch {
+          // skip
+        }
+      }
+
+      return {
+        ...t,
+        members: t.members ?? [],
+        health: { status, lastActivity, staleTaskCount },
+      };
+    });
     return ok(teams, { count: teams.length });
   } catch (e) {
     return serverError(e);

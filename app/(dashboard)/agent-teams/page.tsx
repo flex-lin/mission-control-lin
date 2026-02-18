@@ -3,12 +3,24 @@ import Link from "next/link"
 import { Topbar } from "@/components/layout/topbar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { CreateTeamDialog } from "@/components/agent-teams/create-team-dialog"
-import { Users, Plus } from "lucide-react"
-import type { Team } from "@/types"
+import { SmartCreateDialog } from "@/components/agent-teams/smart-create-dialog"
+import { SubmitTaskDialog } from "@/components/agent-teams/submit-task-dialog"
+import { TeamActionsMenu } from "@/components/agent-teams/team-actions-menu"
+import { ArchivedTeams } from "@/components/agent-teams/archived-teams"
+import { TeamHealthBadge } from "@/components/agent-teams/team-health-badge"
+import { Users } from "lucide-react"
+import type { Team, TeamHealthStatus } from "@/types"
 
-async function getTeams(): Promise<Team[]> {
+interface TeamWithHealth extends Team {
+  health?: {
+    status: TeamHealthStatus
+    lastActivity: string | null
+    staleTaskCount: number
+  }
+}
+
+async function getTeams(): Promise<TeamWithHealth[]> {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
   try {
     const res = await fetch(`${base}/api/teams`, { cache: "no-store" })
@@ -26,10 +38,12 @@ export default async function AgentTeamsPage() {
   return (
     <div className="flex flex-col">
       <Topbar title="Agent Teams" subtitle={`${teams.length} team${teams.length !== 1 ? "s" : ""} configured`}>
+        <SubmitTaskDialog />
+        <SmartCreateDialog />
         <CreateTeamDialog />
       </Topbar>
 
-      <div className="p-6">
+      <div className="space-y-8 p-6">
         {teams.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16 text-center">
             <Users className="mb-3 h-10 w-10 text-muted-foreground" />
@@ -44,13 +58,24 @@ export default async function AgentTeamsPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {teams.map((team) => (
-              <Link key={team.name} href={`/agent-teams/${encodeURIComponent(team.name)}`}>
-                <Card className="cursor-pointer transition-colors hover:bg-accent/50">
-                  <CardHeader className="pb-3">
+              <Card key={team.name} className="relative transition-colors hover:bg-accent/50">
+                <div className="absolute right-3 top-3 z-10">
+                  <TeamActionsMenu teamName={team.name} />
+                </div>
+                <Link href={`/agent-teams/${encodeURIComponent(team.name)}`}>
+                  <CardHeader className="pb-3 pr-12">
                     <div className="flex items-start justify-between">
-                      <CardTitle className="text-base font-semibold text-foreground">
-                        {team.name}
-                      </CardTitle>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base font-semibold text-foreground">
+                          {team.name}
+                        </CardTitle>
+                        {team.health && (
+                          <TeamHealthBadge
+                            status={team.health.status}
+                            staleTaskCount={team.health.staleTaskCount}
+                          />
+                        )}
+                      </div>
                       <Badge variant="secondary" className="shrink-0 text-xs">
                         {team.members.length} member{team.members.length !== 1 ? "s" : ""}
                       </Badge>
@@ -88,11 +113,14 @@ export default async function AgentTeamsPage() {
                       </p>
                     )}
                   </CardContent>
-                </Card>
-              </Link>
+                </Link>
+              </Card>
             ))}
           </div>
         )}
+
+        {/* Past / Archived Teams */}
+        <ArchivedTeams />
       </div>
     </div>
   )

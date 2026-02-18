@@ -9,7 +9,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     const now = new Date();
     const cutoff = new Date(now);
-    if (period === "30d") cutoff.setDate(now.getDate() - 30);
+    if (period === "all") cutoff.setFullYear(2000);
+    else if (period === "30d") cutoff.setDate(now.getDate() - 30);
     else if (period === "1m") cutoff.setMonth(now.getMonth() - 1);
     else cutoff.setDate(now.getDate() - 7);
 

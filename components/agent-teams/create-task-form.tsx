@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -27,16 +28,12 @@ export function CreateTaskForm({ team, onSuccess }: CreateTaskFormProps) {
   const [description, setDescription] = useState("")
   const [owner, setOwner] = useState("__unassigned__")
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!subject.trim()) return
 
     setLoading(true)
-    setError(null)
-    setSuccess(false)
 
     try {
       const body: Record<string, string> = {
@@ -52,17 +49,17 @@ export function CreateTaskForm({ team, onSuccess }: CreateTaskFormProps) {
       })
       const json = await res.json()
       if (!res.ok) {
-        setError(json.error ?? "Failed to create task")
+        toast.error(json.error ?? "Failed to create task")
         return
       }
       setSubject("")
       setDescription("")
       setOwner("__unassigned__")
-      setSuccess(true)
+      toast.success("Task created")
       router.refresh()
       onSuccess?.()
     } catch {
-      setError("Network error")
+      toast.error("Network error")
     } finally {
       setLoading(false)
     }
@@ -108,9 +105,6 @@ export function CreateTaskForm({ team, onSuccess }: CreateTaskFormProps) {
           </SelectContent>
         </Select>
       </div>
-
-      {error && <p className="text-xs text-red-400">{error}</p>}
-      {success && <p className="text-xs text-emerald-400">Task created successfully</p>}
 
       <Button type="submit" disabled={loading || !subject.trim()} className="gap-1.5">
         <Plus className="h-3.5 w-3.5" />
