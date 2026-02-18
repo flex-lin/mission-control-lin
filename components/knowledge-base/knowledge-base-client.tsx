@@ -11,17 +11,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { FolderOpen, Pencil, Trash2, BookOpen, Lock } from "lucide-react"
+import { FolderOpen, Pencil, Trash2, BookOpen, ChevronRight } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { AddPathDialog } from "./add-path-dialog"
 import { EditPathDialog } from "./edit-path-dialog"
 import { DeletePathDialog } from "./delete-path-dialog"
 import type { KnowledgeBaseEntry } from "@/types"
+
+/** Convert an absolute path to the ~/.claude/projects/ folder name format */
+function pathToProjectId(p: string): string {
+  return p.replace(/\//g, "-")
+}
 
 interface KnowledgeBaseClientProps {
   initialEntries: KnowledgeBaseEntry[]
 }
 
 export function KnowledgeBaseClient({ initialEntries }: KnowledgeBaseClientProps) {
+  const router = useRouter()
   const [entries, setEntries] = useState<KnowledgeBaseEntry[]>(initialEntries)
   const [editTarget, setEditTarget] = useState<KnowledgeBaseEntry | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<KnowledgeBaseEntry | null>(null)
@@ -42,7 +49,7 @@ export function KnowledgeBaseClient({ initialEntries }: KnowledgeBaseClientProps
     return () => clearInterval(id)
   }, [refresh])
 
-  const isEditable = (entry: KnowledgeBaseEntry) =>
+  const isDbEntry = (entry: KnowledgeBaseEntry) =>
     entry.source === "db" || entry.source === "both"
 
   if (entries.length === 0) {
@@ -75,14 +82,20 @@ export function KnowledgeBaseClient({ initialEntries }: KnowledgeBaseClientProps
               <TableHead className="w-[200px]">Name</TableHead>
               <TableHead>Path</TableHead>
               <TableHead className="w-[200px]">Tags</TableHead>
-              <TableHead className="w-[100px]">Source</TableHead>
-              <TableHead className="w-[120px]">Last Scanned</TableHead>
-              <TableHead className="w-[80px] text-right">Actions</TableHead>
+              <TableHead className="w-[100px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {entries.map((entry) => (
-              <TableRow key={`${entry.source}-${entry.id}`}>
+              <TableRow
+                key={`${entry.source}-${entry.id}`}
+                className="cursor-pointer hover:bg-muted/50"
+                onClick={() => {
+                  // DB entries use numeric ID for reliable lookup; filesystem-only entries use path-encoded ID
+                  const projectId = entry.id > 0 ? String(entry.id) : encodeURIComponent(pathToProjectId(entry.path))
+                  router.push(`/knowledge-base/${projectId}`)
+                }}
+              >
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <FolderOpen className="h-4 w-4 shrink-0 text-amber-400" />
@@ -103,47 +116,28 @@ export function KnowledgeBaseClient({ initialEntries }: KnowledgeBaseClientProps
                     ))}
                   </div>
                 </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={entry.source === "filesystem" ? "outline" : "secondary"}
-                    className="text-[10px]"
-                  >
-                    {entry.source === "filesystem" && (
-                      <Lock className="mr-1 h-2.5 w-2.5" />
-                    )}
-                    {entry.source}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <span className="text-xs text-muted-foreground">
-                    {entry.lastScanned
-                      ? new Date(entry.lastScanned).toLocaleDateString()
-                      : "Never"}
-                  </span>
-                </TableCell>
                 <TableCell className="text-right">
-                  {isEditable(entry) ? (
-                    <div className="flex justify-end gap-1">
+                  <div className="flex items-center justify-end gap-1">
+                    {isDbEntry(entry) && (
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
-                        onClick={() => setEditTarget(entry)}
+                        onClick={(e) => { e.stopPropagation(); setEditTarget(entry) }}
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteTarget(entry)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Read-only</span>
-                  )}
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget(entry) }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

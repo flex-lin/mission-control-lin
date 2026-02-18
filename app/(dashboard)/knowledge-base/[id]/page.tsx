@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import type { Project, ProjectContext } from "@/types"
+import type { Project, ProjectContext, KnowledgeBaseEntry } from "@/types"
 import { FileText, FolderTree, BookOpen, Zap } from "lucide-react"
 import { SkillsTab } from "@/components/knowledge-base/skills-tab"
+import { RemoveProjectButton } from "@/components/knowledge-base/remove-project-button"
 
 async function getProjectWithContext(id: string): Promise<(Project & ProjectContext) | null> {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
@@ -16,6 +17,19 @@ async function getProjectWithContext(id: string): Promise<(Project & ProjectCont
     if (!res.ok) return null
     const json = await res.json()
     return json.data ?? null
+  } catch {
+    return null
+  }
+}
+
+async function getKbEntry(projectPath: string): Promise<KnowledgeBaseEntry | null> {
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
+  try {
+    const res = await fetch(`${base}/api/knowledge-base`, { cache: "no-store" })
+    if (!res.ok) return null
+    const json = await res.json()
+    const entries = (json.data ?? []) as KnowledgeBaseEntry[]
+    return entries.find((e) => e.path === projectPath) ?? null
   } catch {
     return null
   }
@@ -31,12 +45,21 @@ export default async function ProjectDetailPage({
 
   if (!project) notFound()
 
+  const kbEntry = await getKbEntry(project.path)
   const context = { claudeMd: project.claudeMd, memoryFiles: project.memoryFiles ?? {}, fileTree: project.fileTree }
   const memoryFileEntries = Object.entries(context.memoryFiles)
 
   return (
     <div className="flex flex-col">
-      <Topbar title={project.name} subtitle={project.path} />
+      <Topbar title={project.name} subtitle={project.path}>
+        {kbEntry && (
+          <RemoveProjectButton
+            entryId={kbEntry.id}
+            name={kbEntry.name}
+            path={kbEntry.path}
+          />
+        )}
+      </Topbar>
 
       <div className="space-y-6 p-6">
         {/* Tags */}
