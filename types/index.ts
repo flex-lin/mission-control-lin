@@ -16,6 +16,9 @@ export interface Team {
   members: Teammate[];
   description?: string;
   createdAt?: string;
+  backgroundExecution?: boolean;
+  /** ID of the QueuedTask that spawned this team (for duplicate prevention) */
+  sourceTaskId?: number;
 }
 
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
@@ -126,6 +129,17 @@ export interface ProjectContext {
   fileTree?: string[];
 }
 
+// ── Knowledge Base Types ──────────────────────────────────────────────────────
+
+export interface KnowledgeBaseEntry {
+  id: number;
+  path: string;
+  name: string;
+  tags: string[];
+  lastScanned?: string;
+  source: "db" | "filesystem" | "both";
+}
+
 // ── Settings Types ────────────────────────────────────────────────────────────
 
 export interface ProxyConfig {
@@ -134,10 +148,18 @@ export interface ProxyConfig {
   targetUrl: string;
 }
 
+export interface BackgroundExecutionConfig {
+  enabled: boolean;
+  sleepPreventionMethod: "caffeinate" | "systemd-inhibit" | "auto";
+}
+
+export type BackgroundExecutionStatus = "active" | "idle" | "suspended" | "unavailable";
+
 export interface Settings {
   theme?: "dark" | "light" | "system";
   refreshInterval?: number;
   proxyConfig?: ProxyConfig;
+  backgroundExecution?: BackgroundExecutionConfig;
   experimental?: Record<string, boolean>;
   indexedProjects?: string[];
 }
@@ -176,9 +198,30 @@ export interface TeamPlan {
   description: string;
   personas: TeamPersona[];
   initialTasks: { subject: string; description: string; assignTo?: string }[];
+  /** Links this team to a QueuedTask — enforces one active team per task */
+  sourceTaskId?: number;
 }
 
 export type TeamCreationStatus = "idle" | "generating" | "reviewing" | "spawning" | "done" | "error";
+
+// ── Background Execution Types ───────────────────────────────────────────────
+
+export interface BackgroundConfig {
+  /** Whether this team should auto-wake after system sleep */
+  persistent: boolean;
+  /** Auto-wake strategy: "immediate" wakes on next health poll, "scheduled" uses a delay */
+  wakeStrategy: "immediate" | "scheduled";
+  /** Delay in seconds before auto-wake (only for "scheduled" strategy) */
+  wakeDelaySeconds: number;
+  /** Maximum number of auto-wake attempts before giving up */
+  maxWakeRetries: number;
+  /** Number of auto-wake attempts so far (resets on manual wake or successful completion) */
+  wakeRetryCount: number;
+  /** Timestamp of last detected sleep event */
+  lastSleepDetected: string | null;
+  /** Timestamp of last auto-wake */
+  lastAutoWake: string | null;
+}
 
 // ── Team Health Types ────────────────────────────────────────────────────────
 
@@ -199,6 +242,11 @@ export interface TeamHealth {
   activeTasks: number;
   staleTasks: TeamTask[];
   memberHealth: TeamMemberHealth[];
+  backgroundExecution?: {
+    enabled: boolean;
+    status: BackgroundExecutionStatus;
+    sleepPrevented: boolean;
+  };
 }
 
 export interface WakeRequest {
@@ -216,6 +264,25 @@ export interface WakeResponse {
 
 export type QueuedTaskStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 
+export interface TaskAttachment {
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+}
+
+export const ALLOWED_UPLOAD_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "application/pdf",
+  "text/plain",
+] as const;
+
+export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+export const MAX_FILES_PER_TASK = 5;
+
 export interface QueuedTask {
   id: number;
   goal: string;
@@ -224,6 +291,7 @@ export interface QueuedTask {
   teamName?: string | null;
   priority: number;
   result?: string | null;
+  attachments?: TaskAttachment[];
   createdAt: string;
   startedAt?: string | null;
   completedAt?: string | null;
@@ -307,6 +375,39 @@ export interface UsageSyncStatus {
     claudeCode: string | null;
   };
   keyPrefix: string | null;
+}
+
+// ── Background Execution / Daemon Types ─────────────────────────────────────
+
+export type SleepEventType = "sleep_detected" | "wake_detected";
+
+export interface SleepEvent {
+  type: SleepEventType;
+  timestamp: string;
+}
+
+export interface SessionCheckpointData {
+  teamName: string;
+  taskStatuses: Record<string, string>; // taskId → status
+  paneContent: string;                   // last captured pane output
+  leaderAlive: boolean;
+  memberStatuses: Record<string, boolean>; // memberName → alive
+  projectPath?: string;
+}
+
+export interface ResumeAction {
+  teamName: string;
+  action: "resumed" | "skipped" | "failed";
+  reason: string;
+  timestamp: string;
+}
+
+export interface DaemonStatus {
+  running: boolean;
+  pid: number | null;
+  lastHeartbeat: string | null;
+  lastSleepEvent: SleepEvent | null;
+  resumeHistory: ResumeAction[];
 }
 
 // ── API Response Wrapper ──────────────────────────────────────────────────────

@@ -143,6 +143,33 @@ export function readTeamConfig(teamName: string): Team | null {
   return team;
 }
 
+/**
+ * Find an existing (non-archived) team that was spawned for the given QueuedTask ID.
+ * Returns the team name if found, null otherwise.
+ * This is the file-based counterpart to the DB check in the spawn route —
+ * it catches duplicates even if the DB row was lost or inconsistent.
+ */
+export function findTeamBySourceTaskId(sourceTaskId: number): string | null {
+  const dir = teamsDir();
+  if (!fs.existsSync(dir)) return null;
+
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    try {
+      const configPath = path.join(dir, entry.name, "config.json");
+      const raw = fs.readFileSync(configPath, "utf-8");
+      const config = JSON.parse(raw);
+      if (config.sourceTaskId === sourceTaskId) {
+        return entry.name;
+      }
+    } catch {
+      // skip malformed
+    }
+  }
+  return null;
+}
+
 export function listTeams(): Team[] {
   const dir = teamsDir();
   if (!fs.existsSync(dir)) return [];
