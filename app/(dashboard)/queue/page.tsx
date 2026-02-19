@@ -174,6 +174,7 @@ export default function QueuePage() {
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [cancellingIds, setCancellingIds] = useState<Set<number>>(new Set())
+  const [expandedGoalIds, setExpandedGoalIds] = useState<Set<number>>(new Set())
   const [workerActionLoading, setWorkerActionLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadAbortRef = useRef<AbortController | null>(null)
@@ -466,6 +467,18 @@ export default function QueuePage() {
   function cancelEditing() {
     setEditingId(null)
     setEditGoal("")
+  }
+
+  function toggleGoalExpand(id: number) {
+    setExpandedGoalIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
   }
 
   async function handleStartWorker() {
@@ -801,20 +814,41 @@ export default function QueuePage() {
                           </div>
                         ) : (
                           <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-1 group">
-                              <span className="truncate">{task.goal}</span>
-                              <AttachmentIndicator attachments={parseAttachments(task)} taskId={task.id} activePopover={attachmentPopover} setActivePopover={setAttachmentPopover} />
-                              {isPending && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={() => startEditing(task)}
-                                  title="Edit goal"
-                                >
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
-                              )}
+                            <div className="flex items-start gap-1 group">
+                              <div className="flex-1 min-w-0">
+                                {expandedGoalIds.has(task.id) ? (
+                                  <span className="whitespace-pre-wrap break-words text-sm">{task.goal}</span>
+                                ) : (
+                                  <span className="truncate block">{task.goal}</span>
+                                )}
+                                {task.goal.length > 80 && (
+                                  <button
+                                    type="button"
+                                    className="text-[10px] text-muted-foreground hover:text-foreground transition-colors mt-0.5 flex items-center gap-0.5"
+                                    onClick={() => toggleGoalExpand(task.id)}
+                                  >
+                                    {expandedGoalIds.has(task.id) ? (
+                                      <><ChevronUp className="h-3 w-3" />Show less</>
+                                    ) : (
+                                      <><ChevronDown className="h-3 w-3" />Show more</>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <AttachmentIndicator attachments={parseAttachments(task)} taskId={task.id} activePopover={attachmentPopover} setActivePopover={setAttachmentPopover} />
+                                {isPending && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => startEditing(task)}
+                                    title="Edit goal"
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                             {parseTeamMembers(task).length > 0 && (
                               <div className="flex items-center gap-1 flex-wrap">
@@ -1013,8 +1047,27 @@ export default function QueuePage() {
                       <TableRow key={task.id} className="text-muted-foreground">
                         <TableCell className="font-mono text-xs">{task.id}</TableCell>
                         <TableCell className="max-w-xs text-sm">
-                          <div className="flex items-center gap-1">
-                            <span className="truncate">{task.goal}</span>
+                          <div className="flex items-start gap-1">
+                            <div className="flex-1 min-w-0">
+                              {expandedGoalIds.has(task.id) ? (
+                                <span className="whitespace-pre-wrap break-words text-sm">{task.goal}</span>
+                              ) : (
+                                <span className="truncate block">{task.goal}</span>
+                              )}
+                              {task.goal.length > 80 && (
+                                <button
+                                  type="button"
+                                  className="text-[10px] text-muted-foreground hover:text-foreground transition-colors mt-0.5 flex items-center gap-0.5"
+                                  onClick={() => toggleGoalExpand(task.id)}
+                                >
+                                  {expandedGoalIds.has(task.id) ? (
+                                    <><ChevronUp className="h-3 w-3" />Show less</>
+                                  ) : (
+                                    <><ChevronDown className="h-3 w-3" />Show more</>
+                                  )}
+                                </button>
+                              )}
+                            </div>
                             <AttachmentIndicator attachments={parseAttachments(task)} taskId={task.id} activePopover={attachmentPopover} setActivePopover={setAttachmentPopover} />
                           </div>
                         </TableCell>
@@ -1059,8 +1112,16 @@ export default function QueuePage() {
                         <TableCell className="text-xs">
                           {task.completedAt ? formatRelativeTime(task.completedAt) : formatRelativeTime(task.createdAt)}
                         </TableCell>
-                        <TableCell className="max-w-[160px] truncate text-xs">
-                          {task.result ?? "—"}
+                        <TableCell className="max-w-[160px] text-xs">
+                          {task.result ? (
+                            <div>
+                              {expandedGoalIds.has(task.id) ? (
+                                <span className="whitespace-pre-wrap break-words">{task.result}</span>
+                              ) : (
+                                <span className="truncate block">{task.result}</span>
+                              )}
+                            </div>
+                          ) : "—"}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
