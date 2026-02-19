@@ -291,6 +291,7 @@ All API routes return: `{ data?, error?, meta? }` via helpers in `lib/api-helper
 - **After scaffold**: `pnpm install` and `npx prisma generate` succeed
 - **After implementation**: `pnpm build` exits with zero errors
 - **After integration**: `pnpm build` + all pages render without runtime errors
+- **CRITICAL — No concurrent Next.js processes**: Never run `pnpm dev`, `pnpm build`, or `next dev`/`next build` if a dev server is already running. Turbopack's LSM storage assumes exclusive access to `.next/` — concurrent processes corrupt the cache (SST files), causing all API routes to return 500. If you need to verify the build, first check `pgrep -f 'next dev'` or `fuser 3777/tcp` and skip the build if the dev server is already running. The running dev server already validates compilation.
 
 ## Error Recovery
 - Build failures: read the error, fix the root cause, rebuild — do not skip or suppress
