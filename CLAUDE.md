@@ -28,9 +28,14 @@ pnpm queue:daemon   # Queue worker in persistent tmux session (recommended)
 ```
 
 ### MCP Setup (automatic)
-`pnpm install` runs `scripts/setup-mcp.js` (postinstall) which patches
-`.claude/settings.json` with the absolute path to `scripts/mcp-server.sh`
-for the current machine. Re-run `pnpm mcp:setup` if the project moves.
+`pnpm install` runs `scripts/setup-mcp.js` (postinstall), which generates
+`.claude/settings.json` from `.claude/settings.base.json` and injects the
+absolute path to `scripts/mcp-server.sh` for the current machine.
+
+- `.claude/settings.base.json` — committed to git; contains permissions + `teammateMode`
+- `.claude/settings.json` — gitignored; generated on every `pnpm install` with machine-specific MCP path
+- Re-run `pnpm mcp:setup` if the project directory moves
+
 The MCP server exposes `TeamCreate`, `TeamDelete`, and `SendMessage` to all
 Claude Code leader agents spawned by the queue worker.
 

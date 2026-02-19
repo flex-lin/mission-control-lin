@@ -43,6 +43,9 @@ next-env.d.ts
 # database
 prisma/mission-control.db
 
+# generated claude settings (machine-specific paths; see .claude/settings.base.json)
+.claude/settings.json
+
 # generated prisma client
 lib/generated/
 

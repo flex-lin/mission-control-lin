@@ -17,11 +17,5 @@
       "mcp__mission-control__SendMessage"
     ]
   },
-  "teammateMode": "tmux",
-  "mcpServers": {
-    "mission-control": {
-      "command": "/bin/bash",
-      "args": ["/Users/linjin/mission-control-lin/scripts/mcp-server.sh"]
-    }
-  }
+  "teammateMode": "tmux"
 }
