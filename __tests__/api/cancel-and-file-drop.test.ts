@@ -81,7 +81,7 @@ import { DELETE } from "@/app/api/queue/[id]/route";
 
 async function callDelete(id: string) {
   const req = new NextRequest(
-    new URL(`/api/queue/${id}`, "http://localhost:3777"),
+    new URL(`/api/queue/${id}`, "http://localhost:31777"),
     { method: "DELETE" }
   );
   const res = await DELETE(req, { params: Promise.resolve({ id }) });

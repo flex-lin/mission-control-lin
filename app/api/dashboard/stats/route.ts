@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { listTeams } from "@/lib/claude-files";
 import { computeCost } from "@/lib/pricing";
 import { ok, serverError } from "@/lib/api-helpers";
 
 // GET /api/dashboard/stats — overview stats for the dashboard
-export async function GET(_req: NextRequest): Promise<NextResponse> {
+export async function GET(_req: NextRequest) {
   try {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());

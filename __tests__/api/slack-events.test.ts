@@ -73,7 +73,7 @@ function makeValidSignedReq(body: unknown, secret = TEST_SIGNING_SECRET): NextRe
   const timestamp = freshTimestamp();
   const signature = computeSlackSignature(bodyStr, timestamp, secret);
 
-  return new NextRequest(new URL("http://localhost:3777/api/slack/events"), {
+  return new NextRequest(new URL("http://localhost:31777/api/slack/events"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -88,7 +88,7 @@ function makeInvalidSignedReq(body: unknown): NextRequest {
   const bodyStr = JSON.stringify(body);
   const timestamp = freshTimestamp();
 
-  return new NextRequest(new URL("http://localhost:3777/api/slack/events"), {
+  return new NextRequest(new URL("http://localhost:31777/api/slack/events"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -102,7 +102,7 @@ function makeInvalidSignedReq(body: unknown): NextRequest {
 function makeUnsignedReq(body: unknown): NextRequest {
   const bodyStr = JSON.stringify(body);
 
-  return new NextRequest(new URL("http://localhost:3777/api/slack/events"), {
+  return new NextRequest(new URL("http://localhost:31777/api/slack/events"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: bodyStr,
@@ -115,7 +115,7 @@ function makeStaleTimestampReq(body: unknown, secret = TEST_SIGNING_SECRET): Nex
   const staleTimestamp = Math.floor(Date.now() / 1000 - 6 * 60).toString();
   const signature = computeSlackSignature(bodyStr, staleTimestamp, secret);
 
-  return new NextRequest(new URL("http://localhost:3777/api/slack/events"), {
+  return new NextRequest(new URL("http://localhost:31777/api/slack/events"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -395,7 +395,7 @@ describe("POST /api/slack/events — malformed body", () => {
     const rawBody = "not-valid-json";
     const signature = computeSlackSignature(rawBody, timestamp, TEST_SIGNING_SECRET);
 
-    const req = new NextRequest(new URL("http://localhost:3777/api/slack/events"), {
+    const req = new NextRequest(new URL("http://localhost:31777/api/slack/events"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -415,7 +415,7 @@ describe("POST /api/slack/events — malformed body", () => {
     const rawBody = "";
     const signature = computeSlackSignature(rawBody, timestamp, TEST_SIGNING_SECRET);
 
-    const req = new NextRequest(new URL("http://localhost:3777/api/slack/events"), {
+    const req = new NextRequest(new URL("http://localhost:31777/api/slack/events"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

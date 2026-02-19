@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ok, created, err, serverError } from "@/lib/api-helpers";
 import type { KnowledgeBaseEntry } from "@/types";
@@ -9,7 +9,7 @@ import path from "path";
 // Returns only DB IndexedProject records (manually added by the user).
 // Filesystem projects from ~/.claude/projects/ are NOT auto-included so that
 // a fresh clone starts with a blank knowledge base.
-export async function GET(): Promise<NextResponse> {
+export async function GET() {
   try {
     const dbRecords = await db.indexedProject.findMany({
       orderBy: { id: "desc" },
@@ -31,7 +31,7 @@ export async function GET(): Promise<NextResponse> {
 }
 
 // POST /api/knowledge-base — add a new path/folder
-export async function POST(req: NextRequest): Promise<NextResponse> {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { path: inputPath, name, tags } = body as {

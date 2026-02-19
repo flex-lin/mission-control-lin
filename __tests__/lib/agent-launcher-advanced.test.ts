@@ -194,13 +194,4 @@ describe("agent-launcher advanced", () => {
     });
   });
 
-  // ── getTeamStatus ────────────────────────────────────────────────────
-
-  describe("getTeamStatus", () => {
-    it("delegates to tmux-manager getTeamSessionStatus", async () => {
-      const { getTeamStatus } = await import("@/lib/agent-launcher");
-      const result = getTeamStatus("team", ["leader", "dev"]);
-      expect(Array.isArray(result)).toBe(true);
-    });
-  });
 });

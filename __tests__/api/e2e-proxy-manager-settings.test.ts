@@ -21,7 +21,7 @@ import os from "os";
 let tmpDir: string;
 
 function makeReq(url: string, init?: RequestInit): NextRequest {
-  return new NextRequest(new URL(url, "http://localhost:3777"), init);
+  return new NextRequest(new URL(url, "http://localhost:31777"), init);
 }
 
 function createSettingsFile(content: Record<string, unknown> = {}): void {
@@ -99,7 +99,7 @@ describe("lib/proxy-manager — spawnProxyProcess", () => {
     vi.resetModules();
 
     const { spawnProxyProcess } = await import("@/lib/proxy-manager");
-    spawnProxyProcess(8787, "https://api.anthropic.com");
+    spawnProxyProcess(28787, "https://api.anthropic.com");
 
     expect(spawnMock).toHaveBeenCalledOnce();
     const [cmd, args, opts] = spawnMock.mock.calls[0] as [
@@ -110,7 +110,7 @@ describe("lib/proxy-manager — spawnProxyProcess", () => {
     expect(cmd).toBe("npx");
     expect(args[0]).toBe("tsx");
     expect(args[1]).toMatch(/server\/proxy\.ts$/);
-    expect(opts.env.PROXY_PORT).toBe("8787");
+    expect(opts.env.PROXY_PORT).toBe("28787");
     expect(opts.env.PROXY_TARGET_URL).toBe("https://api.anthropic.com");
     expect(opts.stdio).toBe("ignore");
     expect(opts.detached).toBe(true);
@@ -126,7 +126,7 @@ describe("lib/proxy-manager — spawnProxyProcess", () => {
     vi.resetModules();
 
     const { spawnProxyProcess } = await import("@/lib/proxy-manager");
-    spawnProxyProcess(8787, "https://api.anthropic.com");
+    spawnProxyProcess(28787, "https://api.anthropic.com");
 
     expect(fakeProc.unref).toHaveBeenCalledOnce();
     vi.doUnmock("child_process");
@@ -140,8 +140,8 @@ describe("lib/proxy-manager — spawnProxyProcess", () => {
     vi.resetModules();
 
     const { spawnProxyProcess } = await import("@/lib/proxy-manager");
-    spawnProxyProcess(8787, "https://api.anthropic.com");
-    spawnProxyProcess(8787, "https://api.anthropic.com"); // second call
+    spawnProxyProcess(28787, "https://api.anthropic.com");
+    spawnProxyProcess(28787, "https://api.anthropic.com"); // second call
 
     expect(spawnMock).toHaveBeenCalledOnce();
     vi.doUnmock("child_process");
@@ -160,14 +160,14 @@ describe("lib/proxy-manager — spawnProxyProcess", () => {
     const { spawnProxyProcess } = await import("@/lib/proxy-manager");
 
     // First spawn
-    spawnProxyProcess(8787, "https://api.anthropic.com");
+    spawnProxyProcess(28787, "https://api.anthropic.com");
     expect(spawnMock).toHaveBeenCalledTimes(1);
 
     // Simulate process exit via the registered "exit" callback
     fakeProc1.kill(); // triggers exitCb which sets proxyProcess = null
 
     // Second spawn — allowed because ref was cleared
-    spawnProxyProcess(8787, "https://api.anthropic.com");
+    spawnProxyProcess(28787, "https://api.anthropic.com");
     expect(spawnMock).toHaveBeenCalledTimes(2);
 
     vi.doUnmock("child_process");
@@ -181,10 +181,10 @@ describe("lib/proxy-manager — spawnProxyProcess", () => {
     vi.resetModules();
 
     const { spawnProxyProcess } = await import("@/lib/proxy-manager");
-    spawnProxyProcess(9000, "https://custom-proxy.example.com");
+    spawnProxyProcess(29000, "https://custom-proxy.example.com");
 
     const [, , opts] = spawnMock.mock.calls[0] as [string, string[], { env: Record<string, string> }];
-    expect(opts.env.PROXY_PORT).toBe("9000");
+    expect(opts.env.PROXY_PORT).toBe("29000");
     expect(opts.env.PROXY_TARGET_URL).toBe("https://custom-proxy.example.com");
 
     vi.doUnmock("child_process");
@@ -199,7 +199,7 @@ describe("lib/proxy-manager — spawnProxyProcess", () => {
     vi.resetModules();
 
     const { spawnProxyProcess } = await import("@/lib/proxy-manager");
-    spawnProxyProcess(8787, "https://api.anthropic.com");
+    spawnProxyProcess(28787, "https://api.anthropic.com");
 
     const [, , opts] = spawnMock.mock.calls[0] as [string, string[], { env: Record<string, string> }];
     expect(opts.env.MY_CUSTOM_VAR).toBe("hello-test");
@@ -217,7 +217,7 @@ describe("lib/proxy-manager — spawnProxyProcess", () => {
     vi.resetModules();
 
     const { spawnProxyProcess } = await import("@/lib/proxy-manager");
-    spawnProxyProcess(8787, "https://api.anthropic.com");
+    spawnProxyProcess(28787, "https://api.anthropic.com");
 
     const [, args] = spawnMock.mock.calls[0] as [string, string[]];
     expect(path.isAbsolute(args[1])).toBe(true);
@@ -263,7 +263,7 @@ describe("lib/proxy-manager — killProxyProcess", () => {
     vi.resetModules();
 
     const { spawnProxyProcess, killProxyProcess } = await import("@/lib/proxy-manager");
-    spawnProxyProcess(8787, "https://api.anthropic.com");
+    spawnProxyProcess(28787, "https://api.anthropic.com");
     killProxyProcess();
 
     expect(fakeProc.kill).toHaveBeenCalledWith("SIGTERM");
@@ -286,7 +286,7 @@ describe("lib/proxy-manager — killProxyProcess", () => {
     vi.resetModules();
 
     const { spawnProxyProcess, killProxyProcess } = await import("@/lib/proxy-manager");
-    spawnProxyProcess(8787, "https://api.anthropic.com");
+    spawnProxyProcess(28787, "https://api.anthropic.com");
 
     expect(() => {
       killProxyProcess();
@@ -343,7 +343,7 @@ describe("lib/proxy-manager — getProxyProcess / isProxyRunning", () => {
     vi.resetModules();
 
     const { spawnProxyProcess, getProxyProcess } = await import("@/lib/proxy-manager");
-    spawnProxyProcess(8787, "https://api.anthropic.com");
+    spawnProxyProcess(28787, "https://api.anthropic.com");
 
     expect(getProxyProcess()).toBe(fakeProc);
 
@@ -356,7 +356,7 @@ describe("lib/proxy-manager — getProxyProcess / isProxyRunning", () => {
     vi.resetModules();
 
     const { spawnProxyProcess, killProxyProcess, getProxyProcess } = await import("@/lib/proxy-manager");
-    spawnProxyProcess(8787, "https://api.anthropic.com");
+    spawnProxyProcess(28787, "https://api.anthropic.com");
     killProxyProcess();
 
     expect(getProxyProcess()).toBeNull();
@@ -380,7 +380,7 @@ describe("lib/proxy-manager — getProxyProcess / isProxyRunning", () => {
     vi.resetModules();
 
     const { spawnProxyProcess, isProxyRunning } = await import("@/lib/proxy-manager");
-    spawnProxyProcess(8787, "https://api.anthropic.com");
+    spawnProxyProcess(28787, "https://api.anthropic.com");
 
     expect(isProxyRunning()).toBe(true);
 
@@ -393,7 +393,7 @@ describe("lib/proxy-manager — getProxyProcess / isProxyRunning", () => {
     vi.resetModules();
 
     const { spawnProxyProcess, killProxyProcess, isProxyRunning } = await import("@/lib/proxy-manager");
-    spawnProxyProcess(8787, "https://api.anthropic.com");
+    spawnProxyProcess(28787, "https://api.anthropic.com");
     killProxyProcess();
 
     expect(isProxyRunning()).toBe(false);
@@ -408,7 +408,7 @@ describe("lib/proxy-manager — getProxyProcess / isProxyRunning", () => {
     vi.resetModules();
 
     const { spawnProxyProcess, isProxyRunning } = await import("@/lib/proxy-manager");
-    spawnProxyProcess(8787, "https://api.anthropic.com");
+    spawnProxyProcess(28787, "https://api.anthropic.com");
 
     // Even though spawn was called, the process is already dead
     expect(isProxyRunning()).toBe(false);
@@ -464,38 +464,38 @@ describe("PUT /api/settings — auto-start proxy when proxyConfig.enabled flips 
 
   it("calls spawnProxyProcess when proxy transitions from disabled to enabled", async () => {
     createSettingsFile({
-      proxyConfig: { enabled: false, port: 8787, targetUrl: "https://api.anthropic.com" },
+      proxyConfig: { enabled: false, port: 28787, targetUrl: "https://api.anthropic.com" },
     });
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     const res = await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({
-          proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+          proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
         }),
       })
     );
 
     expect(res.status).toBe(200);
     expect(mockSpawnProxy).toHaveBeenCalledOnce();
-    expect(mockSpawnProxy).toHaveBeenCalledWith(8787, "https://api.anthropic.com");
+    expect(mockSpawnProxy).toHaveBeenCalledWith(28787, "https://api.anthropic.com");
     expect(mockKillProxy).not.toHaveBeenCalled();
   });
 
   it("does NOT call spawnProxyProcess when proxy was already enabled (no flip)", async () => {
     createSettingsFile({
-      proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+      proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
     });
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     const res = await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({
-          proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+          proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
         }),
       })
     );
@@ -504,19 +504,19 @@ describe("PUT /api/settings — auto-start proxy when proxyConfig.enabled flips 
     expect(mockSpawnProxy).not.toHaveBeenCalled();
   });
 
-  it("uses default port 8787 when port is not in request or existing file", async () => {
+  it("uses default port 28787 when port is not in request or existing file", async () => {
     createSettingsFile({});
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({ proxyConfig: { enabled: true } }),
       })
     );
 
-    expect(mockSpawnProxy).toHaveBeenCalledWith(8787, "https://api.anthropic.com");
+    expect(mockSpawnProxy).toHaveBeenCalledWith(28787, "https://api.anthropic.com");
   });
 
   it("falls back to existing file port when new request omits port", async () => {
@@ -527,7 +527,7 @@ describe("PUT /api/settings — auto-start proxy when proxyConfig.enabled flips 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({ proxyConfig: { enabled: true } }),
       })
@@ -542,15 +542,15 @@ describe("PUT /api/settings — auto-start proxy when proxyConfig.enabled flips 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({
-          proxyConfig: { enabled: true, port: 8787, targetUrl: "https://my-proxy.example.com" },
+          proxyConfig: { enabled: true, port: 28787, targetUrl: "https://my-proxy.example.com" },
         }),
       })
     );
 
-    expect(mockSpawnProxy).toHaveBeenCalledWith(8787, "https://my-proxy.example.com");
+    expect(mockSpawnProxy).toHaveBeenCalledWith(28787, "https://my-proxy.example.com");
   });
 
   it("saves proxyConfig to file when enabling", async () => {
@@ -559,17 +559,17 @@ describe("PUT /api/settings — auto-start proxy when proxyConfig.enabled flips 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({
-          proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+          proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
         }),
       })
     );
 
     const saved = readSettingsFile();
     expect((saved.proxyConfig as Record<string, unknown>).enabled).toBe(true);
-    expect((saved.proxyConfig as Record<string, unknown>).port).toBe(8787);
+    expect((saved.proxyConfig as Record<string, unknown>).port).toBe(28787);
   });
 
   it("preserves other file settings when enabling proxy", async () => {
@@ -578,10 +578,10 @@ describe("PUT /api/settings — auto-start proxy when proxyConfig.enabled flips 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({
-          proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+          proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
         }),
       })
     );
@@ -632,16 +632,16 @@ describe("PUT /api/settings — auto-stop proxy when proxyConfig.enabled flips f
 
   it("calls killProxyProcess when proxy transitions from enabled to disabled", async () => {
     createSettingsFile({
-      proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+      proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
     });
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     const res = await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({
-          proxyConfig: { enabled: false, port: 8787, targetUrl: "https://api.anthropic.com" },
+          proxyConfig: { enabled: false, port: 28787, targetUrl: "https://api.anthropic.com" },
         }),
       })
     );
@@ -653,16 +653,16 @@ describe("PUT /api/settings — auto-stop proxy when proxyConfig.enabled flips f
 
   it("does NOT call killProxyProcess when proxy was already disabled (no flip)", async () => {
     createSettingsFile({
-      proxyConfig: { enabled: false, port: 8787, targetUrl: "https://api.anthropic.com" },
+      proxyConfig: { enabled: false, port: 28787, targetUrl: "https://api.anthropic.com" },
     });
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({
-          proxyConfig: { enabled: false, port: 8787, targetUrl: "https://api.anthropic.com" },
+          proxyConfig: { enabled: false, port: 28787, targetUrl: "https://api.anthropic.com" },
         }),
       })
     );
@@ -673,16 +673,16 @@ describe("PUT /api/settings — auto-stop proxy when proxyConfig.enabled flips f
 
   it("persists enabled=false to settings file when disabling", async () => {
     createSettingsFile({
-      proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+      proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
     });
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({
-          proxyConfig: { enabled: false, port: 8787, targetUrl: "https://api.anthropic.com" },
+          proxyConfig: { enabled: false, port: 28787, targetUrl: "https://api.anthropic.com" },
         }),
       })
     );
@@ -694,16 +694,16 @@ describe("PUT /api/settings — auto-stop proxy when proxyConfig.enabled flips f
   it("does not affect non-proxy file settings when disabling proxy", async () => {
     createSettingsFile({
       model: "claude-sonnet-4-6",
-      proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+      proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
     });
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({
-          proxyConfig: { enabled: false, port: 8787, targetUrl: "https://api.anthropic.com" },
+          proxyConfig: { enabled: false, port: 28787, targetUrl: "https://api.anthropic.com" },
         }),
       })
     );
@@ -755,7 +755,7 @@ describe("PUT /api/settings — no proxy side effects when proxyConfig not in bo
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({ theme: "light" }),
       })
@@ -771,7 +771,7 @@ describe("PUT /api/settings — no proxy side effects when proxyConfig not in bo
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({ refreshInterval: 15 }),
       })
@@ -787,7 +787,7 @@ describe("PUT /api/settings — no proxy side effects when proxyConfig not in bo
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({ model: "claude-opus-4-6" }),
       })
@@ -803,7 +803,7 @@ describe("PUT /api/settings — no proxy side effects when proxyConfig not in bo
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
     const res = await PUT(
-      makeReq("http://localhost:3777/api/settings", {
+      makeReq("http://localhost:31777/api/settings", {
         method: "PUT",
         body: JSON.stringify({}),
       })
@@ -849,7 +849,7 @@ describe("GET /api/settings — proxyConfig is included in response", () => {
 
   it("returns proxyConfig.enabled=true when set in settings file", async () => {
     createSettingsFile({
-      proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+      proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
     });
 
     vi.resetModules();
@@ -861,13 +861,13 @@ describe("GET /api/settings — proxyConfig is included in response", () => {
 
     expect(res.status).toBe(200);
     expect(body.data.proxyConfig.enabled).toBe(true);
-    expect(body.data.proxyConfig.port).toBe(8787);
+    expect(body.data.proxyConfig.port).toBe(28787);
     expect(body.data.proxyConfig.targetUrl).toBe("https://api.anthropic.com");
   });
 
   it("returns proxyConfig.enabled=false when disabled in settings file", async () => {
     createSettingsFile({
-      proxyConfig: { enabled: false, port: 8787, targetUrl: "https://api.anthropic.com" },
+      proxyConfig: { enabled: false, port: 28787, targetUrl: "https://api.anthropic.com" },
     });
 
     vi.resetModules();
@@ -893,7 +893,7 @@ describe("GET /api/settings — proxyConfig is included in response", () => {
 
   it("merges DB theme preference with file proxyConfig", async () => {
     createSettingsFile({
-      proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+      proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
     });
     mockPreferenceFindMany.mockResolvedValue([{ key: "theme", value: "dark" }]);
 
@@ -1015,8 +1015,8 @@ describe("GET /api/proxy/status — proxy port probing", () => {
     expect(body.data.port).toBe(port);
   });
 
-  it("uses default port 8787 when proxyConfig is absent from settings", async () => {
-    // There's almost never anything on port 8787 in test environment
+  it("uses default port 28787 when proxyConfig is absent from settings", async () => {
+    // There's almost never anything on port 28787 in test environment
     createSettingsFile({});
 
     vi.resetModules();
@@ -1025,7 +1025,7 @@ describe("GET /api/proxy/status — proxy port probing", () => {
     const body = (await res.json()) as { data: { port: number } };
 
     expect(res.status).toBe(200);
-    expect(body.data.port).toBe(8787);
+    expect(body.data.port).toBe(28787);
   });
 
   it("returns targetUrl from settings file", async () => {
@@ -1068,7 +1068,7 @@ describe("GET /api/proxy/status — proxy port probing", () => {
   });
 
   it("response shape always includes running, port, and targetUrl fields", async () => {
-    createSettingsFile({ proxyConfig: { port: 8787, targetUrl: "https://api.anthropic.com" } });
+    createSettingsFile({ proxyConfig: { port: 28787, targetUrl: "https://api.anthropic.com" } });
 
     vi.resetModules();
     const { GET } = await import("@/app/api/proxy/status/route");
@@ -1124,13 +1124,13 @@ describe("POST /api/proxy/control — action=start", () => {
   });
 
   it("starts the proxy and returns success with port", async () => {
-    createSettingsFile({ proxyConfig: { port: 8787, targetUrl: "https://api.anthropic.com" } });
+    createSettingsFile({ proxyConfig: { port: 28787, targetUrl: "https://api.anthropic.com" } });
 
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
     const res = await POST(
-      makeReq("http://localhost:3777/api/proxy/control", {
+      makeReq("http://localhost:31777/api/proxy/control", {
         method: "POST",
         body: JSON.stringify({ action: "start" }),
       })
@@ -1140,9 +1140,9 @@ describe("POST /api/proxy/control — action=start", () => {
     expect(res.status).toBe(200);
     expect(body.data.success).toBe(true);
     expect(body.data.action).toBe("start");
-    expect(body.data.port).toBe(8787);
+    expect(body.data.port).toBe(28787);
     expect(mockSpawnProxy).toHaveBeenCalledOnce();
-    expect(mockSpawnProxy).toHaveBeenCalledWith(8787, "https://api.anthropic.com");
+    expect(mockSpawnProxy).toHaveBeenCalledWith(28787, "https://api.anthropic.com");
   });
 
   it("uses custom port from settings", async () => {
@@ -1152,7 +1152,7 @@ describe("POST /api/proxy/control — action=start", () => {
 
     const { POST } = await import("@/app/api/proxy/control/route");
     const res = await POST(
-      makeReq("http://localhost:3777/api/proxy/control", {
+      makeReq("http://localhost:31777/api/proxy/control", {
         method: "POST",
         body: JSON.stringify({ action: "start" }),
       })
@@ -1165,63 +1165,63 @@ describe("POST /api/proxy/control — action=start", () => {
 
   it("spawns with the targetUrl from settings", async () => {
     createSettingsFile({
-      proxyConfig: { port: 8787, targetUrl: "https://my-proxy.example.com" },
+      proxyConfig: { port: 28787, targetUrl: "https://my-proxy.example.com" },
     });
 
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
     await POST(
-      makeReq("http://localhost:3777/api/proxy/control", {
+      makeReq("http://localhost:31777/api/proxy/control", {
         method: "POST",
         body: JSON.stringify({ action: "start" }),
       })
     );
 
-    expect(mockSpawnProxy).toHaveBeenCalledWith(8787, "https://my-proxy.example.com");
+    expect(mockSpawnProxy).toHaveBeenCalledWith(28787, "https://my-proxy.example.com");
   });
 
-  it("uses default port 8787 and default targetUrl when settings has no proxyConfig", async () => {
+  it("uses default port 28787 and default targetUrl when settings has no proxyConfig", async () => {
     createSettingsFile({});
 
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
     await POST(
-      makeReq("http://localhost:3777/api/proxy/control", {
+      makeReq("http://localhost:31777/api/proxy/control", {
         method: "POST",
         body: JSON.stringify({ action: "start" }),
       })
     );
 
-    expect(mockSpawnProxy).toHaveBeenCalledWith(8787, "https://api.anthropic.com");
+    expect(mockSpawnProxy).toHaveBeenCalledWith(28787, "https://api.anthropic.com");
   });
 
   it("sets ANTHROPIC_BASE_URL in project settings on start", async () => {
-    createSettingsFile({ proxyConfig: { port: 8787, targetUrl: "https://api.anthropic.com" } });
+    createSettingsFile({ proxyConfig: { port: 28787, targetUrl: "https://api.anthropic.com" } });
 
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
     await POST(
-      makeReq("http://localhost:3777/api/proxy/control", {
+      makeReq("http://localhost:31777/api/proxy/control", {
         method: "POST",
         body: JSON.stringify({ action: "start" }),
       })
     );
 
-    expect(mockSetProjectProxyEnv).toHaveBeenCalledWith("http://localhost:8787");
+    expect(mockSetProjectProxyEnv).toHaveBeenCalledWith("http://localhost:28787");
   });
 
   it("returns 400 ALREADY_RUNNING when proxy is already running", async () => {
-    createSettingsFile({ proxyConfig: { port: 8787 } });
+    createSettingsFile({ proxyConfig: { port: 28787 } });
     mockIsRunning = true;
 
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
     const res = await POST(
-      makeReq("http://localhost:3777/api/proxy/control", {
+      makeReq("http://localhost:31777/api/proxy/control", {
         method: "POST",
         body: JSON.stringify({ action: "start" }),
       })
@@ -1239,7 +1239,7 @@ describe("POST /api/proxy/control — action=start", () => {
 
     const { POST } = await import("@/app/api/proxy/control/route");
     const res = await POST(
-      makeReq("http://localhost:3777/api/proxy/control", {
+      makeReq("http://localhost:31777/api/proxy/control", {
         method: "POST",
         body: JSON.stringify({ action: "restart" }),
       })
@@ -1257,7 +1257,7 @@ describe("POST /api/proxy/control — action=start", () => {
 
     const { POST } = await import("@/app/api/proxy/control/route");
     const res = await POST(
-      makeReq("http://localhost:3777/api/proxy/control", {
+      makeReq("http://localhost:31777/api/proxy/control", {
         method: "POST",
         body: JSON.stringify({}),
       })
@@ -1305,14 +1305,14 @@ describe("POST /api/proxy/control — action=stop", () => {
   });
 
   it("stops the proxy and returns success", async () => {
-    createSettingsFile({ proxyConfig: { port: 8787 } });
+    createSettingsFile({ proxyConfig: { port: 28787 } });
     mockIsRunning = true;
 
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
     const res = await POST(
-      makeReq("http://localhost:3777/api/proxy/control", {
+      makeReq("http://localhost:31777/api/proxy/control", {
         method: "POST",
         body: JSON.stringify({ action: "stop" }),
       })
@@ -1326,14 +1326,14 @@ describe("POST /api/proxy/control — action=stop", () => {
   });
 
   it("removes ANTHROPIC_BASE_URL from project settings on stop", async () => {
-    createSettingsFile({ proxyConfig: { port: 8787 } });
+    createSettingsFile({ proxyConfig: { port: 28787 } });
     mockIsRunning = true;
 
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
     await POST(
-      makeReq("http://localhost:3777/api/proxy/control", {
+      makeReq("http://localhost:31777/api/proxy/control", {
         method: "POST",
         body: JSON.stringify({ action: "stop" }),
       })
@@ -1350,7 +1350,7 @@ describe("POST /api/proxy/control — action=stop", () => {
 
     const { POST } = await import("@/app/api/proxy/control/route");
     const res = await POST(
-      makeReq("http://localhost:3777/api/proxy/control", {
+      makeReq("http://localhost:31777/api/proxy/control", {
         method: "POST",
         body: JSON.stringify({ action: "stop" }),
       })
@@ -1375,28 +1375,28 @@ describe("ProxyStatusBanner component interface and contract", () => {
   });
 
   it("ProxyStatusInfo shape has all required fields", () => {
-    const statusInfo = { running: true, port: 8787, targetUrl: "https://api.anthropic.com" };
+    const statusInfo = { running: true, port: 28787, targetUrl: "https://api.anthropic.com" };
     expect(typeof statusInfo.running).toBe("boolean");
     expect(typeof statusInfo.port).toBe("number");
     expect(typeof statusInfo.targetUrl).toBe("string");
   });
 
   it("running=false status is valid for ProxyStatusInfo", () => {
-    const statusInfo = { running: false, port: 8787, targetUrl: "https://api.anthropic.com" };
+    const statusInfo = { running: false, port: 28787, targetUrl: "https://api.anthropic.com" };
     expect(statusInfo.running).toBe(false);
   });
 
   it("env var instruction uses correct ANTHROPIC_BASE_URL format", () => {
-    const port = 8787;
+    const port = 28787;
     const envVar = `ANTHROPIC_BASE_URL=http://localhost:${port}`;
-    expect(envVar).toBe("ANTHROPIC_BASE_URL=http://localhost:8787");
+    expect(envVar).toBe("ANTHROPIC_BASE_URL=http://localhost:28787");
     expect(envVar).toMatch(/^ANTHROPIC_BASE_URL=http:\/\/localhost:\d+$/);
   });
 
   it("compact mode label contains port number", () => {
-    const port = 8787;
+    const port = 28787;
     const label = `Proxy capturing on :${port}`;
-    expect(label).toContain(":8787");
+    expect(label).toContain(":28787");
   });
 
   it("compact mode off label is correct", () => {

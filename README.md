@@ -43,10 +43,10 @@ Configure theme, polling intervals, API proxy (with auto-start/stop), and sleep 
 pnpm install
 npx prisma generate
 pnpm db:push          # first time only
-pnpm dev              # Next.js on :3777
+pnpm dev              # Next.js on :31777
 ```
 
-Open [http://localhost:3777](http://localhost:3777).
+Open [http://localhost:31777](http://localhost:31777).
 
 ### Optional: API Proxy
 
@@ -57,10 +57,10 @@ Enable the proxy directly from the Settings page. Mission Control auto-starts an
 
 **Option B — Manual start:**
 ```bash
-pnpm proxy   # Starts on port 8787
+pnpm proxy   # Starts on port 28787
 ```
 
-Either way, point Claude Code at the proxy by setting `ANTHROPIC_BASE_URL=http://localhost:8787`.
+Either way, point Claude Code at the proxy by setting `ANTHROPIC_BASE_URL=http://localhost:28787`.
 
 The Analytics page shows a status banner indicating whether the proxy is capturing traffic, with a copy-paste env-var command to help onboard new sessions.
 
@@ -68,11 +68,11 @@ The Analytics page shows a status banner indicating whether the proxy is capturi
 
 | Command | Description |
 |---------|-------------|
-| `pnpm dev` | Start Next.js dev server (port 3777) |
+| `pnpm dev` | Start Next.js dev server (port 31777) |
 | `pnpm dev:all` | Generate Prisma client + start Next.js, proxy, and queue worker together |
 | `pnpm build` | Production build |
 | `pnpm start` | Start production server |
-| `pnpm proxy` | Start API proxy (port 8787) |
+| `pnpm proxy` | Start API proxy (port 28787) |
 | `pnpm queue` | Start task queue worker (auto-spawns teams for queued tasks) |
 | `pnpm mcp` | Start MCP stdio server (used by Claude Code leader agents) |
 | `pnpm db:push` | Push Prisma schema to SQLite |
@@ -82,12 +82,12 @@ The Analytics page shows a status banner indicating whether the proxy is capturi
 ## Architecture
 
 ```
-Browser ──→ Next.js (port 3777)
+Browser ──→ Next.js (port 31777)
                ├── Dashboard pages (React Server Components)
                ├── API routes (team CRUD, analytics, usage, queue, settings)
                └── Reads/writes ~/.claude/ (team configs, tasks)
 
-Claude CLI ──→ Proxy (port 8787) ──→ Anthropic API
+Claude CLI ──→ Proxy (port 28787) ──→ Anthropic API
                └── Logs tokens to SQLite
 
 Next.js (/api/usage/sync) ──→ Anthropic Admin API

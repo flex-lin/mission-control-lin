@@ -24,7 +24,7 @@ function loadSettingsConfig(): { port: number; targetUrl: string } {
 
   const port = parseInt(process.env.PROXY_PORT ?? "", 10) ||
     settings.proxyConfig?.port ||
-    8787
+    28787
 
   const targetUrl = process.env.PROXY_TARGET_URL ??
     settings.proxyConfig?.targetUrl ??
@@ -62,6 +62,7 @@ function openDb(): Database.Database {
     `ALTER TABLE proxy_logs ADD COLUMN member_name TEXT`,
     `ALTER TABLE proxy_logs ADD COLUMN cache_read_tokens INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE proxy_logs ADD COLUMN cache_creation_tokens INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE proxy_logs ADD COLUMN repo_name TEXT`,
   ]
   for (const sql of migrations) {
     try { db.exec(sql) } catch { /* column already exists */ }
@@ -77,6 +78,7 @@ interface LogEntry {
   cacheCreationTokens: number
   teamName?: string
   memberName?: string
+  repoName?: string
   endpoint: string
   latencyMs: number
   statusCode: number
@@ -84,8 +86,8 @@ interface LogEntry {
 
 function insertLog(db: Database.Database, entry: LogEntry): void {
   const stmt = db.prepare(`
-    INSERT INTO proxy_logs (timestamp, model, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, team_name, member_name, endpoint, latency_ms, status_code)
-    VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO proxy_logs (timestamp, model, input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, team_name, member_name, repo_name, endpoint, latency_ms, status_code)
+    VALUES (datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   stmt.run(
     entry.model,
@@ -95,6 +97,7 @@ function insertLog(db: Database.Database, entry: LogEntry): void {
     entry.cacheCreationTokens,
     entry.teamName ?? null,
     entry.memberName ?? null,
+    entry.repoName ?? null,
     entry.endpoint,
     entry.latencyMs,
     entry.statusCode
@@ -103,14 +106,14 @@ function insertLog(db: Database.Database, entry: LogEntry): void {
 
 // ─── Token Extraction ──────────────────────────────────────────────────────────
 
-export interface AnthropicUsage {
+interface AnthropicUsage {
   input_tokens?: number
   output_tokens?: number
   cache_read_input_tokens?: number
   cache_creation_input_tokens?: number
 }
 
-export interface AnthropicResponseBody {
+interface AnthropicResponseBody {
   model?: string
   usage?: AnthropicUsage
   error?: { type: string; message: string }
@@ -210,7 +213,7 @@ export function isStreamingRequest(reqBody: Buffer): boolean {
 
 // ─── Proxy Server ─────────────────────────────────────────────────────────────
 
-export function createProxyServer(): http.Server {
+function createProxyServer(): http.Server {
   const db = openDb()
 
   const server = http.createServer((clientReq, clientRes) => {
@@ -234,13 +237,16 @@ export function createProxyServer(): http.Server {
       const reqBody = Buffer.concat(reqChunks)
       const streaming = isStreamingRequest(reqBody)
 
-      // Extract team/member name from custom headers set by Claude Code
+      // Extract team/member/repo name from custom headers set by Claude Code
       const teamName =
         clientReq.headers["x-claude-team"] as string | undefined ??
         clientReq.headers["x-team-name"] as string | undefined
       const memberName =
         clientReq.headers["x-claude-member"] as string | undefined ??
         clientReq.headers["x-member-name"] as string | undefined
+      const repoName =
+        clientReq.headers["x-claude-repo"] as string | undefined ??
+        clientReq.headers["x-repo-name"] as string | undefined
 
       // Build options for proxied request
       const options: https.RequestOptions = {
@@ -288,19 +294,19 @@ export function createProxyServer(): http.Server {
             if (isSSE) {
               const usage = extractUsageFromSSE(resBody)
               if (usage) {
-                insertLog(db, { ...usage, teamName, memberName, endpoint, latencyMs, statusCode })
+                insertLog(db, { ...usage, teamName, memberName, repoName, endpoint, latencyMs, statusCode })
               } else {
-                insertLog(db, { model: "unknown", inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, teamName, memberName, endpoint, latencyMs, statusCode })
+                insertLog(db, { model: "unknown", inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, teamName, memberName, repoName, endpoint, latencyMs, statusCode })
               }
             } else {
               try {
                 const parsed = JSON.parse(resBody) as AnthropicResponseBody
                 if (parsed.usage || parsed.model) {
                   const usage = extractUsage(parsed)
-                  insertLog(db, { ...usage, teamName, memberName, endpoint, latencyMs, statusCode })
+                  insertLog(db, { ...usage, teamName, memberName, repoName, endpoint, latencyMs, statusCode })
                 }
               } catch {
-                insertLog(db, { model: "unknown", inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, teamName, memberName, endpoint, latencyMs, statusCode })
+                insertLog(db, { model: "unknown", inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, teamName, memberName, repoName, endpoint, latencyMs, statusCode })
               }
             }
           } catch (logErr) {
@@ -351,7 +357,3 @@ process.on("unhandledRejection", (reason) => {
   console.error("[proxy] unhandled rejection (proxy still running):", reason)
 })
 
-// Run directly if this is the entry point
-if (require.main === module) {
-  startProxy()
-}

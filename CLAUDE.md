@@ -20,8 +20,8 @@ Local dashboard for managing Claude Code agent teams, tracking token usage, and 
 ```bash
 pnpm install        # deps + auto-registers MCP server in .claude/settings.json
 npx prisma generate
-pnpm dev            # Next.js on :3777
-pnpm proxy          # API proxy on :8787 (optional, for proxy-based token tracking)
+pnpm dev            # Next.js on :31777
+pnpm proxy          # API proxy on :28787 (optional, for proxy-based token tracking)
 pnpm queue:daemon   # Queue worker in persistent tmux session (recommended)
 # pnpm queue        # Queue worker in foreground (dies on terminal close)
 # pnpm dev:all      # prisma generate + all servers via scripts/start-all.sh
@@ -222,7 +222,7 @@ Procfile                      # Process declarations: web (pnpm dev) + worker (p
 - `POST /api/analytics/ingest` — bulk-ingest analytics snapshots
 
 ### Token Tracking (Proxy-Based)
-- Proxy server (`server/proxy.ts`) intercepts Anthropic API requests on port 8787
+- Proxy server (`server/proxy.ts`) intercepts Anthropic API requests on port 28787
 - Exports `extractUsage()` (non-streaming JSON), `extractUsageFromSSE()` (streaming SSE), `isStreamingRequest()` for testability
 - Extracts tokens from JSON responses or SSE streams (`message_start`/`message_delta`)
 - Records to SQLite via direct better-sqlite3 (not Prisma, for performance)
@@ -291,7 +291,7 @@ All API routes return: `{ data?, error?, meta? }` via helpers in `lib/api-helper
 - **After scaffold**: `pnpm install` and `npx prisma generate` succeed
 - **After implementation**: `pnpm build` exits with zero errors
 - **After integration**: `pnpm build` + all pages render without runtime errors
-- **CRITICAL — No concurrent Next.js processes**: Never run `pnpm dev`, `pnpm build`, or `next dev`/`next build` if a dev server is already running. Turbopack's LSM storage assumes exclusive access to `.next/` — concurrent processes corrupt the cache (SST files), causing all API routes to return 500. If you need to verify the build, first check `pgrep -f 'next dev'` or `fuser 3777/tcp` and skip the build if the dev server is already running. The running dev server already validates compilation.
+- **CRITICAL — No concurrent Next.js processes**: Never run `pnpm dev`, `pnpm build`, or `next dev`/`next build` if a dev server is already running. Turbopack's LSM storage assumes exclusive access to `.next/` — concurrent processes corrupt the cache (SST files), causing all API routes to return 500. If you need to verify the build, first check `pgrep -f 'next dev'` or `fuser 31777/tcp` and skip the build if the dev server is already running. The running dev server already validates compilation.
 
 ## Error Recovery
 - Build failures: read the error, fix the root cause, rebuild — do not skip or suppress

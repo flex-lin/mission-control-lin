@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { readTeamConfig } from "@/lib/claude-files";
 import { ok, notFound, err, serverError, safeName } from "@/lib/api-helpers";
 import fs from "fs";
@@ -14,7 +14,7 @@ function inboxPath(teamName: string, agentName: string): string {
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ name: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { name } = await params;
     if (!safeName(name)) return err("Invalid team name", "VALIDATION_ERROR");

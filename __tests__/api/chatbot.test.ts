@@ -167,7 +167,7 @@ const REAL_CLAUDE_DIR = path.join(process.env.HOME!, ".claude");
 // ── Request factory ────────────────────────────────────────────────────────────
 
 function makeReq(body: unknown): NextRequest {
-  return new NextRequest(new URL("http://localhost:3777/api/chatbot"), {
+  return new NextRequest(new URL("http://localhost:31777/api/chatbot"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

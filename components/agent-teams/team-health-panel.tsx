@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table"
 import { TeamHealthBadge } from "@/components/agent-teams/team-health-badge"
 import { WakeButton } from "@/components/agent-teams/wake-button"
+import { StopTeamButton } from "@/components/agent-teams/stop-team-button"
 import { StuckTasksFeed } from "@/components/agent-teams/stuck-tasks-feed"
 import { TmuxAttachBar } from "@/components/agent-teams/tmux-attach-bar"
 import { Badge } from "@/components/ui/badge"
@@ -137,7 +138,15 @@ export function TeamHealthPanel({ teamName }: TeamHealthPanelProps) {
             </div>
           )}
           {data.status !== "exited" && (
-            <WakeButton teamName={teamName} />
+            <div className="flex gap-2">
+              {(data.status === "alive" || data.status === "asleep") && (
+                <StopTeamButton teamName={teamName} />
+              )}
+              <WakeButton
+                teamName={teamName}
+                disabled={data.status === "alive"}
+              />
+            </div>
           )}
         </CardContent>
       </Card>
@@ -147,7 +156,6 @@ export function TeamHealthPanel({ teamName }: TeamHealthPanelProps) {
         <TmuxAttachBar
           attachCmd={data.leaderSession.attachCmd}
           alive={data.leaderSession.alive}
-          sessionName={data.leaderSession.sessionName}
         />
       )}
 

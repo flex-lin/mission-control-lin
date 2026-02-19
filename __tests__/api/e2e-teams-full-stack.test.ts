@@ -91,7 +91,7 @@ vi.mock("@/lib/db", () => ({
 let tmpDir: string;
 
 function makeReq(url: string, init?: RequestInit): NextRequest {
-  return new NextRequest(new URL(url, "http://localhost:3777"), init);
+  return new NextRequest(new URL(url, "http://localhost:31777"), init);
 }
 
 function createTeamConfig(
@@ -249,7 +249,7 @@ describe("POST /api/teams — create a team config", () => {
   it("creates a team with name and description", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/route");
-    const req = makeReq("http://localhost:3777/api/teams", {
+    const req = makeReq("http://localhost:31777/api/teams", {
       method: "POST",
       body: JSON.stringify({ name: "new-team", description: "My new team" }),
     });
@@ -270,7 +270,7 @@ describe("POST /api/teams — create a team config", () => {
   it("returns 400 when name is missing", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/route");
-    const req = makeReq("http://localhost:3777/api/teams", {
+    const req = makeReq("http://localhost:31777/api/teams", {
       method: "POST",
       body: JSON.stringify({ description: "No name" }),
     });
@@ -285,7 +285,7 @@ describe("POST /api/teams — create a team config", () => {
   it("returns 400 for invalid name characters", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/route");
-    const req = makeReq("http://localhost:3777/api/teams", {
+    const req = makeReq("http://localhost:31777/api/teams", {
       method: "POST",
       body: JSON.stringify({ name: "invalid name!" }),
     });
@@ -302,7 +302,7 @@ describe("POST /api/teams — create a team config", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/route");
-    const req = makeReq("http://localhost:3777/api/teams", {
+    const req = makeReq("http://localhost:31777/api/teams", {
       method: "POST",
       body: JSON.stringify({ name: "existing-team" }),
     });
@@ -317,7 +317,7 @@ describe("POST /api/teams — create a team config", () => {
   it("creates a team without description (defaults to empty string)", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/route");
-    const req = makeReq("http://localhost:3777/api/teams", {
+    const req = makeReq("http://localhost:31777/api/teams", {
       method: "POST",
       body: JSON.stringify({ name: "no-desc-team" }),
     });
@@ -342,7 +342,7 @@ describe("GET /api/teams/[name] — team detail", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/teams/[name]/route");
-    const req = makeReq("http://localhost:3777/api/teams/detail-team");
+    const req = makeReq("http://localhost:31777/api/teams/detail-team");
     const res = await GET(req, { params: Promise.resolve({ name: "detail-team" }) });
     const body = await res.json();
 
@@ -354,7 +354,7 @@ describe("GET /api/teams/[name] — team detail", () => {
   it("returns 404 for non-existent team", async () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/teams/[name]/route");
-    const req = makeReq("http://localhost:3777/api/teams/ghost-team");
+    const req = makeReq("http://localhost:31777/api/teams/ghost-team");
     const res = await GET(req, { params: Promise.resolve({ name: "ghost-team" }) });
     const body = await res.json();
 
@@ -367,7 +367,7 @@ describe("GET /api/teams/[name] — team detail", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/teams/[name]/route");
-    const req = makeReq("http://localhost:3777/api/teams/empty-task-team");
+    const req = makeReq("http://localhost:31777/api/teams/empty-task-team");
     const res = await GET(req, { params: Promise.resolve({ name: "empty-task-team" }) });
     const body = await res.json();
 
@@ -387,7 +387,7 @@ describe("DELETE /api/teams/[name] — delete team", () => {
 
     vi.resetModules();
     const { DELETE } = await import("@/app/api/teams/[name]/route");
-    const req = makeReq("http://localhost:3777/api/teams/to-delete", { method: "DELETE" });
+    const req = makeReq("http://localhost:31777/api/teams/to-delete", { method: "DELETE" });
     const res = await DELETE(req, { params: Promise.resolve({ name: "to-delete" }) });
     const body = await res.json();
 
@@ -404,7 +404,7 @@ describe("DELETE /api/teams/[name] — delete team", () => {
   it("returns 404 for non-existent team", async () => {
     vi.resetModules();
     const { DELETE } = await import("@/app/api/teams/[name]/route");
-    const req = makeReq("http://localhost:3777/api/teams/no-such-team", { method: "DELETE" });
+    const req = makeReq("http://localhost:31777/api/teams/no-such-team", { method: "DELETE" });
     const res = await DELETE(req, { params: Promise.resolve({ name: "no-such-team" }) });
     const body = await res.json();
 
@@ -426,7 +426,7 @@ describe("GET /api/teams/[name]/tasks — list tasks", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/teams/[name]/tasks/route");
-    const req = makeReq("http://localhost:3777/api/teams/sorted-team/tasks");
+    const req = makeReq("http://localhost:31777/api/teams/sorted-team/tasks");
     const res = await GET(req, { params: Promise.resolve({ name: "sorted-team" }) });
     const body = await res.json();
 
@@ -441,7 +441,7 @@ describe("GET /api/teams/[name]/tasks — list tasks", () => {
   it("returns 404 when team does not exist", async () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/teams/[name]/tasks/route");
-    const req = makeReq("http://localhost:3777/api/teams/ghost/tasks");
+    const req = makeReq("http://localhost:31777/api/teams/ghost/tasks");
     const res = await GET(req, { params: Promise.resolve({ name: "ghost" }) });
     const body = await res.json();
 
@@ -454,7 +454,7 @@ describe("GET /api/teams/[name]/tasks — list tasks", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/teams/[name]/tasks/route");
-    const req = makeReq("http://localhost:3777/api/teams/no-tasks-team/tasks");
+    const req = makeReq("http://localhost:31777/api/teams/no-tasks-team/tasks");
     const res = await GET(req, { params: Promise.resolve({ name: "no-tasks-team" }) });
     const body = await res.json();
 
@@ -472,7 +472,7 @@ describe("GET /api/teams/[name]/tasks — list tasks", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/teams/[name]/tasks/route");
-    const req = makeReq("http://localhost:3777/api/teams/mixed-team/tasks");
+    const req = makeReq("http://localhost:31777/api/teams/mixed-team/tasks");
     const res = await GET(req, { params: Promise.resolve({ name: "mixed-team" }) });
     const body = await res.json();
 
@@ -493,7 +493,7 @@ describe("POST /api/teams/[name]/tasks — create task", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/tasks/route");
-    const req = makeReq("http://localhost:3777/api/teams/task-team/tasks", {
+    const req = makeReq("http://localhost:31777/api/teams/task-team/tasks", {
       method: "POST",
       body: JSON.stringify({ subject: "New task", description: "Do the thing" }),
     });
@@ -513,7 +513,7 @@ describe("POST /api/teams/[name]/tasks — create task", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/tasks/route");
-    const req = makeReq("http://localhost:3777/api/teams/fresh-team/tasks", {
+    const req = makeReq("http://localhost:31777/api/teams/fresh-team/tasks", {
       method: "POST",
       body: JSON.stringify({ subject: "First task" }),
     });
@@ -530,7 +530,7 @@ describe("POST /api/teams/[name]/tasks — create task", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/tasks/route");
-    const req = makeReq("http://localhost:3777/api/teams/missing-sub-team/tasks", {
+    const req = makeReq("http://localhost:31777/api/teams/missing-sub-team/tasks", {
       method: "POST",
       body: JSON.stringify({ description: "No subject" }),
     });
@@ -545,7 +545,7 @@ describe("POST /api/teams/[name]/tasks — create task", () => {
   it("returns 404 for non-existent team", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/tasks/route");
-    const req = makeReq("http://localhost:3777/api/teams/ghost/tasks", {
+    const req = makeReq("http://localhost:31777/api/teams/ghost/tasks", {
       method: "POST",
       body: JSON.stringify({ subject: "Task" }),
     });
@@ -562,7 +562,7 @@ describe("POST /api/teams/[name]/tasks — create task", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/tasks/route");
-    const req = makeReq("http://localhost:3777/api/teams/full-task-team/tasks", {
+    const req = makeReq("http://localhost:31777/api/teams/full-task-team/tasks", {
       method: "POST",
       body: JSON.stringify({
         subject: "Full task",
@@ -595,7 +595,7 @@ describe("POST /api/teams/[name]/tasks — create task", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/tasks/route");
-    const req = makeReq("http://localhost:3777/api/teams/asleep-team/tasks", {
+    const req = makeReq("http://localhost:31777/api/teams/asleep-team/tasks", {
       method: "POST",
       body: JSON.stringify({ subject: "New task for asleep team" }),
     });
@@ -626,7 +626,7 @@ describe("POST /api/teams/[name]/tasks — create task", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/tasks/route");
-    const req = makeReq("http://localhost:3777/api/teams/stale-team/tasks", {
+    const req = makeReq("http://localhost:31777/api/teams/stale-team/tasks", {
       method: "POST",
       body: JSON.stringify({ subject: "Wake up task" }),
     });
@@ -654,7 +654,7 @@ describe("PATCH /api/teams/[name]/tasks/[id] — update task", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const req = makeReq("http://localhost:3777/api/teams/update-team/tasks/1", {
+    const req = makeReq("http://localhost:31777/api/teams/update-team/tasks/1", {
       method: "PATCH",
       body: JSON.stringify({ status: "in_progress" }),
     });
@@ -673,7 +673,7 @@ describe("PATCH /api/teams/[name]/tasks/[id] — update task", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const req = makeReq("http://localhost:3777/api/teams/edit-team/tasks/5", {
+    const req = makeReq("http://localhost:31777/api/teams/edit-team/tasks/5", {
       method: "PATCH",
       body: JSON.stringify({ subject: "New subject", description: "Updated desc" }),
     });
@@ -692,7 +692,7 @@ describe("PATCH /api/teams/[name]/tasks/[id] — update task", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const req = makeReq("http://localhost:3777/api/teams/priority-team/tasks/2", {
+    const req = makeReq("http://localhost:31777/api/teams/priority-team/tasks/2", {
       method: "PATCH",
       body: JSON.stringify({ priority: "urgent" }),
     });
@@ -710,7 +710,7 @@ describe("PATCH /api/teams/[name]/tasks/[id] — update task", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const req = makeReq("http://localhost:3777/api/teams/bad-status-team/tasks/1", {
+    const req = makeReq("http://localhost:31777/api/teams/bad-status-team/tasks/1", {
       method: "PATCH",
       body: JSON.stringify({ status: "flying" }),
     });
@@ -728,7 +728,7 @@ describe("PATCH /api/teams/[name]/tasks/[id] — update task", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const req = makeReq("http://localhost:3777/api/teams/bad-pri-team/tasks/1", {
+    const req = makeReq("http://localhost:31777/api/teams/bad-pri-team/tasks/1", {
       method: "PATCH",
       body: JSON.stringify({ priority: "super-critical" }),
     });
@@ -745,7 +745,7 @@ describe("PATCH /api/teams/[name]/tasks/[id] — update task", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const req = makeReq("http://localhost:3777/api/teams/missing-task-team/tasks/99", {
+    const req = makeReq("http://localhost:31777/api/teams/missing-task-team/tasks/99", {
       method: "PATCH",
       body: JSON.stringify({ status: "completed" }),
     });
@@ -763,7 +763,7 @@ describe("PATCH /api/teams/[name]/tasks/[id] — update task", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const req = makeReq("http://localhost:3777/api/teams/empty-sub-team/tasks/1", {
+    const req = makeReq("http://localhost:31777/api/teams/empty-sub-team/tasks/1", {
       method: "PATCH",
       body: JSON.stringify({ subject: "   " }),
     });
@@ -786,7 +786,7 @@ describe("POST /api/teams/[name]/message — messaging teammates", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/message/route");
-    const req = makeReq("http://localhost:3777/api/teams/msg-team/message", {
+    const req = makeReq("http://localhost:31777/api/teams/msg-team/message", {
       method: "POST",
       body: JSON.stringify({
         recipient: "dev",
@@ -832,7 +832,7 @@ describe("POST /api/teams/[name]/message — messaging teammates", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/message/route");
-    const req = makeReq("http://localhost:3777/api/teams/inbox-team/message", {
+    const req = makeReq("http://localhost:31777/api/teams/inbox-team/message", {
       method: "POST",
       body: JSON.stringify({ recipient: "dev", content: "Second message" }),
     });
@@ -850,7 +850,7 @@ describe("POST /api/teams/[name]/message — messaging teammates", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/message/route");
-    const req = makeReq("http://localhost:3777/api/teams/no-recip-team/message", {
+    const req = makeReq("http://localhost:31777/api/teams/no-recip-team/message", {
       method: "POST",
       body: JSON.stringify({ content: "Hello" }),
     });
@@ -867,7 +867,7 @@ describe("POST /api/teams/[name]/message — messaging teammates", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/message/route");
-    const req = makeReq("http://localhost:3777/api/teams/no-content-team/message", {
+    const req = makeReq("http://localhost:31777/api/teams/no-content-team/message", {
       method: "POST",
       body: JSON.stringify({ recipient: "dev" }),
     });
@@ -884,7 +884,7 @@ describe("POST /api/teams/[name]/message — messaging teammates", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/message/route");
-    const req = makeReq("http://localhost:3777/api/teams/not-member-team/message", {
+    const req = makeReq("http://localhost:31777/api/teams/not-member-team/message", {
       method: "POST",
       body: JSON.stringify({ recipient: "stranger", content: "Hello" }),
     });
@@ -899,7 +899,7 @@ describe("POST /api/teams/[name]/message — messaging teammates", () => {
   it("returns 404 when team does not exist", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/message/route");
-    const req = makeReq("http://localhost:3777/api/teams/nonexistent/message", {
+    const req = makeReq("http://localhost:31777/api/teams/nonexistent/message", {
       method: "POST",
       body: JSON.stringify({ recipient: "dev", content: "Hello" }),
     });
@@ -922,7 +922,7 @@ describe("POST /api/teams/[name]/shutdown — shutdown", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/shutdown/route");
-    const req = makeReq("http://localhost:3777/api/teams/shutdown-team/shutdown", {
+    const req = makeReq("http://localhost:31777/api/teams/shutdown-team/shutdown", {
       method: "POST",
       body: JSON.stringify({ recipient: "dev", reason: "Work is done" }),
     });
@@ -954,7 +954,7 @@ describe("POST /api/teams/[name]/shutdown — shutdown", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/shutdown/route");
-    const req = makeReq("http://localhost:3777/api/teams/force-shutdown-team/shutdown", {
+    const req = makeReq("http://localhost:31777/api/teams/force-shutdown-team/shutdown", {
       method: "POST",
       body: JSON.stringify({ force: true }),
     });
@@ -971,7 +971,7 @@ describe("POST /api/teams/[name]/shutdown — shutdown", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/shutdown/route");
-    const req = makeReq("http://localhost:3777/api/teams/no-recip-shutdown-team/shutdown", {
+    const req = makeReq("http://localhost:31777/api/teams/no-recip-shutdown-team/shutdown", {
       method: "POST",
       body: JSON.stringify({ reason: "Done" }),
     });
@@ -988,7 +988,7 @@ describe("POST /api/teams/[name]/shutdown — shutdown", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/shutdown/route");
-    const req = makeReq("http://localhost:3777/api/teams/member-404-team/shutdown", {
+    const req = makeReq("http://localhost:31777/api/teams/member-404-team/shutdown", {
       method: "POST",
       body: JSON.stringify({ recipient: "nonexistent-member" }),
     });
@@ -1011,7 +1011,7 @@ describe("GET /api/teams/[name]/sessions — session status", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/teams/[name]/sessions/route");
-    const req = makeReq("http://localhost:3777/api/teams/sessions-team/sessions");
+    const req = makeReq("http://localhost:31777/api/teams/sessions-team/sessions");
     const res = await GET(req, { params: Promise.resolve({ name: "sessions-team" }) });
     const body = await res.json();
 
@@ -1025,7 +1025,7 @@ describe("GET /api/teams/[name]/sessions — session status", () => {
   it("returns 404 for non-existent team", async () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/teams/[name]/sessions/route");
-    const req = makeReq("http://localhost:3777/api/teams/ghost-sessions/sessions");
+    const req = makeReq("http://localhost:31777/api/teams/ghost-sessions/sessions");
     const res = await GET(req, { params: Promise.resolve({ name: "ghost-sessions" }) });
     const body = await res.json();
 
@@ -1044,7 +1044,7 @@ describe("Full team lifecycle", () => {
 
     // Step 1: Create team
     const { POST: createTeam } = await import("@/app/api/teams/route");
-    const createReq = makeReq("http://localhost:3777/api/teams", {
+    const createReq = makeReq("http://localhost:31777/api/teams", {
       method: "POST",
       body: JSON.stringify({ name: "lifecycle-team", description: "Full lifecycle test" }),
     });
@@ -1056,7 +1056,7 @@ describe("Full team lifecycle", () => {
     vi.resetModules();
     const { POST: createTask2 } = await import("@/app/api/teams/[name]/tasks/route");
 
-    const task1Req = makeReq("http://localhost:3777/api/teams/lifecycle-team/tasks", {
+    const task1Req = makeReq("http://localhost:31777/api/teams/lifecycle-team/tasks", {
       method: "POST",
       body: JSON.stringify({ subject: "Task One" }),
     });
@@ -1067,7 +1067,7 @@ describe("Full team lifecycle", () => {
     const task1Body = await task1Res.json();
     expect(task1Body.data.id).toBe("1");
 
-    const task2Req = makeReq("http://localhost:3777/api/teams/lifecycle-team/tasks", {
+    const task2Req = makeReq("http://localhost:31777/api/teams/lifecycle-team/tasks", {
       method: "POST",
       body: JSON.stringify({ subject: "Task Two" }),
     });
@@ -1083,7 +1083,7 @@ describe("Full team lifecycle", () => {
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
 
     const patchReq = makeReq(
-      "http://localhost:3777/api/teams/lifecycle-team/tasks/1",
+      "http://localhost:31777/api/teams/lifecycle-team/tasks/1",
       {
         method: "PATCH",
         body: JSON.stringify({ status: "completed" }),
@@ -1113,7 +1113,7 @@ describe("Full team lifecycle", () => {
     vi.resetModules();
     const { PATCH: patch2 } = await import("@/app/api/teams/[name]/tasks/[id]/route");
     const patch2Req = makeReq(
-      "http://localhost:3777/api/teams/lifecycle-team/tasks/2",
+      "http://localhost:31777/api/teams/lifecycle-team/tasks/2",
       {
         method: "PATCH",
         body: JSON.stringify({ status: "completed" }),
@@ -1138,7 +1138,7 @@ describe("Full team lifecycle", () => {
     vi.resetModules();
     const { DELETE } = await import("@/app/api/teams/[name]/route");
     const deleteReq = makeReq(
-      "http://localhost:3777/api/teams/lifecycle-team",
+      "http://localhost:31777/api/teams/lifecycle-team",
       { method: "DELETE" }
     );
     const deleteRes = await DELETE(deleteReq, {

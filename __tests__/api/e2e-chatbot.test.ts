@@ -91,6 +91,11 @@ const mockQueuedTaskCreate = vi.fn();
 const mockQueuedTaskFindMany = vi.fn();
 const mockIndexedProjectFindMany = vi.fn();
 const mockIndexedProjectFindUnique = vi.fn();
+const mockPreferenceFindUnique = vi.fn();
+const mockChatSessionFindUnique = vi.fn();
+const mockChatSessionCreate = vi.fn();
+const mockChatSessionUpdate = vi.fn();
+const mockChatMessageCreate = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -102,7 +107,30 @@ vi.mock("@/lib/db", () => ({
       findMany: (...args: unknown[]) => mockIndexedProjectFindMany(...args),
       findUnique: (...args: unknown[]) => mockIndexedProjectFindUnique(...args),
     },
+    preference: {
+      findUnique: (...args: unknown[]) => mockPreferenceFindUnique(...args),
+    },
+    chatSession: {
+      findUnique: (...args: unknown[]) => mockChatSessionFindUnique(...args),
+      create: (...args: unknown[]) => mockChatSessionCreate(...args),
+      update: (...args: unknown[]) => mockChatSessionUpdate(...args),
+    },
+    chatMessage: {
+      create: (...args: unknown[]) => mockChatMessageCreate(...args),
+    },
   },
+}));
+
+// ── Mock claude-oauth ─────────────────────────────────────────────────────────
+
+vi.mock("@/lib/claude-oauth", () => ({
+  createOAuthClient: () => null,
+}));
+
+// ── Mock tmux-manager ─────────────────────────────────────────────────────────
+
+vi.mock("@/lib/tmux-manager", () => ({
+  killAllTeamSessions: vi.fn(),
 }));
 
 // ── Mock claude-files ─────────────────────────────────────────────────────────
@@ -120,11 +148,11 @@ vi.mock("@/lib/claude-files", () => ({
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeReq(url: string, init?: RequestInit): NextRequest {
-  return new NextRequest(new URL(url, "http://localhost:3777"), init);
+  return new NextRequest(new URL(url, "http://localhost:31777"), init);
 }
 
 function chatReq(messages: Array<{ role: string; content: string }>) {
-  return makeReq("http://localhost:3777/api/chat", {
+  return makeReq("http://localhost:31777/api/chat", {
     method: "POST",
     body: JSON.stringify({ messages }),
     headers: { "Content-Type": "application/json" },
@@ -175,6 +203,11 @@ beforeEach(() => {
   mockQueuedTaskFindMany.mockResolvedValue([]);
   mockIndexedProjectFindMany.mockResolvedValue([]);
   mockIndexedProjectFindUnique.mockResolvedValue(null);
+  mockPreferenceFindUnique.mockResolvedValue(null);
+  mockChatSessionCreate.mockResolvedValue({ id: "test-session-id", title: null });
+  mockChatSessionFindUnique.mockResolvedValue(null);
+  mockChatSessionUpdate.mockResolvedValue({});
+  mockChatMessageCreate.mockResolvedValue({});
 
   // Default: simple text response with no tool use
   mockStreamFn = vi.fn(() => createMockStream("Hello! How can I help?"));
@@ -193,7 +226,7 @@ describe("POST /api/chat — input validation", () => {
   it("returns 400 when messages is missing", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/chat/route");
-    const req = makeReq("http://localhost:3777/api/chat", {
+    const req = makeReq("http://localhost:31777/api/chat", {
       method: "POST",
       body: JSON.stringify({}),
     });
@@ -208,7 +241,7 @@ describe("POST /api/chat — input validation", () => {
   it("returns 400 when messages is empty array", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/chat/route");
-    const req = makeReq("http://localhost:3777/api/chat", {
+    const req = makeReq("http://localhost:31777/api/chat", {
       method: "POST",
       body: JSON.stringify({ messages: [] }),
     });
@@ -223,7 +256,7 @@ describe("POST /api/chat — input validation", () => {
   it("returns 400 when messages is not an array", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/chat/route");
-    const req = makeReq("http://localhost:3777/api/chat", {
+    const req = makeReq("http://localhost:31777/api/chat", {
       method: "POST",
       body: JSON.stringify({ messages: "not an array" }),
     });
@@ -251,7 +284,7 @@ describe("POST /api/chat — API key handling", () => {
     expect(res.status).toBe(500);
 
     const body = await res.json();
-    expect(body.error).toMatch(/ANTHROPIC_API_KEY/i);
+    expect(body.error).toMatch(/ANTHROPIC_API_KEY|authentication/i);
   });
 });
 
@@ -301,11 +334,12 @@ describe("POST /api/chat — streaming response format", () => {
     const { POST } = await import("@/app/api/chat/route");
     const req = chatReq([{ role: "user", content: "What teams are running?" }]);
 
-    await POST(req);
+    const res = await POST(req);
+    await readStream(res); // consume stream to trigger processConversation
 
     expect(mockStreamFn).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: "claude-sonnet-4-5-20250514",
+        model: "claude-sonnet-4-5",
         max_tokens: 4096,
         system: expect.stringContaining("Mission Control"),
         messages: expect.arrayContaining([
@@ -317,6 +351,8 @@ describe("POST /api/chat — streaming response format", () => {
         tools: expect.arrayContaining([
           expect.objectContaining({ name: "list_teams" }),
           expect.objectContaining({ name: "get_team_health" }),
+          expect.objectContaining({ name: "delete_team" }),
+          expect.objectContaining({ name: "shutdown_team" }),
           expect.objectContaining({ name: "submit_queue_task" }),
           expect.objectContaining({ name: "search_knowledge_base" }),
         ]),
@@ -909,9 +945,8 @@ describe("POST /api/chat — error handling", () => {
       (e) => typeof e === "object" && e.type === "error"
     );
     expect(errorEvent).toBeDefined();
-    // Error messages are sanitized — generic message returned instead of internal details
     expect((errorEvent as Record<string, unknown>).error).toBe(
-      "Internal error"
+      "API rate limit exceeded"
     );
 
     // Should still end with [DONE]
@@ -921,7 +956,7 @@ describe("POST /api/chat — error handling", () => {
   it("handles malformed JSON body gracefully", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/chat/route");
-    const req = makeReq("http://localhost:3777/api/chat", {
+    const req = makeReq("http://localhost:31777/api/chat", {
       method: "POST",
       body: "not valid json{{{",
       headers: { "Content-Type": "application/json" },
@@ -1013,7 +1048,8 @@ describe("POST /api/chat — tool definitions", () => {
     const { POST } = await import("@/app/api/chat/route");
     const req = chatReq([{ role: "user", content: "Hello" }]);
 
-    await POST(req);
+    const res = await POST(req);
+    await readStream(res); // consume stream to trigger processConversation
 
     const callArgs = mockStreamFn.mock.calls[0][0] as {
       tools: Array<{ name: string }>;
@@ -1023,10 +1059,12 @@ describe("POST /api/chat — tool definitions", () => {
     expect(toolNames).toContain("list_teams");
     expect(toolNames).toContain("get_team_health");
     expect(toolNames).toContain("get_team_tasks");
+    expect(toolNames).toContain("delete_team");
+    expect(toolNames).toContain("shutdown_team");
     expect(toolNames).toContain("submit_queue_task");
     expect(toolNames).toContain("list_queue_tasks");
     expect(toolNames).toContain("search_knowledge_base");
     expect(toolNames).toContain("get_knowledge_base_entry");
-    expect(toolNames).toHaveLength(7);
+    expect(toolNames).toHaveLength(9);
   });
 });

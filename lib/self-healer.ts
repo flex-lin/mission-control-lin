@@ -139,7 +139,7 @@ export function chooseStrategy(errorMessage: string): HealingStrategy {
 
 // ── File Patch Application ────────────────────────────────────────────────────
 
-export interface FilePatch {
+interface FilePatch {
   filePath: string;
   content: string; // full new file content to replace with
 }
@@ -148,7 +148,7 @@ export interface FilePatch {
  * Apply an array of file patches to disk.
  * Patches are absolute or relative to `projectPath`.
  */
-export function applyPatches(patches: FilePatch[], projectPath: string): void {
+function applyPatches(patches: FilePatch[], projectPath: string): void {
   for (const patch of patches) {
     const absPath = path.isAbsolute(patch.filePath)
       ? patch.filePath

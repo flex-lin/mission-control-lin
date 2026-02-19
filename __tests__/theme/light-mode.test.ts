@@ -182,7 +182,7 @@ vi.mock("@/lib/claude-files", () => ({
 
 function makeSettingsRequest(body?: Record<string, unknown>) {
   return new NextRequest(
-    new URL("http://localhost:3777/api/settings"),
+    new URL("http://localhost:31777/api/settings"),
     body
       ? {
           method: "PUT",

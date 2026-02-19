@@ -41,7 +41,7 @@ export async function GET(): Promise<NextResponse> {
       // Zero tasks also means team has nothing to do → "completed"
       if (tasks.length === 0) {
         status = "completed";
-      } else if (tasks.length > 0 && tasks.every((task) => task.status === "completed" || task.status === "deleted")) {
+      } else if (tasks.every((task) => task.status === "completed" || task.status === "deleted")) {
         status = "completed";
       }
 

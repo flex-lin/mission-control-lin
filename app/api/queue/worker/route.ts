@@ -4,7 +4,6 @@
  * POST — start (or restart) the worker in a persistent tmux daemon session
  * DELETE — stop the worker tmux session
  */
-import { NextResponse } from "next/server";
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
@@ -36,7 +35,7 @@ function heartbeatFresh(): { fresh: boolean; lastHeartbeat: string | null } {
   }
 }
 
-export async function GET(): Promise<NextResponse> {
+export async function GET() {
   try {
     const sessionAlive = tmuxSessionAlive();
     const { fresh, lastHeartbeat } = heartbeatFresh();
@@ -52,7 +51,7 @@ export async function GET(): Promise<NextResponse> {
   }
 }
 
-export async function POST(): Promise<NextResponse> {
+export async function POST() {
   try {
     execSync(`bash '${START_SCRIPT}'`, { timeout: 10_000, stdio: "pipe" });
     return ok({ started: true, sessionName: SESSION, attachCmd: `tmux attach-session -t ${SESSION}` });
@@ -61,7 +60,7 @@ export async function POST(): Promise<NextResponse> {
   }
 }
 
-export async function DELETE(): Promise<NextResponse> {
+export async function DELETE() {
   try {
     execSync(`tmux kill-session -t '${SESSION}' 2>/dev/null || true`, {
       timeout: 5_000,

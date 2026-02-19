@@ -159,7 +159,7 @@ async function runBuild(buildId: string, projectPath: string, autoHeal: boolean)
       if (!success && autoHeal) {
         try {
           const fullOutput = [stdout, stderr].filter(Boolean).join("\n")
-          const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:31777"
 
           // 1. Report the compilation error to the self-healing system
           const reportRes = await fetch(`${baseUrl}/api/self-healing`, {

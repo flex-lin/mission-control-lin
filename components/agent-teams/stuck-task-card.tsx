@@ -4,13 +4,14 @@ import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, Clock, ChevronDown, ChevronUp, MessageSquare, Key, HelpCircle, GitBranch, XCircle, ShieldAlert } from "lucide-react"
+import { AlertCircle, Clock, ChevronDown, ChevronUp, MessageSquare, Key, HelpCircle, GitBranch, XCircle, ShieldAlert, EyeOff, Eye } from "lucide-react"
 import type { StuckTask } from "@/types"
 
 interface StuckTaskCardProps {
   task: StuckTask
   showTeamName?: boolean
   onRespond?: (task: StuckTask) => void
+  onDismiss?: (task: StuckTask) => void
 }
 
 const blockerColors: Record<string, string> = {
@@ -56,7 +57,7 @@ function formatRelativeTime(isoString: string | undefined): string {
   return `${Math.floor(hours / 24)}d`
 }
 
-export function StuckTaskCard({ task, showTeamName, onRespond }: StuckTaskCardProps) {
+export function StuckTaskCard({ task, showTeamName, onRespond, onDismiss }: StuckTaskCardProps) {
   const [expanded, setExpanded] = useState(false)
 
   const type = task.blockerType ?? "missing_info"
@@ -131,15 +132,35 @@ export function StuckTaskCard({ task, showTeamName, onRespond }: StuckTaskCardPr
             {task.owner && <>Owner: {task.owner}</>}
             {task.blockerFrom && <> &middot; From: {task.blockerFrom}</>}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-6 gap-1 px-2 text-[10px]"
-            onClick={() => onRespond?.(task)}
-          >
-            <MessageSquare className="h-3 w-3" />
-            Respond
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 gap-1 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+              onClick={() => onDismiss?.(task)}
+            >
+              {task.dismissed ? (
+                <>
+                  <Eye className="h-3 w-3" />
+                  Undismiss
+                </>
+              ) : (
+                <>
+                  <EyeOff className="h-3 w-3" />
+                  Dismiss
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 gap-1 px-2 text-[10px]"
+              onClick={() => onRespond?.(task)}
+            >
+              <MessageSquare className="h-3 w-3" />
+              Respond
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { readTeamConfig, readTask, writeTask } from "@/lib/claude-files";
 import { ok, notFound, err, serverError, safeName } from "@/lib/api-helpers";
 import fs from "fs";
@@ -10,7 +10,7 @@ const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ name: string; id: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { name, id } = await params;
     if (!safeName(name)) return err("Invalid team name", "VALIDATION_ERROR");
@@ -27,8 +27,8 @@ export async function POST(
       assignTo?: string;
     };
 
-    if (!body.action || !["message", "reassign", "cancel"].includes(body.action)) {
-      return err('action must be "message", "reassign", or "cancel"', "VALIDATION_ERROR");
+    if (!body.action || !["message", "reassign", "cancel", "dismiss", "undismiss"].includes(body.action)) {
+      return err('action must be "message", "reassign", "cancel", "dismiss", or "undismiss"', "VALIDATION_ERROR");
     }
 
     const timestamp = new Date().toISOString();
@@ -72,7 +72,7 @@ export async function POST(
       fs.writeFileSync(resolvedPath, JSON.stringify(messages, null, 2), "utf-8");
 
       // Clear blocker metadata and record response
-      const { blockerSummary, blockerType, blockerDetails, blockerSince, blockerFrom, ...restMetadata } =
+      const { blockerSummary: _bs2, blockerType: _bt2, blockerDetails: _bd2, blockerSince: _bsi2, blockerFrom: _bf2, ...restMetadata } =
         (task.metadata ?? {}) as Record<string, unknown>;
       task.metadata = {
         ...restMetadata,
@@ -132,6 +132,22 @@ export async function POST(
       }
 
       return ok({ action: "reassign", assignTo: body.assignTo, taskId: id });
+    }
+
+    if (body.action === "dismiss") {
+      task.metadata = {
+        ...task.metadata,
+        dismissedAt: timestamp,
+      };
+      writeTask(name, task);
+      return ok({ action: "dismiss", taskId: id });
+    }
+
+    if (body.action === "undismiss") {
+      const { dismissedAt: _, ...restMeta } = (task.metadata ?? {}) as Record<string, unknown>;
+      task.metadata = restMeta;
+      writeTask(name, task);
+      return ok({ action: "undismiss", taskId: id });
     }
 
     // cancel

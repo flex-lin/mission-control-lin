@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { readTask, writeTask, readTeamConfig } from "@/lib/claude-files";
 import { ok, notFound, err, serverError, safeName } from "@/lib/api-helpers";
 import type { TeamTask, TaskPriority } from "@/types";
@@ -7,7 +7,7 @@ import type { TeamTask, TaskPriority } from "@/types";
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ name: string; id: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { name, id } = await params;
     if (!safeName(name)) return err("Invalid team name", "VALIDATION_ERROR");

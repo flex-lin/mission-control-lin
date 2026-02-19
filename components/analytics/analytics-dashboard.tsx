@@ -12,13 +12,13 @@ import { toast } from "sonner"
 import { useSettings } from "@/lib/settings-context"
 import { RepoUsageChart } from "@/components/analytics/repo-usage-chart"
 import { ProxyStatusBanner } from "@/components/analytics/proxy-status-banner"
-import type { ProxyLog, DailyEntry, ModelEntry, TeamEntry, MemberEntry } from "@/types"
+import type { ProxyLog, DailyEntry, ModelEntry, TeamEntry, RepoEntry } from "@/types"
 
 interface AnalyticsData {
   daily: DailyEntry[]
   byModel: ModelEntry[]
   byTeam: TeamEntry[]
-  byMember: MemberEntry[]
+  byRepo: RepoEntry[]
   logs: ProxyLog[]
   totalInput: number
   totalOutput: number
@@ -47,7 +47,7 @@ async function fetchJson<T>(url: string, fallback: T): Promise<T> {
 async function fetchAnalyticsData(period: Period): Promise<AnalyticsData> {
   const errors: string[] = []
 
-  const [daily, byModel, byTeam, byMember, logs] = await Promise.all([
+  const [daily, byModel, byTeam, byRepo, logs] = await Promise.all([
     fetchJson<DailyEntry[]>(`/api/analytics?period=${period}&groupBy=day`, []).catch((e: Error) => {
       errors.push(e.message)
       return [] as DailyEntry[]
@@ -60,9 +60,9 @@ async function fetchAnalyticsData(period: Period): Promise<AnalyticsData> {
       errors.push(e.message)
       return [] as TeamEntry[]
     }),
-    fetchJson<MemberEntry[]>(`/api/analytics/by-member?period=${period}`, []).catch((e: Error) => {
+    fetchJson<RepoEntry[]>(`/api/analytics/by-repo?period=${period}`, []).catch((e: Error) => {
       errors.push(e.message)
-      return [] as MemberEntry[]
+      return [] as RepoEntry[]
     }),
     fetchJson<ProxyLog[]>(`/api/proxy-logs?limit=500`, []).catch((e: Error) => {
       errors.push(e.message)
@@ -79,7 +79,7 @@ async function fetchAnalyticsData(period: Period): Promise<AnalyticsData> {
   const totalCost = byModel.reduce((s, m) => s + m.estimatedCost, 0)
   const totalRequests = byModel.reduce((s, m) => s + m.requests, 0)
 
-  return { daily, byModel, byTeam, byMember, logs, totalInput, totalOutput, totalCost, totalRequests }
+  return { daily, byModel, byTeam, byRepo, logs, totalInput, totalOutput, totalCost, totalRequests }
 }
 
 export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
@@ -116,7 +116,7 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
     }
   }, [period, loadData, settings.refreshInterval])
 
-  const { daily, byModel, byTeam, logs, totalInput, totalOutput, totalCost, totalRequests } = data
+  const { daily, byModel, byTeam, byRepo, logs, totalInput, totalOutput, totalCost, totalRequests } = data
 
   return (
     <div className="space-y-6 p-6">
@@ -224,7 +224,7 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
           <CardTitle className="text-sm font-semibold">Usage by Repo</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? <Skeleton className="h-[300px] w-full" /> : <RepoUsageChart data={byTeam} />}
+          {loading ? <Skeleton className="h-[300px] w-full" /> : <RepoUsageChart data={byRepo} />}
         </CardContent>
       </Card>
 

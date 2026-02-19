@@ -3,14 +3,12 @@ import os from "os"
 import chokidar, { FSWatcher } from "chokidar"
 import { EventEmitter } from "events"
 
-export type WatchEvent = {
+type WatchEvent = {
   type: "add" | "change" | "unlink" | "addDir" | "unlinkDir"
   filePath: string
   relativePath: string
   timestamp: string
 }
-
-export type WatchEventHandler = (event: WatchEvent) => void
 
 const CLAUDE_DIR = path.join(os.homedir(), ".claude")
 
@@ -73,22 +71,6 @@ class FileWatcherService extends EventEmitter {
     this.isRunning = false
     this.watchedPaths.clear()
     return this.watcher.close()
-  }
-
-  addPath(watchPath: string): void {
-    if (!this.watcher || this.watchedPaths.has(watchPath)) return
-    this.watcher.add(watchPath)
-    this.watchedPaths.add(watchPath)
-  }
-
-  removePath(watchPath: string): void {
-    if (!this.watcher || !this.watchedPaths.has(watchPath)) return
-    this.watcher.unwatch(watchPath)
-    this.watchedPaths.delete(watchPath)
-  }
-
-  getWatchedPaths(): string[] {
-    return Array.from(this.watchedPaths)
   }
 
   get running(): boolean {

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { ok, err, notFound, serverError } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
 import { killSessionAsync, listTeamSessionsAsync } from "@/lib/tmux-manager";
@@ -10,7 +10,7 @@ const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "tasks");
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function GET(req: NextRequest, ctx: RouteContext): Promise<NextResponse> {
+export async function GET(_req: NextRequest, ctx: RouteContext) {
   try {
     const { id } = await ctx.params;
     const taskId = parseInt(id, 10);
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, ctx: RouteContext): Promise<NextResp
   }
 }
 
-export async function DELETE(req: NextRequest, ctx: RouteContext): Promise<NextResponse> {
+export async function DELETE(_req: NextRequest, ctx: RouteContext) {
   try {
     const { id } = await ctx.params;
     const taskId = parseInt(id, 10);
@@ -66,7 +66,7 @@ export async function DELETE(req: NextRequest, ctx: RouteContext): Promise<NextR
 }
 
 // Update a pending task (goal, priority, teamMembers)
-export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<NextResponse> {
+export async function PATCH(req: NextRequest, ctx: RouteContext) {
   try {
     const { id } = await ctx.params;
     const taskId = parseInt(id, 10);
@@ -113,7 +113,7 @@ export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<NextRe
 }
 
 // Retry a failed task
-export async function POST(req: NextRequest, ctx: RouteContext): Promise<NextResponse> {
+export async function POST(_req: NextRequest, ctx: RouteContext) {
   try {
     const { id } = await ctx.params;
     const taskId = parseInt(id, 10);

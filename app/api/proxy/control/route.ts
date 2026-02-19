@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       }
 
       const settings = readSettings()
-      const port = settings.proxyConfig?.port ?? 8787
+      const port = settings.proxyConfig?.port ?? 28787
       const targetUrl = settings.proxyConfig?.targetUrl ?? "https://api.anthropic.com"
 
       // Validate targetUrl to prevent SSRF

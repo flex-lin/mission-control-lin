@@ -88,6 +88,13 @@ export async function spawnTeam(
     "utf-8"
   );
 
+  // Write plan.json alongside config for dashboard viewing
+  fs.writeFileSync(
+    path.join(teamDir, "plan.json"),
+    JSON.stringify(plan, null, 2),
+    "utf-8"
+  );
+
   // Write background execution config if persistent flag is set
   if (options?.persistent) {
     writeBackgroundConfig(teamName, {

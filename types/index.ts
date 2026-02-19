@@ -20,6 +20,8 @@ export interface Team {
   backgroundExecution?: boolean;
   /** ID of the QueuedTask that spawned this team (for duplicate prevention) */
   sourceTaskId?: number;
+  /** Absolute path to the project/repository this team is working in */
+  projectPath?: string;
 }
 
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
@@ -47,6 +49,7 @@ export interface StuckTask extends TeamTask {
   blockerDetails?: string;
   blockerSince?: string;
   blockerFrom?: string;
+  dismissed?: boolean;
 }
 
 // ── Analytics Types ───────────────────────────────────────────────────────────
@@ -81,9 +84,8 @@ export interface TeamEntry {
   estimatedCost: number;
 }
 
-export interface MemberEntry {
-  memberName: string;
-  teamName: string;
+export interface RepoEntry {
+  repoName: string;
   totalInput: number;
   totalOutput: number;
   totalTokens: number;
@@ -101,6 +103,7 @@ export interface ProxyLog {
   cacheCreationTokens: number;
   teamName?: string;
   memberName?: string;
+  repoName?: string;
   endpoint: string;
   latencyMs: number;
   statusCode: number;
@@ -145,7 +148,7 @@ export interface KnowledgeBaseEntry {
 
 // ── Settings Types ────────────────────────────────────────────────────────────
 
-export interface ProxyConfig {
+interface ProxyConfig {
   enabled: boolean;
   port: number;
   targetUrl: string;
@@ -245,20 +248,6 @@ export interface TeamRole {
   isPreset: boolean;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface CreateTeamRoleRequest {
-  name: string;
-  role: string;
-  agentType: AgentType;
-  description: string;
-}
-
-export interface UpdateTeamRoleRequest {
-  name?: string;
-  role?: string;
-  agentType?: AgentType;
-  description?: string;
 }
 
 // ── Task Queue Types ────────────────────────────────────────────────────────
@@ -381,29 +370,6 @@ export interface UsageSyncStatus {
 
 // ── Background Execution / Daemon Types ─────────────────────────────────────
 
-export type SleepEventType = "sleep_detected" | "wake_detected";
-
-export interface SleepEvent {
-  type: SleepEventType;
-  timestamp: string;
-}
-
-export interface SessionCheckpointData {
-  teamName: string;
-  taskStatuses: Record<string, string>; // taskId → status
-  paneContent: string;                   // last captured pane output
-  leaderAlive: boolean;
-  memberStatuses: Record<string, boolean>; // memberName → alive
-  projectPath?: string;
-}
-
-export interface ResumeAction {
-  teamName: string;
-  action: "resumed" | "skipped" | "failed";
-  reason: string;
-  timestamp: string;
-}
-
 // ── Usage Limits Types ───────────────────────────────────────────────────────
 
 export interface UsageLimits {
@@ -413,7 +379,7 @@ export interface UsageLimits {
   monthlyCost: number | null;
 }
 
-export interface UsageSummaryPeriod {
+interface UsageSummaryPeriod {
   tokens: number;
   cost: number;
   tokenLimit: number | null;
@@ -464,7 +430,7 @@ export interface CompilationError {
   healingAttempts?: HealingAttempt[];
 }
 
-export interface HealingAttempt {
+interface HealingAttempt {
   id: number;
   compilationErrorId: number;
   attemptNumber: number;
@@ -540,6 +506,11 @@ export interface SlackManifest {
     background_color?: string;
   };
   features: {
+    app_home?: {
+      home_tab_enabled?: boolean;
+      messages_tab_enabled?: boolean;
+      messages_tab_read_only_enabled?: boolean;
+    };
     bot_user: {
       display_name: string;
       always_online: boolean;

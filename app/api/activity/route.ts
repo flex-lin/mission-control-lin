@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { ok, serverError } from "@/lib/api-helpers";
 import type { ActivityEvent, ActivityEventType } from "@/types";
 import fs from "fs";
@@ -73,7 +73,7 @@ function buildActivityEvents(): ActivityEvent[] {
 }
 
 // GET /api/activity?limit=50
-export async function GET(req: NextRequest): Promise<NextResponse> {
+export async function GET(req: NextRequest) {
   try {
     const limit = Math.min(Number(req.nextUrl.searchParams.get("limit") ?? 50), 100);
     const events = buildActivityEvents().slice(0, limit);

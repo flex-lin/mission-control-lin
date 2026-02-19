@@ -11,7 +11,7 @@ import { SkillsTab } from "@/components/knowledge-base/skills-tab"
 import { RemoveProjectButton } from "@/components/knowledge-base/remove-project-button"
 
 async function getProjectWithContext(id: string): Promise<(Project & ProjectContext) | null> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:31777"
   try {
     const res = await fetch(`${base}/api/projects/${encodeURIComponent(id)}`, { cache: "no-store" })
     if (!res.ok) return null
@@ -23,7 +23,7 @@ async function getProjectWithContext(id: string): Promise<(Project & ProjectCont
 }
 
 async function getKbEntry(projectPath: string): Promise<KnowledgeBaseEntry | null> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:31777"
   try {
     const res = await fetch(`${base}/api/knowledge-base`, { cache: "no-store" })
     if (!res.ok) return null

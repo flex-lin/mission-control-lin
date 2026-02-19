@@ -7,6 +7,7 @@ import { StuckTaskCard } from "@/components/agent-teams/stuck-task-card"
 import { UnblockDialog } from "@/components/agent-teams/unblock-dialog"
 import { FilterBar } from "@/components/stuck/filter-bar"
 import { CheckCircle2 } from "lucide-react"
+import { toast } from "sonner"
 import type { StuckTask } from "@/types"
 
 export function StuckPageClient() {
@@ -17,6 +18,7 @@ export function StuckPageClient() {
   const blockerType = searchParams.get("type") ?? "all"
   const team = searchParams.get("team") ?? "all"
   const search = searchParams.get("q") ?? ""
+  const showDismissed = searchParams.get("dismissed") === "true"
 
   const updateParams = useCallback(
     (key: string, value: string) => {
@@ -32,10 +34,39 @@ export function StuckPageClient() {
     [searchParams, router]
   )
 
-  const { data, loading, error } = useAutoRefresh<StuckTask[]>({
-    url: "/api/teams/stuck",
+  const apiUrl = showDismissed
+    ? "/api/teams/stuck?includeDismissed=true"
+    : "/api/teams/stuck"
+
+  const { data, loading, error, refetch } = useAutoRefresh<StuckTask[]>({
+    url: apiUrl,
     intervalMs: 10000,
   })
+
+  const handleDismiss = useCallback(
+    async (task: StuckTask) => {
+      const action = task.dismissed ? "undismiss" : "dismiss"
+      try {
+        const res = await fetch(
+          `/api/teams/${encodeURIComponent(task.teamName)}/tasks/${encodeURIComponent(task.id)}/respond`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action }),
+          }
+        )
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error ?? `HTTP ${res.status}`)
+        }
+        toast.success(action === "dismiss" ? "Task dismissed" : "Task restored")
+        refetch()
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : `Failed to ${action}`)
+      }
+    },
+    [refetch]
+  )
 
   const tasks = data ?? []
 
@@ -88,9 +119,11 @@ export function StuckPageClient() {
         team={team}
         search={search}
         teamNames={teamNames}
+        showDismissed={showDismissed}
         onBlockerTypeChange={(v) => updateParams("type", v)}
         onTeamChange={(v) => updateParams("team", v)}
         onSearchChange={(v) => updateParams("q", v)}
+        onShowDismissedChange={(v) => updateParams("dismissed", v ? "true" : "")}
       />
 
       {filtered.length === 0 ? (
@@ -110,6 +143,7 @@ export function StuckPageClient() {
               task={task}
               showTeamName
               onRespond={setRespondTask}
+              onDismiss={handleDismiss}
             />
           ))}
         </div>

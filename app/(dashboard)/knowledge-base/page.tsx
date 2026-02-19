@@ -6,7 +6,7 @@ import { SkillsSection } from "@/components/knowledge-base/skills-section"
 import type { KnowledgeBaseEntry } from "@/types"
 
 async function getEntries(): Promise<KnowledgeBaseEntry[]> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:31777"
   try {
     const res = await fetch(`${base}/api/knowledge-base`, { cache: "no-store" })
     if (!res.ok) return []

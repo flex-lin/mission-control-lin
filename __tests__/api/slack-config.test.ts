@@ -53,7 +53,7 @@ const { GET, POST, DELETE } = SlackConfigRoute;
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function makePostReq(body: Record<string, unknown>) {
-  return new NextRequest(new URL("http://localhost:3777/api/slack/config"), {
+  return new NextRequest(new URL("http://localhost:31777/api/slack/config"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

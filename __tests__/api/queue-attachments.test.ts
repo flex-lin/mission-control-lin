@@ -75,12 +75,12 @@ function makeFile(name: string, type: string, sizeBytes = 100): File {
 
 function makeRequest(url: string, formData?: FormData): NextRequest {
   if (formData) {
-    return new NextRequest(new URL(url, "http://localhost:3777"), {
+    return new NextRequest(new URL(url, "http://localhost:31777"), {
       method: "POST",
       body: formData,
     });
   }
-  return new NextRequest(new URL(url, "http://localhost:3777"));
+  return new NextRequest(new URL(url, "http://localhost:31777"));
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -96,7 +96,7 @@ async function callUpload(url: string, formData?: FormData) {
 async function callDelete(id: string) {
   vi.resetModules();
   const mod = await import("@/app/api/queue/[id]/route");
-  const req = new NextRequest(new URL(`/api/queue/${id}`, "http://localhost:3777"), {
+  const req = new NextRequest(new URL(`/api/queue/${id}`, "http://localhost:31777"), {
     method: "DELETE",
   });
   const res = await mod.DELETE(req, { params: Promise.resolve({ id }) });

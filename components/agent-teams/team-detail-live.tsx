@@ -19,10 +19,11 @@ import { TeamHealthPanel } from "@/components/agent-teams/team-health-panel"
 import { BackgroundConfigPanel } from "@/components/agent-teams/background-config-panel"
 import { TmuxSessionBar } from "@/components/agent-teams/tmux-session-bar"
 import { TaskRowEditable } from "@/components/agent-teams/task-row-editable"
+import { TeamPlanViewer } from "@/components/agent-teams/team-plan-viewer"
 import { AlertCircle, CheckCircle2, Play } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import type { Team, TeamTask } from "@/types"
+import type { Team, TeamTask, TeamPlan } from "@/types"
 
 interface SessionInfo {
   name: string
@@ -35,11 +36,13 @@ interface TeamDetailLiveProps {
   initialData: {
     team: Team
     tasks: TeamTask[]
+    plan?: TeamPlan | null
   }
 }
 
 interface TeamWithTasks extends Team {
   tasks: TeamTask[]
+  plan?: TeamPlan | null
 }
 
 export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
@@ -80,7 +83,7 @@ export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
 
   const tasks = liveData?.tasks ?? initialData.tasks
   const teamForForms: Team = liveData
-    ? { name: liveData.name, members: liveData.members, description: liveData.description, createdAt: liveData.createdAt }
+    ? { name: liveData.name, members: liveData.members, description: liveData.description, createdAt: liveData.createdAt, projectPath: liveData.projectPath }
     : initialData.team
 
   const activeTasks = tasks.filter((t) => t.status === "in_progress").length
@@ -140,6 +143,11 @@ export function TeamDetailLive({ initialData }: TeamDetailLiveProps) {
 
       {/* Tmux sessions bar */}
       <TmuxSessionBar sessions={sessionData?.sessions ?? []} />
+
+      {/* Team Plan */}
+      {(liveData?.plan ?? initialData.plan) && (
+        <TeamPlanViewer plan={(liveData?.plan ?? initialData.plan)!} />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left: tabs for tasks + members */}

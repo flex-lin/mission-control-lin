@@ -7,7 +7,7 @@ import { CreateTeamDialog } from "@/components/agent-teams/create-team-dialog"
 import { SmartCreateDialog } from "@/components/agent-teams/smart-create-dialog"
 import { TeamActionsMenu } from "@/components/agent-teams/team-actions-menu"
 import { TeamHealthBadge } from "@/components/agent-teams/team-health-badge"
-import { CheckCircle2, Users } from "lucide-react"
+import { CheckCircle2, FolderOpen, Users } from "lucide-react"
 import type { Team, TeamHealthStatus } from "@/types"
 
 interface TaskStats {
@@ -27,7 +27,7 @@ interface TeamWithHealth extends Team {
 }
 
 async function getTeams(): Promise<TeamWithHealth[]> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:31777"
   try {
     const res = await fetch(`${base}/api/teams`, { cache: "no-store" })
     if (!res.ok) return []
@@ -87,6 +87,12 @@ export default async function AgentTeamsPage() {
                     </div>
                     {team.description && (
                       <p className="text-xs text-muted-foreground">{team.description}</p>
+                    )}
+                    {team.projectPath && (
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground" title={team.projectPath}>
+                        <FolderOpen className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{team.projectPath.split("/").pop()}</span>
+                      </div>
                     )}
                   </CardHeader>
                   <CardContent>

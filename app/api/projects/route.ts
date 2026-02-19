@@ -1,11 +1,10 @@
-import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { ok, serverError } from "@/lib/api-helpers";
 
 // GET /api/projects — list projects from the DB only (IndexedProject records).
 // Filesystem projects from ~/.claude/projects/ are NOT auto-included so that
 // a fresh clone starts with a blank knowledge base.
-export async function GET(): Promise<NextResponse> {
+export async function GET() {
   try {
     const indexed = await db.indexedProject.findMany({
       orderBy: { id: "desc" },

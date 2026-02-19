@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { readSettings, writeSettings, setProjectProxyEnv } from "@/lib/claude-files";
 import { db } from "@/lib/db";
 import { ok, err, serverError, validateUrl } from "@/lib/api-helpers";
@@ -13,7 +13,7 @@ const ALLOWED_FILE_KEYS = new Set([
 ]);
 
 // GET /api/settings — read ~/.claude/settings.json + DB preferences
-export async function GET(): Promise<NextResponse> {
+export async function GET() {
   try {
     const fileSettings = readSettings();
 
@@ -42,7 +42,7 @@ export async function GET(): Promise<NextResponse> {
 }
 
 // PUT /api/settings — write settings (UI prefs go to DB, claude settings to file)
-export async function PUT(req: NextRequest): Promise<NextResponse> {
+export async function PUT(req: NextRequest) {
   try {
     const body = await req.json() as Partial<Settings>;
 
@@ -91,7 +91,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     if (body.proxyConfig !== undefined) {
       const wasEnabled = currentFile.proxyConfig?.enabled ?? false;
       const nowEnabled = body.proxyConfig.enabled ?? false;
-      const port = body.proxyConfig.port ?? currentFile.proxyConfig?.port ?? 8787;
+      const port = body.proxyConfig.port ?? currentFile.proxyConfig?.port ?? 28787;
       const targetUrl = body.proxyConfig.targetUrl ?? currentFile.proxyConfig?.targetUrl ?? "https://api.anthropic.com";
 
       if (!wasEnabled && nowEnabled) {

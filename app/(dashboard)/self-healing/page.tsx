@@ -610,10 +610,8 @@ export default function SelfHealingPage() {
         body: JSON.stringify({ status: "pending" }),
       })
       await handleHeal(id)
-      return
     } catch {
       setActionError("Failed to retry healing")
-    } finally {
       stopActioning(id)
       await refetchAll()
     }

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { readTaskList, writeTask, readTeamConfig, getTeamLastActivity } from "@/lib/claude-files";
 import { ok, created, notFound, err, serverError, safeName } from "@/lib/api-helpers";
 import type { TeamTask } from "@/types";
@@ -12,7 +12,7 @@ const STALENESS_MS = 5 * 60 * 1000;
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ name: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { name } = await params;
     if (!safeName(name)) return err("Invalid team name", "VALIDATION_ERROR");
@@ -37,7 +37,7 @@ export async function GET(
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ name: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { name } = await params;
     if (!safeName(name)) return err("Invalid team name", "VALIDATION_ERROR");

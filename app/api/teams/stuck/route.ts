@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { listTeams, readTaskList } from "@/lib/claude-files";
 import { ok, serverError } from "@/lib/api-helpers";
 import type { StuckTask } from "@/types";
@@ -11,7 +11,7 @@ const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
 const STALENESS_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
 // GET /api/teams/stuck — aggregated stuck tasks across all teams
-export async function GET(req: NextRequest): Promise<NextResponse> {
+export async function GET(req: NextRequest) {
   try {
     const teamFilter = req.nextUrl.searchParams.get("team");
     const teams = listTeams();
@@ -30,6 +30,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
       for (const task of tasks) {
         if (task.status !== "in_progress") continue;
+
+        // Skip dismissed tasks
+        if (task.metadata?.dismissedAt) continue;
 
         // Case 1: task has explicit blocker metadata (original behavior)
         if (task.metadata?.blockerSummary) {

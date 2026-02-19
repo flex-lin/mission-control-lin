@@ -170,7 +170,7 @@ async function handleChatMessage(channel: string, text: string): Promise<void> {
   if (!webClient) return;
 
   try {
-    const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3777";
+    const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:31777";
     const chatRes = await fetch(`${baseUrl}/api/chatbot`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

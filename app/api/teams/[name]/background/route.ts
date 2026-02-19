@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { readTeamConfig } from "@/lib/claude-files";
 import { ok, err, notFound, serverError, safeName } from "@/lib/api-helpers";
 import {
@@ -13,7 +13,7 @@ import type { BackgroundConfig } from "@/types";
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ name: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { name } = await params;
     if (!safeName(name)) return err("Invalid team name", "VALIDATION_ERROR");
@@ -31,7 +31,7 @@ export async function GET(
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ name: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { name } = await params;
     if (!safeName(name)) return err("Invalid team name", "VALIDATION_ERROR");
@@ -73,7 +73,7 @@ export async function PUT(
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ name: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { name } = await params;
     if (!safeName(name)) return err("Invalid team name", "VALIDATION_ERROR");

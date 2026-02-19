@@ -5,7 +5,6 @@ import {
   sessionExists,
   createSession,
   sendKeysAndSubmit,
-  getTeamSessionStatus,
   sessionProcessAlive,
   killSession,
   capturePane,
@@ -21,7 +20,6 @@ interface LaunchableMember {
 }
 
 const LEADER_NAME = "leader";
-const SEND_DELAY_MS = 3000;
 const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
 
 function sleep(ms: number): Promise<void> {
@@ -71,40 +69,6 @@ async function waitForClaudeReady(sessionName: string, maxWaitMs = 30000): Promi
   }
 }
 
-async function acceptPrompt(sessionName: string, maxWaitMs = 15000): Promise<void> {
-  const start = Date.now();
-  const pollMs = 500;
-
-  while (Date.now() - start < maxWaitMs) {
-    const content = capturePane(sessionName);
-
-    if (content.includes("Yes, I accept")) {
-      sendRawKey(sessionName, "Down");
-      await sleep(300);
-      sendRawKey(sessionName, "Enter");
-      await sleep(1000);
-      const afterContent = capturePane(sessionName);
-      if (afterContent.includes("Yes, I trust")) {
-        sendRawKey(sessionName, "Enter");
-        await sleep(500);
-      }
-      return;
-    }
-
-    if (content.includes("Yes, I trust")) {
-      sendRawKey(sessionName, "Enter");
-      await sleep(500);
-      return;
-    }
-
-    if (content.includes("Try \"") || content.includes("❯ ")) {
-      return;
-    }
-
-    await sleep(pollMs);
-  }
-}
-
 /**
  * Write a launcher script for the team leader.
  * This avoids all shell quoting issues by embedding the system prompt
@@ -147,7 +111,7 @@ function writeLeaderLauncher(teamName: string, projectPath: string): string {
     "",
     "## COMPLETION & CLEANUP",
     "When ALL tasks reach status=completed:",
-    "1. Verify the build ONLY if no dev server is already running (check with: pgrep -f 'next dev' || fuser 3777/tcp).",
+    "1. Verify the build ONLY if no dev server is already running (check with: pgrep -f 'next dev' || fuser 31777/tcp).",
     "   If a dev server is running, skip the build — it already validates compilation. NEVER run pnpm build / pnpm dev concurrently with an existing Next.js process; it corrupts the Turbopack cache.",
     "   If no dev server is running, run the project build command (e.g. pnpm build) to verify nothing is broken",
     "2. If the build fails, fix the issues and rebuild until it passes",
@@ -388,66 +352,6 @@ export async function launchTeamAsLeader(
 
 export function getLeaderSessionName(teamName: string): string {
   return getSessionName(teamName, LEADER_NAME);
-}
-
-// ── Legacy exports ──
-
-export async function launchTeamMember(
-  teamName: string,
-  member: LaunchableMember,
-  projectPath?: string,
-  tasks?: TeamTask[]
-): Promise<{ sessionName: string; launched: boolean }> {
-  const sessionName = getSessionName(teamName, member.name);
-
-  if (sessionExists(sessionName)) {
-    return { sessionName, launched: false };
-  }
-
-  const cwd = projectPath || process.env.HOME || "/tmp";
-  createSession(sessionName, "claude --dangerously-skip-permissions", cwd);
-  await sleep(2000);
-  await acceptPrompt(sessionName);
-  await sleep(SEND_DELAY_MS);
-
-  const assignedTasks = tasks?.filter((t) => t.owner === member.name) ?? [];
-  const taskListStr =
-    assignedTasks.length > 0
-      ? assignedTasks.map((t) => `- [${t.id}] ${t.subject}`).join("\n")
-      : "(check task list)";
-
-  const prompt = `You are "${member.name}" on team "${teamName}". Role: ${member.role}. ${member.description}.
-Tasks: ${taskListStr}
-${projectPath ? `Project: ${projectPath}` : ""}
-Start working immediately.`;
-
-  sendKeysAndSubmit(sessionName, prompt);
-  return { sessionName, launched: true };
-}
-
-export async function launchTeam(
-  teamName: string,
-  members: LaunchableMember[],
-  projectPath?: string,
-  tasks?: TeamTask[]
-): Promise<{ launched: string[]; alreadyRunning: string[] }> {
-  const launched: string[] = [];
-  const alreadyRunning: string[] = [];
-
-  for (const member of members) {
-    const result = await launchTeamMember(teamName, member, projectPath, tasks);
-    if (result.launched) {
-      launched.push(member.name);
-    } else {
-      alreadyRunning.push(member.name);
-    }
-  }
-
-  return { launched, alreadyRunning };
-}
-
-export function getTeamStatus(teamName: string, memberNames: string[]) {
-  return getTeamSessionStatus(teamName, memberNames);
 }
 
 export function personaToLaunchable(persona: TeamPersona): LaunchableMember {

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { ok, err, serverError } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
 import {
@@ -16,7 +16,7 @@ function sanitizeFilename(name: string): string {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 200);
 }
 
-export async function POST(req: NextRequest): Promise<NextResponse> {
+export async function POST(req: NextRequest) {
   try {
     const taskIdParam = new URL(req.url).searchParams.get("taskId");
     if (!taskIdParam) return err("taskId query param is required", "VALIDATION_ERROR");

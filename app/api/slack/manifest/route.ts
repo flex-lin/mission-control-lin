@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
       if (host) {
         domain = `${proto}://${host}`;
       } else {
-        domain = "http://localhost:3777";
+        domain = "http://localhost:31777";
       }
     }
 
@@ -36,6 +36,11 @@ export async function GET(req: NextRequest) {
         background_color: "#1a1a2e",
       },
       features: {
+        app_home: {
+          home_tab_enabled: false,
+          messages_tab_enabled: true,
+          messages_tab_read_only_enabled: false,
+        },
         bot_user: {
           display_name: "Mission Control",
           always_online: true,

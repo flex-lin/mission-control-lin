@@ -1,6 +1,8 @@
 "use client"
 
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -24,9 +26,11 @@ interface FilterBarProps {
   team: string
   search: string
   teamNames: string[]
+  showDismissed: boolean
   onBlockerTypeChange: (value: string) => void
   onTeamChange: (value: string) => void
   onSearchChange: (value: string) => void
+  onShowDismissedChange: (value: boolean) => void
 }
 
 export function FilterBar({
@@ -34,9 +38,11 @@ export function FilterBar({
   team,
   search,
   teamNames,
+  showDismissed,
   onBlockerTypeChange,
   onTeamChange,
   onSearchChange,
+  onShowDismissedChange,
 }: FilterBarProps) {
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -77,6 +83,18 @@ export function FilterBar({
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-8 text-xs h-8"
         />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Switch
+          id="show-dismissed"
+          checked={showDismissed}
+          onCheckedChange={onShowDismissedChange}
+          className="scale-75"
+        />
+        <Label htmlFor="show-dismissed" className="text-xs text-muted-foreground cursor-pointer">
+          Show dismissed
+        </Label>
       </div>
     </div>
   )

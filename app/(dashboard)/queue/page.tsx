@@ -42,7 +42,6 @@ import {
   ChevronRight,
   Users,
   Upload,
-  ImageIcon,
   FileText,
   Paperclip,
   TriangleAlert,

@@ -112,7 +112,7 @@ export function ProxyStatusBanner({ compact = false }: ProxyStatusBannerProps) {
   }
 
   // Proxy is not running
-  const envVar = `ANTHROPIC_BASE_URL=http://localhost:8787`
+  const envVar = `ANTHROPIC_BASE_URL=http://localhost:28787`
   return (
     <Alert className="border-yellow-500/30 bg-yellow-500/5">
       <Radio className="h-4 w-4 text-yellow-500" />

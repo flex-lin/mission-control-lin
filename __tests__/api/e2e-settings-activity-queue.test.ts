@@ -81,7 +81,7 @@ vi.mock("@/lib/pricing", () => ({
 let tmpDir: string;
 
 function makeReq(url: string, init?: RequestInit): NextRequest {
-  return new NextRequest(new URL(url, "http://localhost:3777"), init);
+  return new NextRequest(new URL(url, "http://localhost:31777"), init);
 }
 
 function createSettingsFile(content: Record<string, unknown> = {}): void {
@@ -204,7 +204,7 @@ describe("PUT /api/settings — save settings", () => {
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
-    const req = makeReq("http://localhost:3777/api/settings", {
+    const req = makeReq("http://localhost:31777/api/settings", {
       method: "PUT",
       body: JSON.stringify({ theme: "light" }),
     });
@@ -224,7 +224,7 @@ describe("PUT /api/settings — save settings", () => {
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
-    const req = makeReq("http://localhost:3777/api/settings", {
+    const req = makeReq("http://localhost:31777/api/settings", {
       method: "PUT",
       body: JSON.stringify({ refreshInterval: 5000 }),
     });
@@ -241,7 +241,7 @@ describe("PUT /api/settings — save settings", () => {
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
-    const req = makeReq("http://localhost:3777/api/settings", {
+    const req = makeReq("http://localhost:31777/api/settings", {
       method: "PUT",
       body: JSON.stringify({ model: "claude-sonnet-4-6" }),
     });
@@ -322,7 +322,7 @@ describe("PUT /api/settings/usage-limits — save limits", () => {
   it("saves valid limits to DB", async () => {
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/usage-limits/route");
-    const req = makeReq("http://localhost:3777/api/settings/usage-limits", {
+    const req = makeReq("http://localhost:31777/api/settings/usage-limits", {
       method: "PUT",
       body: JSON.stringify({ dailyTokens: 100000, monthlyCost: 50 }),
     });
@@ -338,7 +338,7 @@ describe("PUT /api/settings/usage-limits — save limits", () => {
   it("removes a limit when value is null", async () => {
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/usage-limits/route");
-    const req = makeReq("http://localhost:3777/api/settings/usage-limits", {
+    const req = makeReq("http://localhost:31777/api/settings/usage-limits", {
       method: "PUT",
       body: JSON.stringify({ dailyTokens: null }),
     });
@@ -353,7 +353,7 @@ describe("PUT /api/settings/usage-limits — save limits", () => {
   it("returns 400 for negative limit values", async () => {
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/usage-limits/route");
-    const req = makeReq("http://localhost:3777/api/settings/usage-limits", {
+    const req = makeReq("http://localhost:31777/api/settings/usage-limits", {
       method: "PUT",
       body: JSON.stringify({ dailyTokens: -100 }),
     });
@@ -372,7 +372,7 @@ describe("PUT /api/settings/usage-limits — save limits", () => {
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/usage-limits/route");
     // "NaN" — Number("NaN") is NaN, which is not finite
-    const req = makeReq("http://localhost:3777/api/settings/usage-limits", {
+    const req = makeReq("http://localhost:31777/api/settings/usage-limits", {
       method: "PUT",
       body: '{"dailyCost":"not-a-number"}',
     });
@@ -388,7 +388,7 @@ describe("PUT /api/settings/usage-limits — save limits", () => {
   it("allows zero as a valid limit (meaning block all)", async () => {
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/usage-limits/route");
-    const req = makeReq("http://localhost:3777/api/settings/usage-limits", {
+    const req = makeReq("http://localhost:31777/api/settings/usage-limits", {
       method: "PUT",
       body: JSON.stringify({ dailyTokens: 0 }),
     });
@@ -412,7 +412,7 @@ describe("GET /api/activity — activity feed", () => {
   it("returns empty events when no teams exist", async () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/activity/route");
-    const req = makeReq("http://localhost:3777/api/activity");
+    const req = makeReq("http://localhost:31777/api/activity");
     const res = await GET(req);
     const body = await res.json();
 
@@ -429,7 +429,7 @@ describe("GET /api/activity — activity feed", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/activity/route");
-    const req = makeReq("http://localhost:3777/api/activity");
+    const req = makeReq("http://localhost:31777/api/activity");
     const res = await GET(req);
     const body = await res.json();
 
@@ -448,7 +448,7 @@ describe("GET /api/activity — activity feed", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/activity/route");
-    const req = makeReq("http://localhost:3777/api/activity");
+    const req = makeReq("http://localhost:31777/api/activity");
     const res = await GET(req);
     const body = await res.json();
 
@@ -466,7 +466,7 @@ describe("GET /api/activity — activity feed", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/activity/route");
-    const req = makeReq("http://localhost:3777/api/activity?limit=2");
+    const req = makeReq("http://localhost:31777/api/activity?limit=2");
     const res = await GET(req);
     const body = await res.json();
 
@@ -482,7 +482,7 @@ describe("GET /api/activity — activity feed", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/activity/route");
-    const req = makeReq("http://localhost:3777/api/activity");
+    const req = makeReq("http://localhost:31777/api/activity");
     const res = await GET(req);
     const body = await res.json();
 
@@ -512,7 +512,7 @@ describe("GET /api/dashboard/stats — dashboard metrics", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/dashboard/stats/route");
-    const req = makeReq("http://localhost:3777/api/dashboard/stats");
+    const req = makeReq("http://localhost:31777/api/dashboard/stats");
     const res = await GET(req);
     const body = await res.json();
 
@@ -536,7 +536,7 @@ describe("GET /api/dashboard/stats — dashboard metrics", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/dashboard/stats/route");
-    const req = makeReq("http://localhost:3777/api/dashboard/stats");
+    const req = makeReq("http://localhost:31777/api/dashboard/stats");
     const res = await GET(req);
     const body = await res.json();
 
@@ -555,7 +555,7 @@ describe("GET /api/dashboard/stats — dashboard metrics", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/dashboard/stats/route");
-    const req = makeReq("http://localhost:3777/api/dashboard/stats");
+    const req = makeReq("http://localhost:31777/api/dashboard/stats");
     const res = await GET(req);
     const body = await res.json();
 
@@ -572,7 +572,7 @@ describe("GET /api/dashboard/stats — dashboard metrics", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/dashboard/stats/route");
-    const req = makeReq("http://localhost:3777/api/dashboard/stats");
+    const req = makeReq("http://localhost:31777/api/dashboard/stats");
     const res = await GET(req);
     const body = await res.json();
 
@@ -591,7 +591,7 @@ describe("GET /api/queue — list queued tasks", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue");
+    const req = makeReq("http://localhost:31777/api/queue");
     const res = await GET(req);
     const body = await res.json();
 
@@ -611,7 +611,7 @@ describe("GET /api/queue — list queued tasks", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue");
+    const req = makeReq("http://localhost:31777/api/queue");
     const res = await GET(req);
     const body = await res.json();
 
@@ -630,7 +630,7 @@ describe("GET /api/queue — list queued tasks", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue?group=active");
+    const req = makeReq("http://localhost:31777/api/queue?group=active");
     const res = await GET(req);
     const body = await res.json();
 
@@ -652,7 +652,7 @@ describe("GET /api/queue — list queued tasks", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue?group=completed");
+    const req = makeReq("http://localhost:31777/api/queue?group=completed");
     const res = await GET(req);
     const body = await res.json();
 
@@ -676,7 +676,7 @@ describe("GET /api/queue — list queued tasks", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue");
+    const req = makeReq("http://localhost:31777/api/queue");
     const res = await GET(req);
     const body = await res.json();
 
@@ -707,7 +707,7 @@ describe("POST /api/queue — enqueue task", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ goal: "Implement feature X", projectPath: projectDir }),
     });
@@ -726,7 +726,7 @@ describe("POST /api/queue — enqueue task", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ goal: "No path" }),
     });
@@ -745,7 +745,7 @@ describe("POST /api/queue — enqueue task", () => {
   it("returns 400 when goal is missing", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ projectPath: "/some/path" }),
     });
@@ -760,7 +760,7 @@ describe("POST /api/queue — enqueue task", () => {
   it("returns 400 when goal is empty string", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ goal: "   " }),
     });
@@ -778,7 +778,7 @@ describe("POST /api/queue — enqueue task", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ goal: "Urgent task", priority: 3 }),
     });
@@ -804,7 +804,7 @@ describe("GET /api/queue/[id] — get queued task", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/5");
+    const req = makeReq("http://localhost:31777/api/queue/5");
     const res = await GET(req, { params: Promise.resolve({ id: "5" }) });
     const body = await res.json();
 
@@ -818,7 +818,7 @@ describe("GET /api/queue/[id] — get queued task", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/999");
+    const req = makeReq("http://localhost:31777/api/queue/999");
     const res = await GET(req, { params: Promise.resolve({ id: "999" }) });
     const body = await res.json();
 
@@ -829,7 +829,7 @@ describe("GET /api/queue/[id] — get queued task", () => {
   it("returns 400 for non-numeric id", async () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/abc");
+    const req = makeReq("http://localhost:31777/api/queue/abc");
     const res = await GET(req, { params: Promise.resolve({ id: "abc" }) });
     const body = await res.json();
 
@@ -850,7 +850,7 @@ describe("DELETE /api/queue/[id] — cancel or delete task", () => {
 
     vi.resetModules();
     const { DELETE } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/1", { method: "DELETE" });
+    const req = makeReq("http://localhost:31777/api/queue/1", { method: "DELETE" });
     const res = await DELETE(req, { params: Promise.resolve({ id: "1" }) });
     const body = await res.json();
 
@@ -871,7 +871,7 @@ describe("DELETE /api/queue/[id] — cancel or delete task", () => {
 
     vi.resetModules();
     const { DELETE } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/2", { method: "DELETE" });
+    const req = makeReq("http://localhost:31777/api/queue/2", { method: "DELETE" });
     const res = await DELETE(req, { params: Promise.resolve({ id: "2" }) });
     const body = await res.json();
 
@@ -885,7 +885,7 @@ describe("DELETE /api/queue/[id] — cancel or delete task", () => {
 
     vi.resetModules();
     const { DELETE } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/999", { method: "DELETE" });
+    const req = makeReq("http://localhost:31777/api/queue/999", { method: "DELETE" });
     const res = await DELETE(req, { params: Promise.resolve({ id: "999" }) });
     const body = await res.json();
 
@@ -907,7 +907,7 @@ describe("PATCH /api/queue/[id] — edit queued task", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/1", {
+    const req = makeReq("http://localhost:31777/api/queue/1", {
       method: "PATCH",
       body: JSON.stringify({ goal: "New goal" }),
     });
@@ -927,7 +927,7 @@ describe("PATCH /api/queue/[id] — edit queued task", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/2", {
+    const req = makeReq("http://localhost:31777/api/queue/2", {
       method: "PATCH",
       body: JSON.stringify({ priority: 2 }),
     });
@@ -947,7 +947,7 @@ describe("PATCH /api/queue/[id] — edit queued task", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/3", {
+    const req = makeReq("http://localhost:31777/api/queue/3", {
       method: "PATCH",
       body: JSON.stringify({ goal: "Changed" }),
     });
@@ -965,7 +965,7 @@ describe("PATCH /api/queue/[id] — edit queued task", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/4", {
+    const req = makeReq("http://localhost:31777/api/queue/4", {
       method: "PATCH",
       body: JSON.stringify({ unknownField: "value" }),
     });
@@ -991,7 +991,7 @@ describe("POST /api/queue/[id] — retry task", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/1", { method: "POST" });
+    const req = makeReq("http://localhost:31777/api/queue/1", { method: "POST" });
     const res = await POST(req, { params: Promise.resolve({ id: "1" }) });
     const body = await res.json();
 
@@ -1011,7 +1011,7 @@ describe("POST /api/queue/[id] — retry task", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/2", { method: "POST" });
+    const req = makeReq("http://localhost:31777/api/queue/2", { method: "POST" });
     const res = await POST(req, { params: Promise.resolve({ id: "2" }) });
 
     expect(res.status).toBe(200);
@@ -1023,7 +1023,7 @@ describe("POST /api/queue/[id] — retry task", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/3", { method: "POST" });
+    const req = makeReq("http://localhost:31777/api/queue/3", { method: "POST" });
     const res = await POST(req, { params: Promise.resolve({ id: "3" }) });
     const body = await res.json();
 
@@ -1036,7 +1036,7 @@ describe("POST /api/queue/[id] — retry task", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/999", { method: "POST" });
+    const req = makeReq("http://localhost:31777/api/queue/999", { method: "POST" });
     const res = await POST(req, { params: Promise.resolve({ id: "999" }) });
     const body = await res.json();
 

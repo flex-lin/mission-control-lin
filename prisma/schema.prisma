@@ -17,6 +17,7 @@ model ProxyLog {
   cacheCreationTokens   Int      @default(0) @map("cache_creation_tokens")
   teamName              String?  @map("team_name")
   memberName            String?  @map("member_name")
+  repoName              String?  @map("repo_name")
   endpoint              String
   latencyMs             Int      @map("latency_ms")
   statusCode            Int      @map("status_code")
@@ -173,6 +174,35 @@ model SessionCheckpoint {
 
   @@index([teamName])
   @@map("session_checkpoints")
+}
+
+/// Chat assistant session (Claude Code-style persistent conversations)
+model ChatSession {
+  id        String   @id @default(uuid())
+  title     String?                              // auto-generated from first message
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  messages ChatMessage[]
+
+  @@index([updatedAt])
+  @@map("chat_sessions")
+}
+
+/// Individual message within a chat session
+model ChatMessage {
+  id        String   @id @default(uuid())
+  sessionId String   @map("session_id")
+  role      String                               // "user" | "assistant"
+  content   String
+  toolCalls String?  @map("tool_calls")          // JSON array of tool calls
+  toolResults String? @map("tool_results")       // JSON array of tool results
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("chat_messages")
 }
 
 /// Slack workspace integration configuration

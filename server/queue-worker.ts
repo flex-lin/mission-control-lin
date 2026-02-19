@@ -18,10 +18,18 @@ interface QueuedTaskRow {
   team_name: string | null;
   priority: number;
   result: string | null;
+  attachments: string; // JSON array of TaskAttachment objects
   team_members: string; // JSON array of role objects
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
+}
+
+interface TaskAttachment {
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
 }
 
 interface SelectedRole {
@@ -66,15 +74,21 @@ function openDb(): Database.Database {
       team_name TEXT,
       priority INTEGER NOT NULL DEFAULT 0,
       result TEXT,
+      attachments TEXT NOT NULL DEFAULT '[]',
       team_members TEXT NOT NULL DEFAULT '[]',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       started_at TEXT,
       completed_at TEXT
     )
   `);
-  // Ensure team_members column exists in older DBs (migration safety)
+  // Ensure columns exist in older DBs (migration safety)
   try {
     db.exec(`ALTER TABLE queued_tasks ADD COLUMN team_members TEXT NOT NULL DEFAULT '[]'`);
+  } catch {
+    // Column already exists — ignore
+  }
+  try {
+    db.exec(`ALTER TABLE queued_tasks ADD COLUMN attachments TEXT NOT NULL DEFAULT '[]'`);
   } catch {
     // Column already exists — ignore
   }
@@ -145,11 +159,6 @@ function getTaskCompletionState(teamName: string): "completed" | "cleaned_up" | 
   }
 
   return "has_pending";
-}
-
-function allTasksCompleted(teamName: string): boolean {
-  const state = getTaskCompletionState(teamName);
-  return state === "completed";
 }
 
 function cleanupTeam(teamName: string): void {
@@ -408,8 +417,28 @@ async function processTask(db: Database.Database, task: QueuedTaskRow): Promise<
   try {
     const { generateTeamPlan, ensureUniqueName } = await import("../lib/team-planner");
 
+    // Parse attachments and build context for the team
+    let attachments: TaskAttachment[] = [];
+    try {
+      const parsed = JSON.parse(task.attachments || "[]");
+      if (Array.isArray(parsed)) attachments = parsed as TaskAttachment[];
+    } catch {
+      // Ignore parse errors
+    }
+
+    // Build goal with attachment context so agents know about attached files
+    const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "tasks");
+    let goalWithAttachments = task.goal;
+    if (attachments.length > 0) {
+      const attachmentLines = attachments.map((a) => {
+        const filePath = path.join(UPLOAD_DIR, String(task.id), a.filename);
+        return `- ${a.originalName} (${a.mimeType}, ${Math.round(a.size / 1024)}KB): ${filePath}`;
+      });
+      goalWithAttachments += `\n\nAttached files (preserved from original task):\n${attachmentLines.join("\n")}`;
+    }
+
     console.log(`[queue] Generating team plan for: ${task.goal}`);
-    const plan = await generateTeamPlan(task.goal, task.project_path);
+    const plan = await generateTeamPlan(goalWithAttachments, task.project_path);
 
     // If the queued task has explicitly configured team members, override the AI-generated personas
     let configuredMembers: SelectedRole[] = [];
@@ -443,7 +472,7 @@ async function processTask(db: Database.Database, task: QueuedTaskRow): Promise<
     ).run(teamName, task.id);
 
     console.log(`[queue] Spawning team ${teamName} at ${task.project_path}`);
-    await spawnTeamForQueue(teamName, task.goal, task.project_path, plan, task.id);
+    await spawnTeamForQueue(teamName, goalWithAttachments, task.project_path, plan, task.id);
 
     await monitorTeam(db, task.id, teamName, Date.now());
   } catch (e) {
@@ -570,4 +599,3 @@ export function startQueueWorker(): void {
   });
 }
 
-export { runQueueWorker };

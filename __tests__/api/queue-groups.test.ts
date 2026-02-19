@@ -64,7 +64,7 @@ const SAMPLE_COUNTS = [
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function makeRequest(url: string) {
-  return new NextRequest(new URL(url, "http://localhost:3777"));
+  return new NextRequest(new URL(url, "http://localhost:31777"));
 }
 
 async function callGET(url: string) {

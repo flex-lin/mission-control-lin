@@ -107,7 +107,7 @@ const REAL_HOME = process.env.HOME ?? "/root";
 let tmpDir: string;
 
 function makeReq(url: string, init?: RequestInit): NextRequest {
-  return new NextRequest(new URL(url, "http://localhost:3777"), init);
+  return new NextRequest(new URL(url, "http://localhost:31777"), init);
 }
 
 function createTeamConfig(
@@ -410,7 +410,7 @@ describe("B. Team spawner — system prompt persistence on disk", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/route");
-    const req = makeReq("http://localhost:3777/api/teams", {
+    const req = makeReq("http://localhost:31777/api/teams", {
       method: "POST",
       body: JSON.stringify({ name: "existing-build-team", description: "Duplicate" }),
     });
@@ -448,7 +448,7 @@ describe("C. Health endpoint — build-related stuck task detection", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/teams/[name]/health/route");
-    const req = makeReq("http://localhost:3777/api/teams/build-stuck-team/health");
+    const req = makeReq("http://localhost:31777/api/teams/build-stuck-team/health");
     const res = await GET(req, { params: Promise.resolve({ name: "build-stuck-team" }) });
     const body = await res.json();
 
@@ -477,7 +477,7 @@ describe("C. Health endpoint — build-related stuck task detection", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/teams/[name]/health/route");
-    const req = makeReq("http://localhost:3777/api/teams/build-active-team/health");
+    const req = makeReq("http://localhost:31777/api/teams/build-active-team/health");
     const res = await GET(req, { params: Promise.resolve({ name: "build-active-team" }) });
     const body = await res.json();
 
@@ -494,7 +494,7 @@ describe("C. Health endpoint — build-related stuck task detection", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/teams/[name]/health/route");
-    const req = makeReq("http://localhost:3777/api/teams/build-done-team/health");
+    const req = makeReq("http://localhost:31777/api/teams/build-done-team/health");
     const res = await GET(req, { params: Promise.resolve({ name: "build-done-team" }) });
     const body = await res.json();
 
@@ -529,7 +529,7 @@ describe("C. Health endpoint — build-related stuck task detection", () => {
   it("health endpoint returns 404 for non-existent team", async () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/teams/[name]/health/route");
-    const req = makeReq("http://localhost:3777/api/teams/no-such-team/health");
+    const req = makeReq("http://localhost:31777/api/teams/no-such-team/health");
     const res = await GET(req, { params: Promise.resolve({ name: "no-such-team" }) });
     const body = await res.json();
 
@@ -546,7 +546,7 @@ describe("C. Health endpoint — build-related stuck task detection", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/teams/[name]/health/route");
-    const req = makeReq("http://localhost:3777/api/teams/no-sleep-team/health");
+    const req = makeReq("http://localhost:31777/api/teams/no-sleep-team/health");
     const res = await GET(req, { params: Promise.resolve({ name: "no-sleep-team" }) });
     const body = await res.json();
 
@@ -572,7 +572,7 @@ describe("D. Task management during build failure recovery", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const req = makeReq("http://localhost:3777/api/teams/build-verify-team/tasks/1", {
+    const req = makeReq("http://localhost:31777/api/teams/build-verify-team/tasks/1", {
       method: "PATCH",
       body: JSON.stringify({ status: "in_progress" }),
     });
@@ -596,7 +596,7 @@ describe("D. Task management during build failure recovery", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const req = makeReq("http://localhost:3777/api/teams/retry-build-team/tasks/1", {
+    const req = makeReq("http://localhost:31777/api/teams/retry-build-team/tasks/1", {
       method: "PATCH",
       body: JSON.stringify({ status: "pending" }),
     });
@@ -621,7 +621,7 @@ describe("D. Task management during build failure recovery", () => {
 
     // Complete tasks 1 and 2
     for (const id of ["1", "2"]) {
-      const req = makeReq(`http://localhost:3777/api/teams/multi-task-build/tasks/${id}`, {
+      const req = makeReq(`http://localhost:31777/api/teams/multi-task-build/tasks/${id}`, {
         method: "PATCH",
         body: JSON.stringify({ status: "completed" }),
       });
@@ -655,7 +655,7 @@ describe("D. Task management during build failure recovery", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const req = makeReq("http://localhost:3777/api/teams/error-desc-team/tasks/1", {
+    const req = makeReq("http://localhost:31777/api/teams/error-desc-team/tasks/1", {
       method: "PATCH",
       body: JSON.stringify({ description: errorDesc }),
     });
@@ -686,7 +686,7 @@ describe("D. Task management during build failure recovery", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const req = makeReq("http://localhost:3777/api/teams/meta-build-team/tasks/1", {
+    const req = makeReq("http://localhost:31777/api/teams/meta-build-team/tasks/1", {
       method: "PATCH",
       body: JSON.stringify({ metadata: buildMeta }),
     });
@@ -710,7 +710,7 @@ describe("D. Task management during build failure recovery", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const req = makeReq("http://localhost:3777/api/teams/assign-build-team/tasks/1", {
+    const req = makeReq("http://localhost:31777/api/teams/assign-build-team/tasks/1", {
       method: "PATCH",
       body: JSON.stringify({ owner: "backend-dev" }),
     });
@@ -735,7 +735,7 @@ describe("D. Task management during build failure recovery", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const req = makeReq("http://localhost:3777/api/teams/urgent-build-team/tasks/1", {
+    const req = makeReq("http://localhost:31777/api/teams/urgent-build-team/tasks/1", {
       method: "PATCH",
       body: JSON.stringify({ priority: "urgent" }),
     });
@@ -760,7 +760,7 @@ describe("E. Full self-healing lifecycle", () => {
 
     // Step 1: Create team for a project that might have build errors
     const { POST: createTeam } = await import("@/app/api/teams/route");
-    const createReq = makeReq("http://localhost:3777/api/teams", {
+    const createReq = makeReq("http://localhost:31777/api/teams", {
       method: "POST",
       body: JSON.stringify({
         name: "heal-lifecycle",
@@ -774,7 +774,7 @@ describe("E. Full self-healing lifecycle", () => {
     vi.resetModules();
     const { POST: addTask } = await import("@/app/api/teams/[name]/tasks/route");
 
-    const implTask = makeReq("http://localhost:3777/api/teams/heal-lifecycle/tasks", {
+    const implTask = makeReq("http://localhost:31777/api/teams/heal-lifecycle/tasks", {
       method: "POST",
       body: JSON.stringify({ subject: "Implement self-healing feature", owner: "backend-dev" }),
     });
@@ -784,7 +784,7 @@ describe("E. Full self-healing lifecycle", () => {
     // Step 3: Start the implementation task
     vi.resetModules();
     const { PATCH: patchTask } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const startReq = makeReq("http://localhost:3777/api/teams/heal-lifecycle/tasks/1", {
+    const startReq = makeReq("http://localhost:31777/api/teams/heal-lifecycle/tasks/1", {
       method: "PATCH",
       body: JSON.stringify({ status: "in_progress" }),
     });
@@ -793,7 +793,7 @@ describe("E. Full self-healing lifecycle", () => {
     // Step 4: Complete the implementation task
     vi.resetModules();
     const { PATCH: completeTask } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const doneReq = makeReq("http://localhost:3777/api/teams/heal-lifecycle/tasks/1", {
+    const doneReq = makeReq("http://localhost:31777/api/teams/heal-lifecycle/tasks/1", {
       method: "PATCH",
       body: JSON.stringify({ status: "completed" }),
     });
@@ -806,7 +806,7 @@ describe("E. Full self-healing lifecycle", () => {
     // In a real scenario, the leader adds a "run build and fix" task
     vi.resetModules();
     const { POST: addBuildTask } = await import("@/app/api/teams/[name]/tasks/route");
-    const buildTask = makeReq("http://localhost:3777/api/teams/heal-lifecycle/tasks", {
+    const buildTask = makeReq("http://localhost:31777/api/teams/heal-lifecycle/tasks", {
       method: "POST",
       body: JSON.stringify({
         subject: "Run pnpm build and fix any compilation errors",
@@ -825,7 +825,7 @@ describe("E. Full self-healing lifecycle", () => {
     // Step 6: Simulate build failure — update task with error context
     vi.resetModules();
     const { PATCH: updateBuildTask } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const failReq = makeReq("http://localhost:3777/api/teams/heal-lifecycle/tasks/2", {
+    const failReq = makeReq("http://localhost:31777/api/teams/heal-lifecycle/tasks/2", {
       method: "PATCH",
       body: JSON.stringify({
         status: "in_progress",
@@ -842,7 +842,7 @@ describe("E. Full self-healing lifecycle", () => {
     // Step 7: Simulate build fix and second attempt success
     vi.resetModules();
     const { PATCH: fixBuildTask } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const fixReq = makeReq("http://localhost:3777/api/teams/heal-lifecycle/tasks/2", {
+    const fixReq = makeReq("http://localhost:31777/api/teams/heal-lifecycle/tasks/2", {
       method: "PATCH",
       body: JSON.stringify({
         description: "Build succeeded after fixing TS2304 in src/lib/heal.ts",
@@ -854,7 +854,7 @@ describe("E. Full self-healing lifecycle", () => {
     // Step 8: Complete the build task
     vi.resetModules();
     const { PATCH: doneBuildTask } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const completeBuildReq = makeReq("http://localhost:3777/api/teams/heal-lifecycle/tasks/2", {
+    const completeBuildReq = makeReq("http://localhost:31777/api/teams/heal-lifecycle/tasks/2", {
       method: "PATCH",
       body: JSON.stringify({ status: "completed" }),
     });
@@ -907,7 +907,7 @@ describe("E. Full self-healing lifecycle", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/teams/[name]/message/route");
-    const req = makeReq("http://localhost:3777/api/teams/msg-heal-team/message", {
+    const req = makeReq("http://localhost:31777/api/teams/msg-heal-team/message", {
       method: "POST",
       body: JSON.stringify({
         recipient: "backend-dev",
@@ -951,7 +951,7 @@ describe("E. Full self-healing lifecycle", () => {
 
     vi.resetModules();
     const { POST: wakeTeam } = await import("@/app/api/teams/[name]/wake/route");
-    const req = makeReq("http://localhost:3777/api/teams/wake-build-team/wake", {
+    const req = makeReq("http://localhost:31777/api/teams/wake-build-team/wake", {
       method: "POST",
     });
 
@@ -969,7 +969,7 @@ describe("E. Full self-healing lifecycle", () => {
 
     vi.resetModules();
     const { DELETE } = await import("@/app/api/teams/[name]/route");
-    const req = makeReq("http://localhost:3777/api/teams/delete-mid-build", {
+    const req = makeReq("http://localhost:31777/api/teams/delete-mid-build", {
       method: "DELETE",
     });
 
@@ -1126,7 +1126,7 @@ describe("G. Stuck task detection — build verification tasks", () => {
 
     vi.resetModules();
     const { GET: getStuck } = await import("@/app/api/teams/stuck/route");
-    const req = makeReq("http://localhost:3777/api/teams/stuck");
+    const req = makeReq("http://localhost:31777/api/teams/stuck");
     const res = await getStuck(req);
     const body = await res.json();
 
@@ -1149,7 +1149,7 @@ describe("G. Stuck task detection — build verification tasks", () => {
     const { POST: respondToTask } = await import(
       "@/app/api/teams/[name]/tasks/[id]/respond/route"
     );
-    const req = makeReq("http://localhost:3777/api/teams/cancel-build-team/tasks/1/respond", {
+    const req = makeReq("http://localhost:31777/api/teams/cancel-build-team/tasks/1/respond", {
       method: "POST",
       body: JSON.stringify({ action: "cancel" }),
     });
@@ -1182,7 +1182,7 @@ describe("G. Stuck task detection — build verification tasks", () => {
       "@/app/api/teams/[name]/tasks/[id]/respond/route"
     );
     const req = makeReq(
-      "http://localhost:3777/api/teams/reassign-build-team/tasks/1/respond",
+      "http://localhost:31777/api/teams/reassign-build-team/tasks/1/respond",
       {
         method: "POST",
         body: JSON.stringify({ action: "reassign", assignTo: "backend-dev" }),
@@ -1217,7 +1217,7 @@ describe("G. Stuck task detection — build verification tasks", () => {
       "@/app/api/teams/[name]/tasks/[id]/respond/route"
     );
     const req = makeReq(
-      "http://localhost:3777/api/teams/msg-stuck-build/tasks/1/respond",
+      "http://localhost:31777/api/teams/msg-stuck-build/tasks/1/respond",
       {
         method: "POST",
         body: JSON.stringify({
@@ -1263,7 +1263,7 @@ describe("H. Edge cases and error handling", () => {
 
     vi.resetModules();
     const { PATCH: reorder } = await import("@/app/api/teams/[name]/tasks/reorder/route");
-    const req = makeReq("http://localhost:3777/api/teams/reorder-build-team/tasks/reorder", {
+    const req = makeReq("http://localhost:31777/api/teams/reorder-build-team/tasks/reorder", {
       method: "PATCH",
       // Move build task to be second, not last
       body: JSON.stringify({ taskIds: ["1", "3", "2"] }),
@@ -1286,7 +1286,7 @@ describe("H. Edge cases and error handling", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/teams/[name]/tasks/[id]/route");
-    const req = makeReq("http://localhost:3777/api/teams/invalid-build-status/tasks/1", {
+    const req = makeReq("http://localhost:31777/api/teams/invalid-build-status/tasks/1", {
       method: "PATCH",
       body: JSON.stringify({ status: "build_failed" }), // Invalid status
     });
@@ -1376,7 +1376,7 @@ describe("H. Edge cases and error handling", () => {
 
     vi.resetModules();
     const { GET: getTeam } = await import("@/app/api/teams/[name]/route");
-    const req = makeReq("http://localhost:3777/api/teams/detail-build-team");
+    const req = makeReq("http://localhost:31777/api/teams/detail-build-team");
     const res = await getTeam(req, {
       params: Promise.resolve({ name: "detail-build-team" }),
     });

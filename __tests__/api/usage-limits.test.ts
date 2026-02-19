@@ -28,7 +28,7 @@ vi.mock("@/lib/db", () => ({
 
 function makeRequest(body?: Record<string, unknown>) {
   return new NextRequest(
-    new URL("http://localhost:3777/api/settings/usage-limits"),
+    new URL("http://localhost:31777/api/settings/usage-limits"),
     body
       ? { method: "PUT", body: JSON.stringify(body) }
       : undefined

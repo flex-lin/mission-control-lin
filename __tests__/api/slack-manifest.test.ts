@@ -8,7 +8,7 @@ import type { SlackManifest } from "@/types";
  */
 
 function makeReq(params?: Record<string, string>) {
-  const url = new URL("http://localhost:3777/api/slack/manifest");
+  const url = new URL("http://localhost:31777/api/slack/manifest");
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       url.searchParams.set(k, v);

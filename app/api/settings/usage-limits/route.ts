@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ok, err, serverError } from "@/lib/api-helpers";
 import type { UsageLimits } from "@/types";
@@ -19,7 +19,7 @@ const PREF_KEY_MAP: Record<keyof UsageLimits, string> = {
 };
 
 // GET /api/settings/usage-limits — read configured usage limits
-export async function GET(): Promise<NextResponse> {
+export async function GET() {
   try {
     const prefs = await db.preference.findMany({
       where: { key: { startsWith: "usage_limit_" } },
@@ -41,7 +41,7 @@ export async function GET(): Promise<NextResponse> {
 }
 
 // PUT /api/settings/usage-limits — save usage limits
-export async function PUT(req: NextRequest): Promise<NextResponse> {
+export async function PUT(req: NextRequest) {
   try {
     const body = (await req.json()) as Partial<UsageLimits>;
 

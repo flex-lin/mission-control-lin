@@ -139,7 +139,7 @@ function makeSlashReq(
     headers["x-slack-signature"] = computeSlackSignature(bodyStr, timestamp, secret);
   }
 
-  return new NextRequest(new URL("http://localhost:3777/api/slack/slash"), {
+  return new NextRequest(new URL("http://localhost:31777/api/slack/slash"), {
     method: "POST",
     headers,
     body: bodyStr,

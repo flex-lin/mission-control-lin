@@ -289,7 +289,7 @@ describe("End-to-End: One-Team-Per-Task", () => {
     });
 
     function makeRequest(body: Record<string, unknown>) {
-      return new NextRequest("http://localhost:3777/api/teams/spawn", {
+      return new NextRequest("http://localhost:31777/api/teams/spawn", {
         method: "POST",
         body: JSON.stringify(body),
         headers: { "Content-Type": "application/json" },

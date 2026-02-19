@@ -50,7 +50,7 @@ export async function POST(
       `status "healed" and the resolution description once fixed.`
 
     // Submit to queue
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:31777"
     const queueRes = await fetch(`${baseUrl}/api/queue`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

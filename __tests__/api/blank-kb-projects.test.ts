@@ -56,7 +56,7 @@ function makeDbRecord(overrides: Record<string, unknown> = {}) {
 }
 
 function makeRequest(urlPath: string, init?: RequestInit) {
-  return new NextRequest(new URL(urlPath, "http://localhost:3777"), init);
+  return new NextRequest(new URL(urlPath, "http://localhost:31777"), init);
 }
 
 async function callProjectsGET() {

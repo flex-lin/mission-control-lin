@@ -189,6 +189,53 @@ describe("claude-files", () => {
     });
   });
 
+  describe("readTeamPlan", () => {
+    it("returns null when no plan file exists", async () => {
+      const mod = await getModule();
+      expect(mod.readTeamPlan("nonexistent-team")).toBeNull();
+    });
+
+    it("reads a valid plan.json file", async () => {
+      const teamsDir = path.join(tmpDir, ".claude", "teams", "plan-team");
+      fs.mkdirSync(teamsDir, { recursive: true });
+      const plan = {
+        teamName: "plan-team",
+        description: "A planned team",
+        personas: [
+          { name: "dev", role: "Developer", agentType: "general-purpose", description: "Writes code" },
+        ],
+        initialTasks: [
+          { subject: "Build feature", description: "Build it", assignTo: "dev" },
+        ],
+      };
+      fs.writeFileSync(path.join(teamsDir, "plan.json"), JSON.stringify(plan));
+
+      const mod = await getModule();
+      const result = mod.readTeamPlan("plan-team");
+      expect(result).not.toBeNull();
+      expect(result!.teamName).toBe("plan-team");
+      expect(result!.description).toBe("A planned team");
+      expect(result!.personas).toHaveLength(1);
+      expect(result!.personas[0].name).toBe("dev");
+      expect(result!.initialTasks).toHaveLength(1);
+      expect(result!.initialTasks[0].subject).toBe("Build feature");
+    });
+
+    it("returns null for malformed plan.json", async () => {
+      const teamsDir = path.join(tmpDir, ".claude", "teams", "bad-plan");
+      fs.mkdirSync(teamsDir, { recursive: true });
+      fs.writeFileSync(path.join(teamsDir, "plan.json"), "not valid json{{{");
+
+      const mod = await getModule();
+      expect(mod.readTeamPlan("bad-plan")).toBeNull();
+    });
+
+    it("rejects team names with path traversal", async () => {
+      const mod = await getModule();
+      expect(() => mod.readTeamPlan("../etc")).toThrow("Invalid name");
+    });
+  });
+
   describe("getTeamLastActivity", () => {
     it("returns null when no tasks exist", async () => {
       const mod = await getModule();

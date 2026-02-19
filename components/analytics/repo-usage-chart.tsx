@@ -9,7 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts"
-import type { TeamEntry } from "@/types"
+import type { RepoEntry } from "@/types"
 
 const TOOLTIP_STYLE = {
   contentStyle: {
@@ -21,7 +21,7 @@ const TOOLTIP_STYLE = {
 }
 
 interface RepoUsageChartProps {
-  data: TeamEntry[]
+  data: RepoEntry[]
 }
 
 export function RepoUsageChart({ data }: RepoUsageChartProps) {
@@ -37,7 +37,7 @@ export function RepoUsageChart({ data }: RepoUsageChartProps) {
     .sort((a, b) => b.estimatedCost - a.estimatedCost)
     .slice(0, 12)
     .map((d) => ({
-      name: d.teamName,
+      name: d.repoName,
       cost: parseFloat(d.estimatedCost.toFixed(4)),
       tokens: d.totalTokens,
       requests: d.requests,

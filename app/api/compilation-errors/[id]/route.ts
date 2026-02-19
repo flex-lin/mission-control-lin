@@ -3,7 +3,7 @@
  * PATCH  /api/compilation-errors/[id]  — update status or fields
  * DELETE /api/compilation-errors/[id]  — remove error record
  */
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { ok, err, notFound, serverError } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
 
@@ -12,7 +12,7 @@ const VALID_STATUSES = ["pending", "healing", "healed", "failed", "skipped"];
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { id } = await params;
     const numId = parseInt(id, 10);
@@ -35,7 +35,7 @@ export async function GET(
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { id } = await params;
     const numId = parseInt(id, 10);
@@ -76,7 +76,7 @@ export async function PATCH(
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { id } = await params;
     const numId = parseInt(id, 10);

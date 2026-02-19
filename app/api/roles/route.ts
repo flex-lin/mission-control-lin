@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ok, created, serverError, err } from "@/lib/api-helpers";
 import type { AgentType } from "@/types";
@@ -92,7 +92,7 @@ async function ensurePresetsSeeded(): Promise<void> {
 
 // GET /api/roles — list all roles (presets + custom)
 // Optional query: ?preset=true|false to filter by preset status
-export async function GET(req: NextRequest): Promise<NextResponse> {
+export async function GET(req: NextRequest) {
   try {
     await ensurePresetsSeeded();
 
@@ -114,7 +114,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 }
 
 // POST /api/roles — create a custom role
-export async function POST(req: NextRequest): Promise<NextResponse> {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as {
       name?: string;

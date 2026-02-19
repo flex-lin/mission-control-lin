@@ -2,15 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/lib/db";
 import { listTeams, readTeamConfig, readTaskList } from "@/lib/claude-files";
+import { createOAuthClient } from "@/lib/claude-oauth";
 import { serverError } from "@/lib/api-helpers";
 import fs from "fs";
 import path from "path";
 
 const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+function getAnthropicClient(): Anthropic {
+  // Prefer OAuth credentials (from Claude Code login), fall back to API key
+  const oauthClient = createOAuthClient();
+  if (oauthClient) return oauthClient;
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+}
 
 // Tool definitions exposed to the chatbot
 const TOOLS: Anthropic.Tool[] = [
@@ -286,7 +290,7 @@ async function executeTool(
       case "create_team": {
         const { name, description } = toolInput as { name: string; description?: string };
         const res = await fetch(
-          new URL("/api/teams", process.env.NEXTAUTH_URL ?? "http://localhost:3777"),
+          new URL("/api/teams", process.env.NEXTAUTH_URL ?? "http://localhost:31777"),
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -495,7 +499,7 @@ async function executeTool(
 
       case "get_team_health": {
         const { teamName } = toolInput as { teamName: string };
-        const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3777";
+        const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:31777";
         const res = await fetch(`${baseUrl}/api/teams/${encodeURIComponent(teamName)}/health`);
         if (!res.ok) return JSON.stringify({ error: `Failed to get health for "${teamName}"` });
         const data = await res.json() as Record<string, unknown>;
@@ -504,7 +508,7 @@ async function executeTool(
 
       case "wake_team": {
         const { teamName, message } = toolInput as { teamName: string; message?: string };
-        const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3777";
+        const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:31777";
         const res = await fetch(
           `${baseUrl}/api/teams/${encodeURIComponent(teamName)}/wake`,
           {
@@ -585,7 +589,7 @@ async function executeTool(
           owner?: string;
           priority?: string;
         };
-        const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3777";
+        const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:31777";
         const body: Record<string, unknown> = {};
         if (status) body.status = status;
         if (owner) body.owner = owner;
@@ -660,6 +664,7 @@ Be concise and helpful. When performing actions, confirm what you did. When data
     while (iteration < MAX_ITERATIONS) {
       iteration++;
 
+      const anthropic = getAnthropicClient();
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-5",
         max_tokens: 4096,

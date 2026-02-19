@@ -91,18 +91,18 @@ function maskSecret(value: string): string {
 
 // ── Slack API Client ──────────────────────────────────────────────────────────
 
-export interface SlackApiError {
+interface SlackApiError {
   ok: false;
   error: string;
 }
 
-export interface SlackApiSuccess {
+interface SlackApiSuccess {
   ok: true;
   ts?: string;
   channel?: string;
 }
 
-export type SlackApiResult = SlackApiSuccess | SlackApiError;
+type SlackApiResult = SlackApiSuccess | SlackApiError;
 
 /**
  * Send a plain-text message to a Slack channel.
@@ -119,28 +119,6 @@ export async function sendSlackMessage(
       Authorization: `Bearer ${botToken}`,
     },
     body: JSON.stringify({ channel, text }),
-  });
-
-  const data = (await res.json()) as SlackApiResult;
-  return data;
-}
-
-/**
- * Send a Slack Block Kit message to a channel.
- */
-export async function sendSlackBlocks(
-  channel: string,
-  blocks: unknown[],
-  text: string,
-  botToken: string
-): Promise<SlackApiResult> {
-  const res = await fetch("https://slack.com/api/chat.postMessage", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      Authorization: `Bearer ${botToken}`,
-    },
-    body: JSON.stringify({ channel, blocks, text }),
   });
 
   const data = (await res.json()) as SlackApiResult;
@@ -169,19 +147,3 @@ export async function replyToSlashCommand(
   });
 }
 
-// ── Block Kit Helpers ─────────────────────────────────────────────────────────
-
-export function markdownBlock(text: string): unknown {
-  return { type: "section", text: { type: "mrkdwn", text } };
-}
-
-export function dividerBlock(): unknown {
-  return { type: "divider" };
-}
-
-export function headerBlock(text: string): unknown {
-  return {
-    type: "header",
-    text: { type: "plain_text", text, emoji: true },
-  };
-}

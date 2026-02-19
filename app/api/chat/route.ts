@@ -2,8 +2,12 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { listTeams, readTeamConfig, readTaskList } from "@/lib/claude-files";
 import { db } from "@/lib/db";
-import { createOAuthClient } from "@/lib/claude-oauth";
+import { killAllTeamSessions } from "@/lib/tmux-manager";
 import type { KnowledgeBaseEntry } from "@/types";
+import fs from "fs";
+import path from "path";
+
+const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
 
 // ── Tool definitions for Claude ──────────────────────────────────────────────
 
@@ -42,6 +46,36 @@ const tools: Anthropic.Tool[] = [
         team_name: {
           type: "string",
           description: "The name of the team",
+        },
+      },
+      required: ["team_name"],
+    },
+  },
+  {
+    name: "delete_team",
+    description:
+      "Permanently delete an agent team. This kills all tmux sessions for the team and removes the team and task directories. Use with caution — this cannot be undone.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        team_name: {
+          type: "string",
+          description: "The name of the team to delete",
+        },
+      },
+      required: ["team_name"],
+    },
+  },
+  {
+    name: "shutdown_team",
+    description:
+      "Gracefully shut down a team by killing all its tmux sessions, but keeping the team config and task files intact for review.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        team_name: {
+          type: "string",
+          description: "The name of the team to shut down",
         },
       },
       required: ["team_name"],
@@ -122,6 +156,11 @@ const tools: Anthropic.Tool[] = [
 
 // ── Tool execution ───────────────────────────────────────────────────────────
 
+function safeTeamName(name: string): string | null {
+  if (!/^[\w-]+$/.test(name)) return null;
+  return name;
+}
+
 async function executeTool(
   name: string,
   input: Record<string, unknown>
@@ -201,6 +240,40 @@ async function executeTool(
         null,
         2
       );
+    }
+
+    case "delete_team": {
+      const teamName = input.team_name as string;
+      const safe = safeTeamName(teamName);
+      if (!safe) return JSON.stringify({ error: `Invalid team name: "${teamName}"` });
+
+      const teamDir = path.join(CLAUDE_DIR, "teams", safe);
+      if (!fs.existsSync(path.join(teamDir, "config.json"))) {
+        return JSON.stringify({ error: `Team "${teamName}" not found` });
+      }
+
+      killAllTeamSessions(safe);
+
+      const tasksDir = path.join(CLAUDE_DIR, "tasks", safe);
+      if (fs.existsSync(teamDir)) fs.rmSync(teamDir, { recursive: true });
+      if (fs.existsSync(tasksDir)) fs.rmSync(tasksDir, { recursive: true });
+
+      return JSON.stringify({ success: true, team: safe, action: "deleted" });
+    }
+
+    case "shutdown_team": {
+      const teamName = input.team_name as string;
+      const safe = safeTeamName(teamName);
+      if (!safe) return JSON.stringify({ error: `Invalid team name: "${teamName}"` });
+
+      const teamDir = path.join(CLAUDE_DIR, "teams", safe);
+      if (!fs.existsSync(path.join(teamDir, "config.json"))) {
+        return JSON.stringify({ error: `Team "${teamName}" not found` });
+      }
+
+      killAllTeamSessions(safe);
+
+      return JSON.stringify({ success: true, team: safe, action: "shutdown", message: "All tmux sessions killed. Team config and tasks preserved." });
     }
 
     case "submit_queue_task": {
@@ -303,7 +376,7 @@ async function executeTool(
 const SYSTEM_PROMPT = `You are Mission Control Assistant, an AI helper for the Mission Control dashboard — a local tool for managing Claude Code agent teams, tracking token usage, and monitoring API costs.
 
 You can help users with:
-- **Team Management**: List active teams, check team health/status, view team members and their roles
+- **Team Management**: List active teams, check team health/status, view team members and their roles, shut down or delete teams
 - **Task Monitoring**: View tasks within teams, check task progress and statuses
 - **Task Queue**: Submit new tasks to the automated queue, list queued tasks and their statuses
 - **Knowledge Base**: Search registered projects, get project details
@@ -313,6 +386,7 @@ When answering:
 - Use the available tools to fetch real-time data rather than guessing
 - Format data clearly when presenting lists or statuses
 - If a user asks to do something you can't do with your tools, explain what you can help with instead
+- When deleting or shutting down teams, confirm the action was successful
 
 You are running locally — there are no authentication concerns.`;
 
@@ -323,24 +397,11 @@ interface ChatMessage {
   content: string;
 }
 
-function resolveClient(preferred: "api" | "claude-oauth"): Anthropic | null {
-  if (preferred === "claude-oauth") {
-    const oauth = createOAuthClient();
-    if (oauth) return oauth;
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (apiKey) return new Anthropic({ apiKey });
-    return null;
-  }
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (apiKey) return new Anthropic({ apiKey });
-  const oauth = createOAuthClient();
-  if (oauth) return oauth;
-  return null;
-}
-
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as { messages?: ChatMessage[] };
+    const body = (await req.json()) as {
+      messages?: ChatMessage[];
+    };
 
     if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
       return new Response(
@@ -349,25 +410,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Determine which provider to use
-    let chatProvider: "api" | "claude-oauth" = "claude-oauth";
-    try {
-      const providerPref = await db.preference.findUnique({ where: { key: "chatProvider" } });
-      if (providerPref?.value === "api" || providerPref?.value === "claude-oauth") {
-        chatProvider = providerPref.value;
-      }
-    } catch {
-      // DB read failed — use default
-    }
-
-    // Try preferred provider first, then fallback
-    const client = resolveClient(chatProvider);
-    if (!client) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "No authentication available. Configure OAuth or set ANTHROPIC_API_KEY." }),
+        JSON.stringify({ error: "ANTHROPIC_API_KEY is not configured" }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       );
     }
+
+    const client = new Anthropic({ apiKey });
 
     // Build the message list for the API
     const messages: Anthropic.MessageParam[] = body.messages.map((m) => ({
@@ -383,14 +434,7 @@ export async function POST(req: NextRequest) {
           await processConversation(client, messages, controller, encoder);
         } catch (e) {
           console.error("[chat] stream error:", e instanceof Error ? e.message : e);
-          // Extract a user-friendly error message
-          let errorMsg = "Internal error";
-          if (e instanceof Anthropic.APIError) {
-            const body = e.error as { error?: { message?: string } } | undefined;
-            errorMsg = body?.error?.message ?? e.message;
-          } else if (e instanceof Error) {
-            errorMsg = e.message;
-          }
+          const errorMsg = e instanceof Error ? e.message : "Internal error";
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ type: "error", error: errorMsg })}\n\n`)
           );
@@ -422,7 +466,7 @@ async function processConversation(
   messages: Anthropic.MessageParam[],
   controller: ReadableStreamDefaultController,
   encoder: TextEncoder
-) {
+): Promise<void> {
   const MAX_TOOL_ROUNDS = 10;
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -437,13 +481,11 @@ async function processConversation(
 
     let hasToolUse = false;
     const toolUseBlocks: Anthropic.ContentBlock[] = [];
-    let accumulatedText = "";
 
     for await (const event of stream) {
       if (event.type === "content_block_delta") {
         const delta = event.delta;
         if ("text" in delta && delta.text) {
-          accumulatedText += delta.text;
           controller.enqueue(
             encoder.encode(
               `data: ${JSON.stringify({ type: "text", text: delta.text })}\n\n`
@@ -464,15 +506,12 @@ async function processConversation(
     }
 
     if (!hasToolUse) {
-      // No tool calls — we're done
       break;
     }
 
     // Process tool calls and continue the conversation
-    // Add assistant message with all content blocks
     messages.push({ role: "assistant", content: finalMessage.content });
 
-    // Execute each tool and collect results
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
     for (const block of toolUseBlocks) {
       if (block.type !== "tool_use") continue;
@@ -487,6 +526,7 @@ async function processConversation(
         block.name,
         block.input as Record<string, unknown>
       );
+
       toolResults.push({
         type: "tool_result",
         tool_use_id: block.id,
@@ -494,8 +534,6 @@ async function processConversation(
       });
     }
 
-    // Add tool results as user message
     messages.push({ role: "user", content: toolResults });
-    // Loop to get the model's response to the tool results
   }
 }

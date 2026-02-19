@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { Team, Teammate, TeamTask, Settings, Project, ProjectContext, Skill } from "@/types";
+import type { Team, Teammate, TeamTask, TeamPlan, Settings, Project, ProjectContext, Skill } from "@/types";
 
 const CLAUDE_DIR = path.join(process.env.HOME ?? "/root", ".claude");
 
@@ -204,6 +204,14 @@ export function listTeams(): Team[] {
   }
 
   return teams;
+}
+
+// ── Plan functions ────────────────────────────────────────────────────────────
+
+export function readTeamPlan(teamName: string): TeamPlan | null {
+  const safe = safeName(teamName);
+  const planPath = path.join(teamsDir(), safe, "plan.json");
+  return readJson<TeamPlan>(planPath);
 }
 
 // ── Task functions ────────────────────────────────────────────────────────────
@@ -756,35 +764,6 @@ export function listSkills(): Skill[] {
   }
 
   return skills;
-}
-
-export function readSkill(folderName: string): Skill | null {
-  const dir = skillsDir();
-  const skillDir = path.join(dir, folderName);
-  if (!fs.existsSync(skillDir)) return null;
-
-  let skillFile: string | null = null;
-  try {
-    const files = fs.readdirSync(skillDir);
-    skillFile = files.find((f) => f.toLowerCase() === "skill.md") ?? null;
-  } catch {
-    return null;
-  }
-
-  if (!skillFile) return null;
-
-  try {
-    const raw = fs.readFileSync(path.join(skillDir, skillFile), "utf-8");
-    const { attrs, body } = parseFrontMatter(raw);
-    return {
-      folderName,
-      name: attrs.name || folderName,
-      description: attrs.description || "",
-      content: body,
-    };
-  } catch {
-    return null;
-  }
 }
 
 export function readProjectContext(projectDirName: string): ProjectContext {

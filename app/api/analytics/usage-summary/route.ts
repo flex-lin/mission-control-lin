@@ -1,11 +1,10 @@
-import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { ok, serverError } from "@/lib/api-helpers";
 import { computeCost } from "@/lib/pricing";
 import type { UsageLimits, UsageSummary } from "@/types";
 
 // GET /api/analytics/usage-summary — current usage vs configured limits
-export async function GET(): Promise<NextResponse> {
+export async function GET() {
   try {
     const [limits, dailyUsage, monthlyUsage] = await Promise.all([
       loadLimits(),

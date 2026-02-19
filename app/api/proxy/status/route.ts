@@ -27,7 +27,7 @@ function checkPort(port: number): Promise<boolean> {
 export async function GET() {
   try {
     const settings = readSettings()
-    const port = settings.proxyConfig?.port ?? 8787
+    const port = settings.proxyConfig?.port ?? 28787
     const targetUrl = settings.proxyConfig?.targetUrl ?? "https://api.anthropic.com"
     const running = await checkPort(port)
 

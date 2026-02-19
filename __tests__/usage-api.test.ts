@@ -701,7 +701,7 @@ describe("GET /api/usage/status — route handler", () => {
     // getAdminApiKey will return null (env not set, db mock returns null)
     delete process.env.ANTHROPIC_ADMIN_API_KEY;
 
-    const req = new Request("http://localhost:3777/api/usage/status");
+    const req = new Request("http://localhost:31777/api/usage/status");
     const res = await GET();
 
     expect(res.status).toBe(200);
@@ -747,14 +747,14 @@ describe("POST /api/usage/sync — route handler", () => {
 
     const { POST } = await import("@/app/api/usage/sync/route");
 
-    const req = new Request("http://localhost:3777/api/usage/sync", {
+    const req = new Request("http://localhost:31777/api/usage/sync", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     }) as any;
     // NextRequest needs nextUrl
     Object.defineProperty(req, "nextUrl", {
-      get: () => new URL("http://localhost:3777/api/usage/sync"),
+      get: () => new URL("http://localhost:31777/api/usage/sync"),
     });
 
     const res = await POST(req);
@@ -769,9 +769,9 @@ describe("GET /api/usage/summary — route handler", () => {
   it("returns 200 with empty data when no records exist", async () => {
     const { GET } = await import("@/app/api/usage/summary/route");
 
-    const req = new Request("http://localhost:3777/api/usage/summary?period=7d");
+    const req = new Request("http://localhost:31777/api/usage/summary?period=7d");
     Object.defineProperty(req, "nextUrl", {
-      get: () => new URL("http://localhost:3777/api/usage/summary?period=7d"),
+      get: () => new URL("http://localhost:31777/api/usage/summary?period=7d"),
     });
 
     const res = await GET(req as any);
@@ -791,9 +791,9 @@ describe("GET /api/usage/by-model — route handler", () => {
   it("returns 200 with empty data when no records", async () => {
     const { GET } = await import("@/app/api/usage/by-model/route");
 
-    const req = new Request("http://localhost:3777/api/usage/by-model?period=7d");
+    const req = new Request("http://localhost:31777/api/usage/by-model?period=7d");
     Object.defineProperty(req, "nextUrl", {
-      get: () => new URL("http://localhost:3777/api/usage/by-model?period=7d"),
+      get: () => new URL("http://localhost:31777/api/usage/by-model?period=7d"),
     });
 
     const res = await GET(req as any);
@@ -808,9 +808,9 @@ describe("GET /api/usage/by-workspace — route handler", () => {
   it("returns 200 with empty data when no records", async () => {
     const { GET } = await import("@/app/api/usage/by-workspace/route");
 
-    const req = new Request("http://localhost:3777/api/usage/by-workspace?period=7d");
+    const req = new Request("http://localhost:31777/api/usage/by-workspace?period=7d");
     Object.defineProperty(req, "nextUrl", {
-      get: () => new URL("http://localhost:3777/api/usage/by-workspace?period=7d"),
+      get: () => new URL("http://localhost:31777/api/usage/by-workspace?period=7d"),
     });
 
     const res = await GET(req as any);
@@ -825,9 +825,9 @@ describe("GET /api/usage/claude-code — route handler", () => {
   it("returns 200 with zeroed summary when no data", async () => {
     const { GET } = await import("@/app/api/usage/claude-code/route");
 
-    const req = new Request("http://localhost:3777/api/usage/claude-code?period=7d");
+    const req = new Request("http://localhost:31777/api/usage/claude-code?period=7d");
     Object.defineProperty(req, "nextUrl", {
-      get: () => new URL("http://localhost:3777/api/usage/claude-code?period=7d"),
+      get: () => new URL("http://localhost:31777/api/usage/claude-code?period=7d"),
     });
 
     const res = await GET(req as any);

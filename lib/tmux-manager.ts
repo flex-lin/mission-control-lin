@@ -184,20 +184,6 @@ export function killAllTeamSessions(teamName: string): string[] {
   return killed;
 }
 
-export async function killAllTeamSessionsAsync(teamName: string): Promise<string[]> {
-  const killed: string[] = [];
-  const liveSessions = await listTeamSessionsAsync(teamName);
-  for (const s of liveSessions) {
-    killed.push(s.sessionName);
-  }
-  const leaderSession = getSessionName(teamName, "leader");
-  if (!killed.includes(leaderSession)) {
-    killed.push(leaderSession);
-  }
-  await Promise.allSettled(killed.map((s) => killSessionAsync(s)));
-  return killed;
-}
-
 // ── Async variants (non-blocking, for API routes) ──────────────────────────
 
 export async function killSessionAsync(sessionName: string): Promise<void> {

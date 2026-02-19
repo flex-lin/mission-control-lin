@@ -48,11 +48,6 @@ export function SmartCreateDialog() {
   const [queuedTasks, setQueuedTasks] = useState<QueuedTask[]>([])
   const [selectedTaskId, setSelectedTaskId] = useState<string>("")
 
-  // Fetch queued tasks when dialog opens
-  useState(() => {
-    // Will be populated on open
-  })
-
   function resetState() {
     setStep("goal")
     setGoal("")

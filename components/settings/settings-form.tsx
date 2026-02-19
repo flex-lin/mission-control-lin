@@ -21,7 +21,7 @@ import type { Settings } from "@/types"
 import { Save, RotateCcw, Moon, MessageSquare, Copy, CheckCheck, ExternalLink, ChevronDown, ChevronRight, Plug, Unplug, Loader2, Bot } from "lucide-react"
 import type { SlackConfig, SlackConfigInput } from "@/types"
 
-const DEFAULT_PROXY_PORT = 8787
+const DEFAULT_PROXY_PORT = 28787
 const DEFAULT_PROXY_TARGET = "https://api.anthropic.com"
 
 const defaultSettings: Settings = {

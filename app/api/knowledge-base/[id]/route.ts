@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ok, err, notFound, serverError } from "@/lib/api-helpers";
 import type { KnowledgeBaseEntry } from "@/types";
@@ -11,7 +11,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 export async function PATCH(
   req: NextRequest,
   { params }: RouteContext
-): Promise<NextResponse> {
+) {
   try {
     const { id: rawId } = await params;
     const id = parseInt(rawId, 10);
@@ -109,7 +109,7 @@ export async function PATCH(
 export async function DELETE(
   _req: NextRequest,
   { params }: RouteContext
-): Promise<NextResponse> {
+) {
   try {
     const { id: rawId } = await params;
     const id = parseInt(rawId, 10);

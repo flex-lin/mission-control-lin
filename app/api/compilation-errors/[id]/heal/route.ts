@@ -10,7 +10,7 @@
  *
  * Returns a HealingResult object.
  */
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { ok, err, notFound, serverError } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
 import { healError } from "@/lib/self-healer";
@@ -18,7 +18,7 @@ import { healError } from "@/lib/self-healer";
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { id } = await params;
     const numId = parseInt(id, 10);

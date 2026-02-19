@@ -119,7 +119,7 @@ async function handleMessageEvent(
   botToken: string
 ): Promise<void> {
   try {
-    const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3777";
+    const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:31777";
 
     // Forward the user's message to the Mission Control chatbot
     const chatRes = await fetch(`${baseUrl}/api/chatbot`, {

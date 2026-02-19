@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { readTeamConfig, readTaskList } from "@/lib/claude-files";
 import { ok, notFound, serverError } from "@/lib/api-helpers";
 import { resumeTeamAsLeader, personaToLaunchable, getLeaderSessionName } from "@/lib/agent-launcher";
@@ -20,7 +20,7 @@ function safeName(name: string): string {
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ name: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { name } = await params;
     const safe = safeName(name);

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ok, serverError, err, notFound } from "@/lib/api-helpers";
 import type { AgentType } from "@/types";
@@ -9,7 +9,7 @@ const VALID_AGENT_TYPES: AgentType[] = ["general-purpose", "Bash", "Explore", "P
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { id } = await params;
     const numericId = parseInt(id, 10);
@@ -32,7 +32,7 @@ export async function GET(
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { id } = await params;
     const numericId = parseInt(id, 10);
@@ -87,7 +87,7 @@ export async function PUT(
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { id } = await params;
     const numericId = parseInt(id, 10);

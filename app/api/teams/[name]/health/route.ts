@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { readTeamConfig, readTaskList, getTeamLastActivity } from "@/lib/claude-files";
 import { ok, err, notFound, serverError, safeName } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
@@ -36,7 +36,7 @@ interface MemberHealth {
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ name: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { name } = await params;
     if (!safeName(name)) return err("Invalid team name", "VALIDATION_ERROR");
@@ -194,7 +194,7 @@ export async function GET(
         // System likely slept and the tmux session died
         recordSleepEvent(name);
 
-        const { shouldWake, reason } = shouldAutoWake(name);
+        const { shouldWake } = shouldAutoWake(name);
         if (shouldWake) {
           // Attempt auto-wake: rebuild personas and relaunch leader
           const hasPendingTasks = tasks.some(

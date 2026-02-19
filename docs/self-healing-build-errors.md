@@ -233,10 +233,10 @@ When ALL tasks reach status=completed:
    - After all teammates confirm shutdown, use TeamDelete to clean up
    - Say "All tasks complete. Verified and committed." and stop
 4. If the build FAILS:
-   - Call POST http://localhost:3777/api/build-errors with the full error output
+   - Call POST http://localhost:31777/api/build-errors with the full error output
    - Wait for the response which will include a buildErrorId
    - Say "Build failed. Self-healing triggered (buildErrorId: <id>). Waiting for healer team."
-   - Poll GET http://localhost:3777/api/build-errors/<id> every 60 seconds
+   - Poll GET http://localhost:31777/api/build-errors/<id> every 60 seconds
    - When status becomes "resolved", re-run the build to confirm
    - Then proceed with commit and cleanup
    - If status becomes "failed" (all retries exhausted), report the error and stop

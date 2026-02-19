@@ -554,10 +554,10 @@ For local use, a tunnel is needed to expose the Next.js server:
 
 ```bash
 # Option 1: cloudflared
-cloudflared tunnel --url http://localhost:3777
+cloudflared tunnel --url http://localhost:31777
 
 # Option 2: ngrok
-ngrok http 3777
+ngrok http 31777
 ```
 
 The tunnel URL is used as the base URL in the Slack App settings.

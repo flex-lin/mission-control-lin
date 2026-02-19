@@ -53,8 +53,8 @@ vi.mock("fs", async () => {
 
 function makeRequest(period?: string) {
   const url = period
-    ? `http://localhost:3777/api/analytics/by-task?period=${period}`
-    : "http://localhost:3777/api/analytics/by-task";
+    ? `http://localhost:31777/api/analytics/by-task?period=${period}`
+    : "http://localhost:31777/api/analytics/by-task";
   return new NextRequest(new URL(url));
 }
 

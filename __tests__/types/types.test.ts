@@ -80,10 +80,10 @@ describe("type contracts", () => {
       refreshInterval: 5000,
       proxyConfig: {
         enabled: true,
-        port: 8787,
+        port: 28787,
         targetUrl: "https://api.anthropic.com",
       },
     };
-    expect(fullSettings.proxyConfig?.port).toBe(8787);
+    expect(fullSettings.proxyConfig?.port).toBe(28787);
   });
 });

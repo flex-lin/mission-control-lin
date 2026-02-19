@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { readTeamConfig, readTaskList } from "@/lib/claude-files";
+import { NextRequest } from "next/server";
+import { readTeamConfig, readTaskList, readTeamPlan } from "@/lib/claude-files";
 import { ok, notFound, serverError } from "@/lib/api-helpers";
 import { killAllTeamSessions } from "@/lib/tmux-manager";
 import fs from "fs";
@@ -18,14 +18,15 @@ function safeName(name: string): string {
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ name: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { name } = await params;
     const team = readTeamConfig(name);
     if (!team) return notFound(`Team "${name}" not found`);
 
     const tasks = readTaskList(name);
-    return ok({ ...team, tasks });
+    const plan = readTeamPlan(name);
+    return ok({ ...team, tasks, plan });
   } catch (e) {
     return serverError(e);
   }
@@ -35,7 +36,7 @@ export async function GET(
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ name: string }> }
-): Promise<NextResponse> {
+) {
   try {
     const { name } = await params;
     const safe = safeName(name);

@@ -62,7 +62,7 @@ vi.mock("@/lib/tmux-manager", () => ({
 let tmpDir: string;
 
 function makeReq(url: string, init?: RequestInit): NextRequest {
-  return new NextRequest(new URL(url, "http://localhost:3777"), init);
+  return new NextRequest(new URL(url, "http://localhost:31777"), init);
 }
 
 function makeTask(overrides: Record<string, unknown> = {}) {
@@ -116,7 +116,7 @@ describe("POST /api/queue — long goal creation", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ goal: LONG_GOAL }),
     });
@@ -140,7 +140,7 @@ describe("POST /api/queue — long goal creation", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ goal: goalWithSpaces }),
     });
@@ -168,7 +168,7 @@ describe("POST /api/queue — long goal creation", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ goal: multilineGoal }),
     });
@@ -183,7 +183,7 @@ describe("POST /api/queue — long goal creation", () => {
   it("rejects empty goal string with validation error", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ goal: "" }),
     });
@@ -198,7 +198,7 @@ describe("POST /api/queue — long goal creation", () => {
   it("rejects whitespace-only goal string with validation error", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ goal: "   \t\n  " }),
     });
@@ -213,7 +213,7 @@ describe("POST /api/queue — long goal creation", () => {
   it("rejects missing goal field with validation error", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ projectPath: "/some/path" }),
     });
@@ -243,7 +243,7 @@ describe("GET /api/queue — full goal returned for all tasks", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue");
+    const req = makeReq("http://localhost:31777/api/queue");
     const res = await GET(req);
     const body = await res.json();
 
@@ -268,7 +268,7 @@ describe("GET /api/queue — full goal returned for all tasks", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue");
+    const req = makeReq("http://localhost:31777/api/queue");
     const res = await GET(req);
     const body = await res.json();
 
@@ -282,7 +282,7 @@ describe("GET /api/queue — full goal returned for all tasks", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue");
+    const req = makeReq("http://localhost:31777/api/queue");
     const res = await GET(req);
     const body = await res.json();
 
@@ -298,7 +298,7 @@ describe("GET /api/queue — full goal returned for all tasks", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue");
+    const req = makeReq("http://localhost:31777/api/queue");
     const res = await GET(req);
     const body = await res.json();
 
@@ -320,7 +320,7 @@ describe("GET /api/queue/[id] — single task with full goal", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/42");
+    const req = makeReq("http://localhost:31777/api/queue/42");
     const res = await GET(req, { params: Promise.resolve({ id: "42" }) });
     const body = await res.json();
 
@@ -334,7 +334,7 @@ describe("GET /api/queue/[id] — single task with full goal", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/9999");
+    const req = makeReq("http://localhost:31777/api/queue/9999");
     const res = await GET(req, { params: Promise.resolve({ id: "9999" }) });
     const body = await res.json();
 
@@ -345,7 +345,7 @@ describe("GET /api/queue/[id] — single task with full goal", () => {
   it("returns 400 for non-numeric task ID", async () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/not-a-number");
+    const req = makeReq("http://localhost:31777/api/queue/not-a-number");
     const res = await GET(req, {
       params: Promise.resolve({ id: "not-a-number" }),
     });
@@ -368,7 +368,7 @@ describe("GET /api/queue/[id] — single task with full goal", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/5");
+    const req = makeReq("http://localhost:31777/api/queue/5");
     const res = await GET(req, { params: Promise.resolve({ id: "5" }) });
     const body = await res.json();
 
@@ -397,7 +397,7 @@ describe("PATCH /api/queue/[id] — update goal to long string", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/1", {
+    const req = makeReq("http://localhost:31777/api/queue/1", {
       method: "PATCH",
       body: JSON.stringify({ goal: LONG_GOAL }),
     });
@@ -423,7 +423,7 @@ describe("PATCH /api/queue/[id] — update goal to long string", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/2", {
+    const req = makeReq("http://localhost:31777/api/queue/2", {
       method: "PATCH",
       body: JSON.stringify({ goal: "New concise goal" }),
     });
@@ -441,7 +441,7 @@ describe("PATCH /api/queue/[id] — update goal to long string", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/3", {
+    const req = makeReq("http://localhost:31777/api/queue/3", {
       method: "PATCH",
       body: JSON.stringify({ goal: "New goal" }),
     });
@@ -459,7 +459,7 @@ describe("PATCH /api/queue/[id] — update goal to long string", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/4", {
+    const req = makeReq("http://localhost:31777/api/queue/4", {
       method: "PATCH",
       body: JSON.stringify({ goal: "New goal" }),
     });
@@ -477,7 +477,7 @@ describe("PATCH /api/queue/[id] — update goal to long string", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/5", {
+    const req = makeReq("http://localhost:31777/api/queue/5", {
       method: "PATCH",
       body: JSON.stringify({ goal: "" }),
     });
@@ -501,7 +501,7 @@ describe("PATCH /api/queue/[id] — update goal to long string", () => {
 
     vi.resetModules();
     const { PATCH } = await import("@/app/api/queue/[id]/route");
-    const req = makeReq("http://localhost:3777/api/queue/6", {
+    const req = makeReq("http://localhost:31777/api/queue/6", {
       method: "PATCH",
       body: JSON.stringify({ teamMembers: [{ id: "1", name: "architect" }] }),
     });
@@ -901,7 +901,7 @@ describe("POST /api/queue — teamMembers validation", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({
         goal: "Build something",
@@ -923,7 +923,7 @@ describe("POST /api/queue — teamMembers validation", () => {
   it("rejects teamMembers where a member is missing the name field", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({
         goal: "Valid goal",
@@ -941,7 +941,7 @@ describe("POST /api/queue — teamMembers validation", () => {
   it("rejects teamMembers where a member has a non-string name", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({
         goal: "Valid goal",
@@ -962,7 +962,7 @@ describe("POST /api/queue — teamMembers validation", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ goal: "No members needed" }),
     });
@@ -983,7 +983,7 @@ describe("POST /api/queue — teamMembers validation", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
-    const req = makeReq("http://localhost:3777/api/queue", {
+    const req = makeReq("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ goal: "Empty members", teamMembers: [] }),
     });

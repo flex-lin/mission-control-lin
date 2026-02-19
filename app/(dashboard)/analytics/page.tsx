@@ -6,12 +6,12 @@ import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard"
 import { db } from "@/lib/db"
 import { computeCost } from "@/lib/pricing"
 import { getCutoffDate, toLocalDateString, UNTRACKED_TEAM_LABEL } from "@/lib/analytics-helpers"
-import type { DailyEntry, ModelEntry, TeamEntry, MemberEntry, ProxyLog } from "@/types"
+import type { DailyEntry, ModelEntry, TeamEntry, RepoEntry, ProxyLog } from "@/types"
 
 async function loadAnalytics() {
   const cutoff = getCutoffDate("7d")
 
-  const [logs, modelRows, teamRows, memberRows, recentLogs] = await Promise.all([
+  const [logs, modelRows, teamRows, repoRows, recentLogs] = await Promise.all([
     db.proxyLog.findMany({
       where: { timestamp: { gte: cutoff } },
       select: { timestamp: true, model: true, inputTokens: true, outputTokens: true, cacheReadTokens: true, cacheCreationTokens: true },
@@ -31,11 +31,10 @@ async function loadAnalytics() {
       _count: { id: true },
     }),
     db.proxyLog.groupBy({
-      by: ["memberName", "teamName", "model"],
-      where: { timestamp: { gte: cutoff }, memberName: { not: null } },
+      by: ["repoName", "model"],
+      where: { timestamp: { gte: cutoff } },
       _sum: { inputTokens: true, outputTokens: true, cacheReadTokens: true, cacheCreationTokens: true },
       _count: { id: true },
-      _avg: { latencyMs: true },
     }),
     db.proxyLog.findMany({
       orderBy: { timestamp: "desc" },
@@ -102,32 +101,32 @@ async function loadAnalytics() {
     estimatedCost: v.estimatedCost,
   }))
 
-  // Member breakdown (aggregate across models)
-  const memberMap = new Map<string, MemberEntry>()
-  for (const r of memberRows) {
-    const key = `${r.teamName ?? UNTRACKED_TEAM_LABEL}:${r.memberName ?? "unknown"}`
-    const existing = memberMap.get(key) ?? {
-      memberName: r.memberName ?? "unknown",
-      teamName: r.teamName ?? UNTRACKED_TEAM_LABEL,
-      totalInput: 0,
-      totalOutput: 0,
-      totalTokens: 0,
-      requests: 0,
-      estimatedCost: 0,
-    }
+  // Repo breakdown (aggregate across models)
+  const UNTRACKED_REPO_LABEL = "(untracked)"
+  const repoAgg = new Map<string, { totalInput: number; totalOutput: number; requests: number; estimatedCost: number }>()
+  for (const r of repoRows) {
+    const name = r.repoName ?? UNTRACKED_REPO_LABEL
     const baseInput = r._sum.inputTokens ?? 0
     const output = r._sum.outputTokens ?? 0
     const cacheRead = r._sum.cacheReadTokens ?? 0
     const cacheCreate = r._sum.cacheCreationTokens ?? 0
     const input = baseInput + cacheRead + cacheCreate
+
+    const existing = repoAgg.get(name) ?? { totalInput: 0, totalOutput: 0, requests: 0, estimatedCost: 0 }
     existing.totalInput += input
     existing.totalOutput += output
-    existing.totalTokens += input + output
     existing.requests += r._count.id
     existing.estimatedCost += computeCost(r.model, baseInput, output, cacheRead, cacheCreate)
-    memberMap.set(key, existing)
+    repoAgg.set(name, existing)
   }
-  const byMember: MemberEntry[] = Array.from(memberMap.values())
+  const byRepo: RepoEntry[] = Array.from(repoAgg.entries()).map(([repoName, v]) => ({
+    repoName,
+    totalInput: v.totalInput,
+    totalOutput: v.totalOutput,
+    totalTokens: v.totalInput + v.totalOutput,
+    requests: v.requests,
+    estimatedCost: v.estimatedCost,
+  }))
 
   // Map Prisma logs to ProxyLog type
   const logsMapped: ProxyLog[] = recentLogs.map((l) => ({
@@ -140,6 +139,7 @@ async function loadAnalytics() {
     cacheCreationTokens: l.cacheCreationTokens,
     teamName: l.teamName ?? undefined,
     memberName: l.memberName ?? undefined,
+    repoName: l.repoName ?? undefined,
     endpoint: l.endpoint,
     latencyMs: l.latencyMs,
     statusCode: l.statusCode,
@@ -150,7 +150,7 @@ async function loadAnalytics() {
   const totalCost = byModel.reduce((s, m) => s + m.estimatedCost, 0)
   const totalRequests = byModel.reduce((s, m) => s + m.requests, 0)
 
-  return { daily, byModel, byTeam, byMember, logs: logsMapped, totalInput, totalOutput, totalCost, totalRequests }
+  return { daily, byModel, byTeam, byRepo, logs: logsMapped, totalInput, totalOutput, totalCost, totalRequests }
 }
 
 export default async function AnalyticsPage() {
@@ -158,7 +158,7 @@ export default async function AnalyticsPage() {
     daily: [] as DailyEntry[],
     byModel: [] as ModelEntry[],
     byTeam: [] as TeamEntry[],
-    byMember: [] as MemberEntry[],
+    byRepo: [] as RepoEntry[],
     logs: [] as ProxyLog[],
     totalInput: 0,
     totalOutput: 0,

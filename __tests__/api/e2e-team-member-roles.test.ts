@@ -101,7 +101,7 @@ function makeQueuedTask(overrides: Record<string, unknown> = {}) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function makeRequest(url: string, init?: RequestInit): NextRequest {
-  return new NextRequest(new URL(url, "http://localhost:3777"), init);
+  return new NextRequest(new URL(url, "http://localhost:31777"), init);
 }
 
 // ── Setup / Teardown ──────────────────────────────────────────────────────────
@@ -135,7 +135,7 @@ describe("GET /api/roles — listing roles", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/roles/route");
-    const req = makeRequest("http://localhost:3777/api/roles");
+    const req = makeRequest("http://localhost:31777/api/roles");
     const res = await GET(req);
     const body = await res.json();
 
@@ -152,7 +152,7 @@ describe("GET /api/roles — listing roles", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/roles/route");
-    const req = makeRequest("http://localhost:3777/api/roles");
+    const req = makeRequest("http://localhost:31777/api/roles");
     const res = await GET(req);
 
     expect(res.status).toBe(200);
@@ -167,7 +167,7 @@ describe("GET /api/roles — listing roles", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/roles/route");
-    const req = makeRequest("http://localhost:3777/api/roles");
+    const req = makeRequest("http://localhost:31777/api/roles");
     const res = await GET(req);
 
     expect(res.status).toBe(200);
@@ -184,7 +184,7 @@ describe("GET /api/roles — listing roles", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/roles/route");
-    const req = makeRequest("http://localhost:3777/api/roles?preset=true");
+    const req = makeRequest("http://localhost:31777/api/roles?preset=true");
     const res = await GET(req);
     const body = await res.json();
 
@@ -204,7 +204,7 @@ describe("GET /api/roles — listing roles", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/roles/route");
-    const req = makeRequest("http://localhost:3777/api/roles?preset=false");
+    const req = makeRequest("http://localhost:31777/api/roles?preset=false");
     const res = await GET(req);
 
     expect(res.status).toBe(200);
@@ -222,7 +222,7 @@ describe("GET /api/roles — listing roles", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/roles/route");
-    const req = makeRequest("http://localhost:3777/api/roles");
+    const req = makeRequest("http://localhost:31777/api/roles");
     const res = await GET(req);
 
     expect(res.status).toBe(200);
@@ -237,7 +237,7 @@ describe("GET /api/roles — listing roles", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/roles/route");
-    const req = makeRequest("http://localhost:3777/api/roles?preset=false");
+    const req = makeRequest("http://localhost:31777/api/roles?preset=false");
     const res = await GET(req);
     const body = await res.json();
 
@@ -264,7 +264,7 @@ describe("POST /api/roles — create a custom role", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/roles/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles", {
+    const req = makeRequest("http://localhost:31777/api/roles", {
       method: "POST",
       body: JSON.stringify({
         name: "new-analyst",
@@ -287,7 +287,7 @@ describe("POST /api/roles — create a custom role", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/roles/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles", {
+    const req = makeRequest("http://localhost:31777/api/roles", {
       method: "POST",
       body: JSON.stringify({ role: "Some Role", agentType: "general-purpose", description: "desc" }),
     });
@@ -304,7 +304,7 @@ describe("POST /api/roles — create a custom role", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/roles/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles", {
+    const req = makeRequest("http://localhost:31777/api/roles", {
       method: "POST",
       body: JSON.stringify({ name: "some-name", agentType: "general-purpose", description: "desc" }),
     });
@@ -321,7 +321,7 @@ describe("POST /api/roles — create a custom role", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/roles/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles", {
+    const req = makeRequest("http://localhost:31777/api/roles", {
       method: "POST",
       body: JSON.stringify({ name: "some-name", role: "Some Role", description: "desc" }),
     });
@@ -338,7 +338,7 @@ describe("POST /api/roles — create a custom role", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/roles/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles", {
+    const req = makeRequest("http://localhost:31777/api/roles", {
       method: "POST",
       body: JSON.stringify({ name: "some-name", role: "Some Role", agentType: "general-purpose" }),
     });
@@ -355,7 +355,7 @@ describe("POST /api/roles — create a custom role", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/roles/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles", {
+    const req = makeRequest("http://localhost:31777/api/roles", {
       method: "POST",
       body: JSON.stringify({
         name: "test-role",
@@ -384,7 +384,7 @@ describe("POST /api/roles — create a custom role", () => {
       vi.resetModules();
       const { POST } = await import("@/app/api/roles/route");
 
-      const req = makeRequest("http://localhost:3777/api/roles", {
+      const req = makeRequest("http://localhost:31777/api/roles", {
         method: "POST",
         body: JSON.stringify({
           name: `role-${agentType}`,
@@ -406,7 +406,7 @@ describe("POST /api/roles — create a custom role", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/roles/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles", {
+    const req = makeRequest("http://localhost:31777/api/roles", {
       method: "POST",
       body: JSON.stringify({
         name: "architect",
@@ -432,7 +432,7 @@ describe("POST /api/roles — create a custom role", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/roles/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles", {
+    const req = makeRequest("http://localhost:31777/api/roles", {
       method: "POST",
       body: JSON.stringify({
         name: "  trimmed-role  ",
@@ -465,7 +465,7 @@ describe("POST /api/roles — create a custom role", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/roles/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles", {
+    const req = makeRequest("http://localhost:31777/api/roles", {
       method: "POST",
       body: JSON.stringify({
         name: "my-role",
@@ -498,7 +498,7 @@ describe("GET /api/roles/[id] — get single role", () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/5");
+    const req = makeRequest("http://localhost:31777/api/roles/5");
     const res = await GET(req, { params: Promise.resolve({ id: "5" }) });
     const body = await res.json();
 
@@ -511,7 +511,7 @@ describe("GET /api/roles/[id] — get single role", () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/not-a-number");
+    const req = makeRequest("http://localhost:31777/api/roles/not-a-number");
     const res = await GET(req, { params: Promise.resolve({ id: "not-a-number" }) });
     const body = await res.json();
 
@@ -524,7 +524,7 @@ describe("GET /api/roles/[id] — get single role", () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/preset-architect");
+    const req = makeRequest("http://localhost:31777/api/roles/preset-architect");
     const res = await GET(req, { params: Promise.resolve({ id: "preset-architect" }) });
     const body = await res.json();
 
@@ -538,7 +538,7 @@ describe("GET /api/roles/[id] — get single role", () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/9999");
+    const req = makeRequest("http://localhost:31777/api/roles/9999");
     const res = await GET(req, { params: Promise.resolve({ id: "9999" }) });
     const body = await res.json();
 
@@ -562,7 +562,7 @@ describe("PUT /api/roles/[id] — update a custom role", () => {
     vi.resetModules();
     const { PUT } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/100", {
+    const req = makeRequest("http://localhost:31777/api/roles/100", {
       method: "PUT",
       body: JSON.stringify({ role: "Updated Title", description: "Updated desc" }),
     });
@@ -579,7 +579,7 @@ describe("PUT /api/roles/[id] — update a custom role", () => {
     vi.resetModules();
     const { PUT } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/abc", {
+    const req = makeRequest("http://localhost:31777/api/roles/abc", {
       method: "PUT",
       body: JSON.stringify({ role: "Title" }),
     });
@@ -597,7 +597,7 @@ describe("PUT /api/roles/[id] — update a custom role", () => {
     vi.resetModules();
     const { PUT } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/9999", {
+    const req = makeRequest("http://localhost:31777/api/roles/9999", {
       method: "PUT",
       body: JSON.stringify({ role: "New Title" }),
     });
@@ -616,7 +616,7 @@ describe("PUT /api/roles/[id] — update a custom role", () => {
     vi.resetModules();
     const { PUT } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/1", {
+    const req = makeRequest("http://localhost:31777/api/roles/1", {
       method: "PUT",
       body: JSON.stringify({ role: "Trying to change" }),
     });
@@ -637,7 +637,7 @@ describe("PUT /api/roles/[id] — update a custom role", () => {
     vi.resetModules();
     const { PUT } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/100", {
+    const req = makeRequest("http://localhost:31777/api/roles/100", {
       method: "PUT",
       body: JSON.stringify({ name: "architect" }), // name already exists
     });
@@ -656,7 +656,7 @@ describe("PUT /api/roles/[id] — update a custom role", () => {
     vi.resetModules();
     const { PUT } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/100", {
+    const req = makeRequest("http://localhost:31777/api/roles/100", {
       method: "PUT",
       body: JSON.stringify({ agentType: "not-valid" }),
     });
@@ -678,7 +678,7 @@ describe("PUT /api/roles/[id] — update a custom role", () => {
     vi.resetModules();
     const { PUT } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/100", {
+    const req = makeRequest("http://localhost:31777/api/roles/100", {
       method: "PUT",
       body: JSON.stringify({ name: "my-role", description: "Updated description" }),
     });
@@ -698,7 +698,7 @@ describe("PUT /api/roles/[id] — update a custom role", () => {
     vi.resetModules();
     const { PUT } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/100", {
+    const req = makeRequest("http://localhost:31777/api/roles/100", {
       method: "PUT",
       body: JSON.stringify({ role: "New Title" }),
     });
@@ -727,7 +727,7 @@ describe("DELETE /api/roles/[id] — delete a custom role", () => {
     vi.resetModules();
     const { DELETE } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/200", { method: "DELETE" });
+    const req = makeRequest("http://localhost:31777/api/roles/200", { method: "DELETE" });
     const res = await DELETE(req, { params: Promise.resolve({ id: "200" }) });
     const body = await res.json();
 
@@ -743,7 +743,7 @@ describe("DELETE /api/roles/[id] — delete a custom role", () => {
     vi.resetModules();
     const { DELETE } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/200", { method: "DELETE" });
+    const req = makeRequest("http://localhost:31777/api/roles/200", { method: "DELETE" });
     await DELETE(req, { params: Promise.resolve({ id: "200" }) });
 
     expect(mockRoleDelete).toHaveBeenCalledWith({ where: { id: 200 } });
@@ -753,7 +753,7 @@ describe("DELETE /api/roles/[id] — delete a custom role", () => {
     vi.resetModules();
     const { DELETE } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/custom-abc", { method: "DELETE" });
+    const req = makeRequest("http://localhost:31777/api/roles/custom-abc", { method: "DELETE" });
     const res = await DELETE(req, { params: Promise.resolve({ id: "custom-abc" }) });
     const body = await res.json();
 
@@ -768,7 +768,7 @@ describe("DELETE /api/roles/[id] — delete a custom role", () => {
     vi.resetModules();
     const { DELETE } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/9999", { method: "DELETE" });
+    const req = makeRequest("http://localhost:31777/api/roles/9999", { method: "DELETE" });
     const res = await DELETE(req, { params: Promise.resolve({ id: "9999" }) });
     const body = await res.json();
 
@@ -783,7 +783,7 @@ describe("DELETE /api/roles/[id] — delete a custom role", () => {
     vi.resetModules();
     const { DELETE } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/1", { method: "DELETE" });
+    const req = makeRequest("http://localhost:31777/api/roles/1", { method: "DELETE" });
     const res = await DELETE(req, { params: Promise.resolve({ id: "1" }) });
     const body = await res.json();
 
@@ -797,7 +797,7 @@ describe("DELETE /api/roles/[id] — delete a custom role", () => {
     vi.resetModules();
     const { DELETE } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/999", { method: "DELETE" });
+    const req = makeRequest("http://localhost:31777/api/roles/999", { method: "DELETE" });
     await DELETE(req, { params: Promise.resolve({ id: "999" }) });
 
     expect(mockRoleDelete).not.toHaveBeenCalled();
@@ -816,7 +816,7 @@ describe("POST /api/queue — submit task with optional team members", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
 
-    const req = makeRequest("http://localhost:3777/api/queue", {
+    const req = makeRequest("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({
         goal: "Build a REST API",
@@ -846,7 +846,7 @@ describe("POST /api/queue — submit task with optional team members", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
 
-    const req = makeRequest("http://localhost:3777/api/queue", {
+    const req = makeRequest("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({
         goal: "Build a REST API",
@@ -863,7 +863,7 @@ describe("POST /api/queue — submit task with optional team members", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
 
-    const req = makeRequest("http://localhost:3777/api/queue", {
+    const req = makeRequest("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ projectPath: "/tmp", teamMembers: [] }),
     });
@@ -879,7 +879,7 @@ describe("POST /api/queue — submit task with optional team members", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
 
-    const req = makeRequest("http://localhost:3777/api/queue", {
+    const req = makeRequest("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({ goal: "   ", teamMembers: [] }),
     });
@@ -905,7 +905,7 @@ describe("POST /api/queue — submit task with optional team members", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/queue/route");
 
-    const req = makeRequest("http://localhost:3777/api/queue", {
+    const req = makeRequest("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({
         goal: "Build with domain expertise",
@@ -935,7 +935,7 @@ describe("GET /api/queue/[id] — retrieve task with teamMembers", () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/queue/20");
+    const req = makeRequest("http://localhost:31777/api/queue/20");
     const res = await GET(req, { params: Promise.resolve({ id: "20" }) });
     const body = await res.json();
 
@@ -951,7 +951,7 @@ describe("GET /api/queue/[id] — retrieve task with teamMembers", () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/queue/21");
+    const req = makeRequest("http://localhost:31777/api/queue/21");
     const res = await GET(req, { params: Promise.resolve({ id: "21" }) });
     const body = await res.json();
 
@@ -965,7 +965,7 @@ describe("GET /api/queue/[id] — retrieve task with teamMembers", () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/queue/9999");
+    const req = makeRequest("http://localhost:31777/api/queue/9999");
     const res = await GET(req, { params: Promise.resolve({ id: "9999" }) });
     const body = await res.json();
 
@@ -977,7 +977,7 @@ describe("GET /api/queue/[id] — retrieve task with teamMembers", () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/queue/not-a-number");
+    const req = makeRequest("http://localhost:31777/api/queue/not-a-number");
     const res = await GET(req, { params: Promise.resolve({ id: "not-a-number" }) });
     const body = await res.json();
 
@@ -995,7 +995,7 @@ describe("GET /api/queue/[id] — retrieve task with teamMembers", () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/queue/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/queue/30");
+    const req = makeRequest("http://localhost:31777/api/queue/30");
     const res = await GET(req, { params: Promise.resolve({ id: "30" }) });
     const body = await res.json();
 
@@ -1031,7 +1031,7 @@ describe("Full lifecycle: create role → submit task → verify team members", 
     vi.resetModules();
     const { POST: createRole } = await import("@/app/api/roles/route");
 
-    const createReq = makeRequest("http://localhost:3777/api/roles", {
+    const createReq = makeRequest("http://localhost:31777/api/roles", {
       method: "POST",
       body: JSON.stringify(newRoleData),
     });
@@ -1056,7 +1056,7 @@ describe("Full lifecycle: create role → submit task → verify team members", 
     vi.resetModules();
     const { POST: createTask } = await import("@/app/api/queue/route");
 
-    const taskReq = makeRequest("http://localhost:3777/api/queue", {
+    const taskReq = makeRequest("http://localhost:31777/api/queue", {
       method: "POST",
       body: JSON.stringify({
         goal: "Run lifecycle management",
@@ -1076,7 +1076,7 @@ describe("Full lifecycle: create role → submit task → verify team members", 
     vi.resetModules();
     const { GET: getTask } = await import("@/app/api/queue/[id]/route");
 
-    const getReq = makeRequest("http://localhost:3777/api/queue/200");
+    const getReq = makeRequest("http://localhost:31777/api/queue/200");
     const getRes = await getTask(getReq, { params: Promise.resolve({ id: "200" }) });
     const getBody = await getRes.json();
 
@@ -1099,7 +1099,7 @@ describe("Validation edge cases", () => {
     vi.resetModules();
     const { GET } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/0");
+    const req = makeRequest("http://localhost:31777/api/roles/0");
     const res = await GET(req, { params: Promise.resolve({ id: "0" }) });
     const body = await res.json();
 
@@ -1112,7 +1112,7 @@ describe("Validation edge cases", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/roles/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles", {
+    const req = makeRequest("http://localhost:31777/api/roles", {
       method: "POST",
       body: JSON.stringify({ name: "  ", role: "Role", agentType: "general-purpose", description: "desc" }),
     });
@@ -1126,7 +1126,7 @@ describe("Validation edge cases", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/roles/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles", {
+    const req = makeRequest("http://localhost:31777/api/roles", {
       method: "POST",
       body: JSON.stringify({ name: "valid-name", role: "  ", agentType: "general-purpose", description: "desc" }),
     });
@@ -1140,7 +1140,7 @@ describe("Validation edge cases", () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/roles/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles", {
+    const req = makeRequest("http://localhost:31777/api/roles", {
       method: "POST",
       body: JSON.stringify({ name: "valid-name", role: "Valid Role", agentType: "general-purpose", description: "  " }),
     });
@@ -1157,7 +1157,7 @@ describe("Validation edge cases", () => {
     vi.resetModules();
     const { DELETE } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/2", { method: "DELETE" });
+    const req = makeRequest("http://localhost:31777/api/roles/2", { method: "DELETE" });
     const res = await DELETE(req, { params: Promise.resolve({ id: "2" }) });
     const body = await res.json();
 
@@ -1173,7 +1173,7 @@ describe("Validation edge cases", () => {
     vi.resetModules();
     const { PUT } = await import("@/app/api/roles/[id]/route");
 
-    const req = makeRequest("http://localhost:3777/api/roles/2", {
+    const req = makeRequest("http://localhost:31777/api/roles/2", {
       method: "PUT",
       body: JSON.stringify({ role: "Change preset" }),
     });

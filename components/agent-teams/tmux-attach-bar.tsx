@@ -6,10 +6,9 @@ import { toast } from "sonner"
 interface TmuxAttachBarProps {
   attachCmd: string
   alive: boolean
-  sessionName: string
 }
 
-export function TmuxAttachBar({ attachCmd, alive, sessionName }: TmuxAttachBarProps) {
+export function TmuxAttachBar({ attachCmd, alive }: TmuxAttachBarProps) {
   if (!alive) return null
 
   function handleCopy() {

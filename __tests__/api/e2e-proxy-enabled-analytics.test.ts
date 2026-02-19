@@ -79,7 +79,7 @@ vi.mock("@/lib/pricing", () => ({
 let tmpDir: string;
 
 function makeReq(url: string, init?: RequestInit): NextRequest {
-  return new NextRequest(new URL(url, "http://localhost:3777"), init);
+  return new NextRequest(new URL(url, "http://localhost:31777"), init);
 }
 
 function createSettingsFile(content: Record<string, unknown> = {}): void {
@@ -186,10 +186,10 @@ describe("Settings: saving proxyConfig via PUT /api/settings", () => {
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
-    const req = makeReq("http://localhost:3777/api/settings", {
+    const req = makeReq("http://localhost:31777/api/settings", {
       method: "PUT",
       body: JSON.stringify({
-        proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+        proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
       }),
     });
 
@@ -202,20 +202,20 @@ describe("Settings: saving proxyConfig via PUT /api/settings", () => {
     const saved = readSettingsFile();
     expect(saved.proxyConfig).toMatchObject({
       enabled: true,
-      port: 8787,
+      port: 28787,
       targetUrl: "https://api.anthropic.com",
     });
   });
 
   it("saves proxyConfig.enabled=false to disable the proxy", async () => {
-    createSettingsFile({ proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" } });
+    createSettingsFile({ proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" } });
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
-    const req = makeReq("http://localhost:3777/api/settings", {
+    const req = makeReq("http://localhost:31777/api/settings", {
       method: "PUT",
       body: JSON.stringify({
-        proxyConfig: { enabled: false, port: 8787, targetUrl: "https://api.anthropic.com" },
+        proxyConfig: { enabled: false, port: 28787, targetUrl: "https://api.anthropic.com" },
       }),
     });
 
@@ -231,10 +231,10 @@ describe("Settings: saving proxyConfig via PUT /api/settings", () => {
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
-    const req = makeReq("http://localhost:3777/api/settings", {
+    const req = makeReq("http://localhost:31777/api/settings", {
       method: "PUT",
       body: JSON.stringify({
-        proxyConfig: { enabled: true, port: 9000, targetUrl: "https://proxy.example.com" },
+        proxyConfig: { enabled: true, port: 29000, targetUrl: "https://proxy.example.com" },
       }),
     });
 
@@ -244,7 +244,7 @@ describe("Settings: saving proxyConfig via PUT /api/settings", () => {
     const saved = readSettingsFile();
     expect(saved.proxyConfig).toMatchObject({
       enabled: true,
-      port: 9000,
+      port: 29000,
       targetUrl: "https://proxy.example.com",
     });
   });
@@ -257,10 +257,10 @@ describe("Settings: saving proxyConfig via PUT /api/settings", () => {
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
-    const req = makeReq("http://localhost:3777/api/settings", {
+    const req = makeReq("http://localhost:31777/api/settings", {
       method: "PUT",
       body: JSON.stringify({
-        proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+        proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
       }),
     });
 
@@ -281,7 +281,7 @@ describe("Settings: saving proxyConfig via PUT /api/settings", () => {
 describe("Settings: reading proxyConfig via GET /api/settings", () => {
   it("returns proxyConfig from settings file when enabled", async () => {
     createSettingsFile({
-      proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+      proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
     });
 
     vi.resetModules();
@@ -292,14 +292,14 @@ describe("Settings: reading proxyConfig via GET /api/settings", () => {
     expect(res.status).toBe(200);
     expect(body.data.proxyConfig).toMatchObject({
       enabled: true,
-      port: 8787,
+      port: 28787,
       targetUrl: "https://api.anthropic.com",
     });
   });
 
   it("returns proxyConfig.enabled=false when proxy is disabled", async () => {
     createSettingsFile({
-      proxyConfig: { enabled: false, port: 8787, targetUrl: "https://api.anthropic.com" },
+      proxyConfig: { enabled: false, port: 28787, targetUrl: "https://api.anthropic.com" },
     });
 
     vi.resetModules();
@@ -326,7 +326,7 @@ describe("Settings: reading proxyConfig via GET /api/settings", () => {
 
   it("returns both proxyConfig and DB-merged theme", async () => {
     createSettingsFile({
-      proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+      proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
     });
     mockPreferenceFindMany.mockResolvedValue([{ key: "theme", value: "light" }]);
 
@@ -579,7 +579,7 @@ describe("GET /api/proxy-logs — list captured proxy logs", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/proxy-logs/route");
-    const req = makeReq("http://localhost:3777/api/proxy-logs");
+    const req = makeReq("http://localhost:31777/api/proxy-logs");
     const res = await GET(req);
     const body = await res.json();
 
@@ -605,7 +605,7 @@ describe("GET /api/proxy-logs — list captured proxy logs", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/proxy-logs/route");
-    const req = makeReq("http://localhost:3777/api/proxy-logs");
+    const req = makeReq("http://localhost:31777/api/proxy-logs");
     const res = await GET(req);
     const body = await res.json();
 
@@ -630,7 +630,7 @@ describe("GET /api/proxy-logs — list captured proxy logs", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/proxy-logs/route");
-    const req = makeReq("http://localhost:3777/api/proxy-logs?model=claude-opus-4-6");
+    const req = makeReq("http://localhost:31777/api/proxy-logs?model=claude-opus-4-6");
     const res = await GET(req);
     const body = await res.json();
 
@@ -648,7 +648,7 @@ describe("GET /api/proxy-logs — list captured proxy logs", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/proxy-logs/route");
-    const req = makeReq("http://localhost:3777/api/proxy-logs?team=team-alpha");
+    const req = makeReq("http://localhost:31777/api/proxy-logs?team=team-alpha");
     const res = await GET(req);
 
     expect(res.status).toBe(200);
@@ -663,7 +663,7 @@ describe("GET /api/proxy-logs — list captured proxy logs", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/proxy-logs/route");
-    const req = makeReq("http://localhost:3777/api/proxy-logs?limit=10&offset=20");
+    const req = makeReq("http://localhost:31777/api/proxy-logs?limit=10&offset=20");
     const res = await GET(req);
     const body = await res.json();
 
@@ -682,7 +682,7 @@ describe("GET /api/proxy-logs — list captured proxy logs", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/proxy-logs/route");
-    const req = makeReq("http://localhost:3777/api/proxy-logs?limit=9999");
+    const req = makeReq("http://localhost:31777/api/proxy-logs?limit=9999");
     await GET(req);
 
     expect(mockProxyLogFindMany).toHaveBeenCalledWith(
@@ -702,7 +702,7 @@ describe("GET /api/proxy-logs — list captured proxy logs", () => {
 
     vi.resetModules();
     const { GET } = await import("@/app/api/proxy-logs/route");
-    const req = makeReq("http://localhost:3777/api/proxy-logs");
+    const req = makeReq("http://localhost:31777/api/proxy-logs");
     await GET(req);
 
     expect(mockProxyLogFindMany).toHaveBeenCalledWith(
@@ -722,7 +722,7 @@ describe("POST /api/proxy-logs — record a proxy log entry", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/proxy-logs/route");
-    const req = makeReq("http://localhost:3777/api/proxy-logs", {
+    const req = makeReq("http://localhost:31777/api/proxy-logs", {
       method: "POST",
       body: JSON.stringify({
         model: "claude-opus-4-6",
@@ -760,7 +760,7 @@ describe("POST /api/proxy-logs — record a proxy log entry", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/proxy-logs/route");
-    const req = makeReq("http://localhost:3777/api/proxy-logs", {
+    const req = makeReq("http://localhost:31777/api/proxy-logs", {
       method: "POST",
       body: JSON.stringify({
         model: "claude-sonnet-4-6",
@@ -783,7 +783,7 @@ describe("POST /api/proxy-logs — record a proxy log entry", () => {
   it("returns 400 when model field is missing", async () => {
     vi.resetModules();
     const { POST } = await import("@/app/api/proxy-logs/route");
-    const req = makeReq("http://localhost:3777/api/proxy-logs", {
+    const req = makeReq("http://localhost:31777/api/proxy-logs", {
       method: "POST",
       body: JSON.stringify({ inputTokens: 1000, outputTokens: 500 }),
     });
@@ -801,7 +801,7 @@ describe("POST /api/proxy-logs — record a proxy log entry", () => {
 
     vi.resetModules();
     const { POST } = await import("@/app/api/proxy-logs/route");
-    const req = makeReq("http://localhost:3777/api/proxy-logs", {
+    const req = makeReq("http://localhost:31777/api/proxy-logs", {
       method: "POST",
       body: JSON.stringify({ model: "claude-sonnet-4-6" }),
     });
@@ -831,7 +831,7 @@ describe("GET /api/analytics — daily aggregated token counts from proxy logs",
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/route");
-    const req = makeReq("http://localhost:3777/api/analytics?period=7d");
+    const req = makeReq("http://localhost:31777/api/analytics?period=7d");
     const res = await GET(req);
     const body = await res.json();
 
@@ -870,7 +870,7 @@ describe("GET /api/analytics — daily aggregated token counts from proxy logs",
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/route");
-    const req = makeReq("http://localhost:3777/api/analytics?period=7d");
+    const req = makeReq("http://localhost:31777/api/analytics?period=7d");
     const res = await GET(req);
     const body = await res.json();
 
@@ -912,7 +912,7 @@ describe("GET /api/analytics — daily aggregated token counts from proxy logs",
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/route");
-    const req = makeReq("http://localhost:3777/api/analytics?period=7d");
+    const req = makeReq("http://localhost:31777/api/analytics?period=7d");
     const res = await GET(req);
     const body = await res.json();
 
@@ -931,7 +931,7 @@ describe("GET /api/analytics — daily aggregated token counts from proxy logs",
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/route");
-    const req = makeReq("http://localhost:3777/api/analytics");
+    const req = makeReq("http://localhost:31777/api/analytics");
     await GET(req);
 
     // Both findMany and aggregate should be called with a timestamp gte filter
@@ -953,7 +953,7 @@ describe("GET /api/analytics — daily aggregated token counts from proxy logs",
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/route");
-    const req = makeReq("http://localhost:3777/api/analytics?period=30d");
+    const req = makeReq("http://localhost:31777/api/analytics?period=30d");
     await GET(req);
 
     const callArgs = mockProxyLogFindMany.mock.calls[0][0] as { where: { timestamp: { gte: Date } } };
@@ -975,7 +975,7 @@ describe("GET /api/analytics/by-model — proxy log tokens grouped by model", ()
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-model/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-model");
+    const req = makeReq("http://localhost:31777/api/analytics/by-model");
     const res = await GET(req);
     const body = await res.json();
 
@@ -1002,7 +1002,7 @@ describe("GET /api/analytics/by-model — proxy log tokens grouped by model", ()
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-model/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-model?period=7d");
+    const req = makeReq("http://localhost:31777/api/analytics/by-model?period=7d");
     const res = await GET(req);
     const body = await res.json();
 
@@ -1032,7 +1032,7 @@ describe("GET /api/analytics/by-model — proxy log tokens grouped by model", ()
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-model/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-model?period=7d");
+    const req = makeReq("http://localhost:31777/api/analytics/by-model?period=7d");
     await GET(req);
 
     expect(mockProxyLogGroupBy).toHaveBeenCalledWith(
@@ -1054,7 +1054,7 @@ describe("GET /api/analytics/by-team — proxy log tokens grouped by team", () =
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-team/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-team");
+    const req = makeReq("http://localhost:31777/api/analytics/by-team");
     const res = await GET(req);
     const body = await res.json();
 
@@ -1086,7 +1086,7 @@ describe("GET /api/analytics/by-team — proxy log tokens grouped by team", () =
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-team/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-team?period=7d");
+    const req = makeReq("http://localhost:31777/api/analytics/by-team?period=7d");
     const res = await GET(req);
     const body = await res.json();
 
@@ -1118,7 +1118,7 @@ describe("GET /api/analytics/by-team — proxy log tokens grouped by team", () =
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-team/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-team");
+    const req = makeReq("http://localhost:31777/api/analytics/by-team");
     const res = await GET(req);
     const body = await res.json();
 
@@ -1131,7 +1131,7 @@ describe("GET /api/analytics/by-team — proxy log tokens grouped by team", () =
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-team/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-team");
+    const req = makeReq("http://localhost:31777/api/analytics/by-team");
     await GET(req);
 
     expect(mockProxyLogGroupBy).toHaveBeenCalledWith(
@@ -1150,7 +1150,7 @@ describe("GET /api/analytics/by-member — proxy log tokens grouped by member", 
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-member/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-member");
+    const req = makeReq("http://localhost:31777/api/analytics/by-member");
     const res = await GET(req);
     const body = await res.json();
 
@@ -1180,7 +1180,7 @@ describe("GET /api/analytics/by-member — proxy log tokens grouped by member", 
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-member/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-member?period=7d");
+    const req = makeReq("http://localhost:31777/api/analytics/by-member?period=7d");
     const res = await GET(req);
     const body = await res.json();
 
@@ -1203,7 +1203,7 @@ describe("GET /api/analytics/by-member — proxy log tokens grouped by member", 
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-member/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-member?team=team-alpha");
+    const req = makeReq("http://localhost:31777/api/analytics/by-member?team=team-alpha");
     await GET(req);
 
     expect(mockProxyLogGroupBy).toHaveBeenCalledWith(
@@ -1218,7 +1218,7 @@ describe("GET /api/analytics/by-member — proxy log tokens grouped by member", 
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-member/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-member");
+    const req = makeReq("http://localhost:31777/api/analytics/by-member");
     await GET(req);
 
     expect(mockProxyLogGroupBy).toHaveBeenCalledWith(
@@ -1251,7 +1251,7 @@ describe("GET /api/analytics/by-member — proxy log tokens grouped by member", 
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-member/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-member");
+    const req = makeReq("http://localhost:31777/api/analytics/by-member");
     const res = await GET(req);
     const body = await res.json();
 
@@ -1367,10 +1367,10 @@ describe("Full flow: proxy config enabled → traffic captured → tokens in ana
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
-    const req = makeReq("http://localhost:3777/api/settings", {
+    const req = makeReq("http://localhost:31777/api/settings", {
       method: "PUT",
       body: JSON.stringify({
-        proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+        proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
       }),
     });
 
@@ -1378,12 +1378,12 @@ describe("Full flow: proxy config enabled → traffic captured → tokens in ana
     expect(res.status).toBe(200);
 
     const saved = readSettingsFile();
-    expect(saved.proxyConfig).toMatchObject({ enabled: true, port: 8787 });
+    expect(saved.proxyConfig).toMatchObject({ enabled: true, port: 28787 });
   });
 
   it("Step 2: GET /api/settings confirms proxy is enabled", async () => {
     createSettingsFile({
-      proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+      proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
     });
 
     vi.resetModules();
@@ -1457,7 +1457,7 @@ describe("Full flow: proxy config enabled → traffic captured → tokens in ana
 
     vi.resetModules();
     const { GET } = await import("@/app/api/proxy-logs/route");
-    const req = makeReq("http://localhost:3777/api/proxy-logs");
+    const req = makeReq("http://localhost:31777/api/proxy-logs");
     const res = await GET(req);
     const body = await res.json();
 
@@ -1490,7 +1490,7 @@ describe("Full flow: proxy config enabled → traffic captured → tokens in ana
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/route");
-    const req = makeReq("http://localhost:3777/api/analytics?period=7d");
+    const req = makeReq("http://localhost:31777/api/analytics?period=7d");
     const res = await GET(req);
     const body = await res.json();
 
@@ -1517,7 +1517,7 @@ describe("Full flow: proxy config enabled → traffic captured → tokens in ana
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-model/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-model");
+    const req = makeReq("http://localhost:31777/api/analytics/by-model");
     const res = await GET(req);
     const body = await res.json();
 
@@ -1541,7 +1541,7 @@ describe("Full flow: proxy config enabled → traffic captured → tokens in ana
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-team/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-team");
+    const req = makeReq("http://localhost:31777/api/analytics/by-team");
     const res = await GET(req);
     const body = await res.json();
 
@@ -1565,7 +1565,7 @@ describe("Full flow: proxy config enabled → traffic captured → tokens in ana
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-member/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-member");
+    const req = makeReq("http://localhost:31777/api/analytics/by-member");
     const res = await GET(req);
     const body = await res.json();
 
@@ -1605,15 +1605,15 @@ describe("Full flow: proxy config enabled → traffic captured → tokens in ana
   it("disabling proxy: proxyConfig.enabled=false written to settings file", async () => {
     // First enable it
     createSettingsFile({
-      proxyConfig: { enabled: true, port: 8787, targetUrl: "https://api.anthropic.com" },
+      proxyConfig: { enabled: true, port: 28787, targetUrl: "https://api.anthropic.com" },
     });
 
     vi.resetModules();
     const { PUT } = await import("@/app/api/settings/route");
-    const req = makeReq("http://localhost:3777/api/settings", {
+    const req = makeReq("http://localhost:31777/api/settings", {
       method: "PUT",
       body: JSON.stringify({
-        proxyConfig: { enabled: false, port: 8787, targetUrl: "https://api.anthropic.com" },
+        proxyConfig: { enabled: false, port: 28787, targetUrl: "https://api.anthropic.com" },
       }),
     });
 
@@ -1637,7 +1637,7 @@ describe("Full flow: proxy config enabled → traffic captured → tokens in ana
 
     vi.resetModules();
     const { GET } = await import("@/app/api/analytics/by-model/route");
-    const req = makeReq("http://localhost:3777/api/analytics/by-model");
+    const req = makeReq("http://localhost:31777/api/analytics/by-model");
     const res = await GET(req);
     const body = await res.json();
 
