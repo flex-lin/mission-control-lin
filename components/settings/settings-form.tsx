@@ -35,7 +35,6 @@ const defaultSettings: Settings = {
     enabled: false,
     sleepPreventionMethod: "auto",
   },
-  indexedProjects: [],
 }
 
 interface ProxyStatus {
@@ -112,9 +111,6 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     }
   }
 
-  // Indexed project dir input
-  const [newProjectDir, setNewProjectDir] = useState("")
-
   async function handleSave() {
     // Validate refresh interval
     const interval = settings.refreshInterval ?? 30
@@ -166,31 +162,6 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     setProxyTarget(DEFAULT_PROXY_TARGET)
     setTheme("dark")
     toast.info("Settings reset to defaults — click Save to apply")
-  }
-
-  function addProjectDir() {
-    const dir = newProjectDir.trim()
-    if (!dir) return
-    if (!dir.startsWith("/")) {
-      toast.error("Please enter an absolute path (starting with /)")
-      return
-    }
-    if ((settings.indexedProjects ?? []).includes(dir)) {
-      toast.error("This directory is already in the list")
-      return
-    }
-    setSettings((s) => ({
-      ...s,
-      indexedProjects: [...(s.indexedProjects ?? []), dir],
-    }))
-    setNewProjectDir("")
-  }
-
-  function removeProjectDir(dir: string) {
-    setSettings((s) => ({
-      ...s,
-      indexedProjects: (s.indexedProjects ?? []).filter((d) => d !== dir),
-    }))
   }
 
   return (
@@ -379,59 +350,6 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                 </Select>
               </div>
             </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Indexed Projects */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">Indexed Project Directories</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-xs text-muted-foreground">
-            Directories scanned by the Knowledge Base. Add absolute paths.
-          </p>
-
-          <div className="flex gap-2">
-            <Input
-              placeholder="/home/user/projects/my-app"
-              value={newProjectDir}
-              onChange={(e) => setNewProjectDir(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addProjectDir()}
-              className="flex-1"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addProjectDir}
-              disabled={!newProjectDir.trim()}
-            >
-              Add
-            </Button>
-          </div>
-
-          {(settings.indexedProjects ?? []).length === 0 ? (
-            <p className="text-xs text-muted-foreground">No directories indexed yet</p>
-          ) : (
-            <ul className="space-y-1.5">
-              {(settings.indexedProjects ?? []).map((dir) => (
-                <li
-                  key={dir}
-                  className="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2"
-                >
-                  <span className="font-mono text-xs">{dir}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
-                    onClick={() => removeProjectDir(dir)}
-                  >
-                    Remove
-                  </Button>
-                </li>
-              ))}
-            </ul>
           )}
         </CardContent>
       </Card>

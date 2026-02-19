@@ -147,7 +147,7 @@ export interface KnowledgeBaseEntry {
   name: string;
   tags: string[];
   lastScanned?: string;
-  source: "db" | "filesystem" | "both";
+  source: "db";
 }
 
 // ── Settings Types ────────────────────────────────────────────────────────────
@@ -171,7 +171,6 @@ export interface Settings {
   proxyConfig?: ProxyConfig;
   backgroundExecution?: BackgroundExecutionConfig;
   experimental?: Record<string, boolean>;
-  indexedProjects?: string[];
 }
 
 // ── Activity Feed Types ───────────────────────────────────────────────────────
