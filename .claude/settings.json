@@ -1,21 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm *)",
-      "Bash(npx *)",
-      "Bash(pnpm *)",
-      "Bash(node *)",
-      "Bash(git *)",
-      "Bash(mkdir *)",
-      "Bash(ls *)",
-      "Bash(cat *)",
-      "Bash(cd *)",
-      "Bash(tsc *)",
-      "Bash(prisma *)",
-      "Bash(npx prisma *)",
-      "Bash(npx create-next-app *)",
-      "Bash(npx shadcn *)",
-      "Bash(npx shadcn-ui *)",
+      "Bash(*)",
       "Read",
       "Edit",
       "Write",
@@ -23,8 +9,19 @@
       "Grep",
       "Task",
       "WebFetch",
-      "WebSearch"
+      "WebSearch",
+      "NotebookEdit",
+      "Skill",
+      "mcp__mission-control__TeamCreate",
+      "mcp__mission-control__TeamDelete",
+      "mcp__mission-control__SendMessage"
     ]
   },
-  "teammateMode": "tmux"
+  "teammateMode": "tmux",
+  "mcpServers": {
+    "mission-control": {
+      "command": "/bin/bash",
+      "args": ["/Users/linjin/mission-control-lin/scripts/mcp-server.sh"]
+    }
+  }
 }
