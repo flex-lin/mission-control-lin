@@ -7,6 +7,12 @@ set -euo pipefail
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="$DIR/node_modules/.bin"
 
+# Clear stale Turbopack cache to prevent corruption
+if [ -d "$DIR/.next" ]; then
+  echo "Cleaning stale .next cache..."
+  rm -rf "$DIR/.next"
+fi
+
 # Kill any existing services on our ports / from a previous run
 echo "Stopping any existing services..."
 for port in 3777 8787; do
