@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { listTeams, readTeamConfig, readTaskList } from "@/lib/claude-files";
 import { db } from "@/lib/db";
+import { createOAuthClient } from "@/lib/claude-oauth";
 import type { KnowledgeBaseEntry } from "@/types";
 
 // ── Tool definitions for Claude ──────────────────────────────────────────────
@@ -322,6 +323,21 @@ interface ChatMessage {
   content: string;
 }
 
+function resolveClient(preferred: "api" | "claude-oauth"): Anthropic | null {
+  if (preferred === "claude-oauth") {
+    const oauth = createOAuthClient();
+    if (oauth) return oauth;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (apiKey) return new Anthropic({ apiKey });
+    return null;
+  }
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (apiKey) return new Anthropic({ apiKey });
+  const oauth = createOAuthClient();
+  if (oauth) return oauth;
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as { messages?: ChatMessage[] };
@@ -333,15 +349,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
+    // Determine which provider to use
+    let chatProvider: "api" | "claude-oauth" = "claude-oauth";
+    try {
+      const providerPref = await db.preference.findUnique({ where: { key: "chatProvider" } });
+      if (providerPref?.value === "api" || providerPref?.value === "claude-oauth") {
+        chatProvider = providerPref.value;
+      }
+    } catch {
+      // DB read failed — use default
+    }
+
+    // Try preferred provider first, then fallback
+    const client = resolveClient(chatProvider);
+    if (!client) {
       return new Response(
-        JSON.stringify({ error: "ANTHROPIC_API_KEY not configured" }),
+        JSON.stringify({ error: "No authentication available. Configure OAuth or set ANTHROPIC_API_KEY." }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       );
     }
-
-    const client = new Anthropic({ apiKey });
 
     // Build the message list for the API
     const messages: Anthropic.MessageParam[] = body.messages.map((m) => ({
@@ -356,9 +382,15 @@ export async function POST(req: NextRequest) {
         try {
           await processConversation(client, messages, controller, encoder);
         } catch (e) {
-          const errorMsg =
-            "Internal error";
-          if (e instanceof Error) console.error("[chat] stream error:", e.message);
+          console.error("[chat] stream error:", e instanceof Error ? e.message : e);
+          // Extract a user-friendly error message
+          let errorMsg = "Internal error";
+          if (e instanceof Anthropic.APIError) {
+            const body = e.error as { error?: { message?: string } } | undefined;
+            errorMsg = body?.error?.message ?? e.message;
+          } else if (e instanceof Error) {
+            errorMsg = e.message;
+          }
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ type: "error", error: errorMsg })}\n\n`)
           );
@@ -396,7 +428,7 @@ async function processConversation(
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     // Stream the response
     const stream = client.messages.stream({
-      model: "claude-sonnet-4-5-20250514",
+      model: "claude-sonnet-4-5",
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages,

@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useSettings } from "@/lib/settings-context"
 import type { Settings } from "@/types"
-import { Save, RotateCcw, Moon, MessageSquare, Copy, CheckCheck, ExternalLink, ChevronDown, ChevronRight, Plug, Unplug, Loader2 } from "lucide-react"
+import { Save, RotateCcw, Moon, MessageSquare, Copy, CheckCheck, ExternalLink, ChevronDown, ChevronRight, Plug, Unplug, Loader2, Bot } from "lucide-react"
 import type { SlackConfig, SlackConfigInput } from "@/types"
 
 const DEFAULT_PROXY_PORT = 8787
@@ -86,6 +86,26 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     channelId: "",
   })
 
+  // OAuth status
+  interface OAuthStatus {
+    configured: boolean
+    subscriptionType: string | null
+    rateLimitTier: string | null
+    expiresAt: string | null
+    valid: boolean
+  }
+  const [oauthStatus, setOauthStatus] = useState<OAuthStatus | null>(null)
+
+  const fetchOAuthStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/settings/oauth")
+      const json = (await res.json()) as { data?: OAuthStatus }
+      if (json.data) setOauthStatus(json.data)
+    } catch {
+      // ignore
+    }
+  }, [])
+
   const fetchProxyStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/proxy/status")
@@ -123,7 +143,8 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   useEffect(() => {
     void fetchProxyStatus()
     void fetchSlackConfig()
-  }, [fetchProxyStatus, fetchSlackConfig])
+    void fetchOAuthStatus()
+  }, [fetchProxyStatus, fetchSlackConfig, fetchOAuthStatus])
 
   async function handleProxyToggle(enable: boolean) {
     setProxyLoading(true)
@@ -405,6 +426,95 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
               className="w-24"
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Chat Assistant */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bot className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-semibold">Chat Assistant</CardTitle>
+            </div>
+            {oauthStatus?.configured && oauthStatus.valid && (
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs text-muted-foreground">
+                  OAuth connected — {oauthStatus.rateLimitTier?.replace(/_/g, " ") ?? oauthStatus.subscriptionType}
+                </span>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Choose how the chat assistant authenticates with Claude. OAuth uses your Claude subscription at no extra API cost.
+          </p>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Provider</Label>
+              <p className="text-xs text-muted-foreground">
+                {(settings.chatProvider ?? "claude-oauth") === "claude-oauth"
+                  ? "Using your Claude subscription via OAuth"
+                  : "Using ANTHROPIC_API_KEY environment variable"}
+              </p>
+            </div>
+            <Select
+              value={settings.chatProvider ?? "claude-oauth"}
+              onValueChange={(v) =>
+                setSettings((s) => ({ ...s, chatProvider: v as Settings["chatProvider"] }))
+              }
+            >
+              <SelectTrigger className="w-52">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="claude-oauth">Claude Subscription (OAuth)</SelectItem>
+                <SelectItem value="api">API Key</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(settings.chatProvider ?? "claude-oauth") === "claude-oauth" && oauthStatus && (
+            <>
+              <Separator />
+              <div className={`rounded-md border p-3 text-xs space-y-1 ${
+                oauthStatus.configured && oauthStatus.valid
+                  ? "border-emerald-500/30 bg-emerald-500/5"
+                  : "border-yellow-500/30 bg-yellow-500/5"
+              }`}>
+                {oauthStatus.configured && oauthStatus.valid ? (
+                  <>
+                    <p className="font-medium text-emerald-400">OAuth Active</p>
+                    <p className="text-muted-foreground">
+                      Subscription: {oauthStatus.subscriptionType} &middot; Tier: {oauthStatus.rateLimitTier?.replace(/_/g, " ")}
+                    </p>
+                    <p className="text-muted-foreground/70 text-[11px]">
+                      Token expires {new Date(oauthStatus.expiresAt!).toLocaleDateString()}
+                    </p>
+                  </>
+                ) : oauthStatus.configured ? (
+                  <>
+                    <p className="font-medium text-yellow-400">OAuth Token Expired</p>
+                    <p className="text-muted-foreground">
+                      Re-authenticate with <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">claude</code> CLI to refresh the token.
+                      The assistant will fall back to API key if available.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium text-yellow-400">OAuth Not Configured</p>
+                    <p className="text-muted-foreground">
+                      No credentials found at <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">~/.claude/.credentials.json</code>.
+                      Log in with <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">claude</code> CLI first.
+                    </p>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

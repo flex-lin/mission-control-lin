@@ -157,6 +157,7 @@ export interface Settings {
   theme?: "dark" | "light" | "system";
   refreshInterval?: number;
   proxyConfig?: ProxyConfig;
+  chatProvider?: "api" | "claude-oauth";
 }
 
 // ── Activity Feed Types ───────────────────────────────────────────────────────

@@ -30,6 +30,9 @@ export async function GET(): Promise<NextResponse> {
       ...(dbPrefs.refreshInterval && {
         refreshInterval: Number(dbPrefs.refreshInterval),
       }),
+      ...(dbPrefs.chatProvider && {
+        chatProvider: dbPrefs.chatProvider as Settings["chatProvider"],
+      }),
     };
 
     return ok(merged);
@@ -51,6 +54,9 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     if (body.refreshInterval !== undefined) {
       dbUpdates.push({ key: "refreshInterval", value: String(body.refreshInterval) });
     }
+    if (body.chatProvider !== undefined) {
+      dbUpdates.push({ key: "chatProvider", value: body.chatProvider });
+    }
 
     for (const { key, value } of dbUpdates) {
       await db.preference.upsert({
@@ -66,6 +72,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     const {
       theme: _theme,
       refreshInterval: _ri,
+      chatProvider: _cp,
       ...rawFileUpdates
     } = body;
 
