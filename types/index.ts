@@ -513,8 +513,12 @@ export interface SlackConfig {
   /** Masked bot token (only last 4 chars shown when reading) */
   botToken: string;
   /** Masked signing secret (only last 4 chars shown when reading) */
-  signingSecret: string;
+  signingSecret?: string | null;
+  /** Masked app-level token for Socket Mode (only last 4 chars shown when reading) */
+  appToken?: string | null;
   channelId?: string | null;
+  /** Whether Socket Mode WebSocket is currently connected */
+  socketConnected?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -523,8 +527,44 @@ export interface SlackConfigInput {
   workspaceId: string;
   workspaceName?: string;
   botToken: string;
-  signingSecret: string;
+  signingSecret?: string;
+  appToken?: string;
   channelId?: string;
+}
+
+export interface SlackManifest {
+  display_information: {
+    name: string;
+    description: string;
+    background_color?: string;
+  };
+  features: {
+    bot_user: {
+      display_name: string;
+      always_online: boolean;
+    };
+    slash_commands: Array<{
+      command: string;
+      description: string;
+      usage_hint?: string;
+    }>;
+  };
+  oauth_config: {
+    scopes: {
+      bot: string[];
+    };
+  };
+  settings: {
+    event_subscriptions?: {
+      request_url?: string;
+      bot_events: string[];
+    };
+    socket_mode_enabled: boolean;
+    org_deploy_enabled: boolean;
+    interactivity?: {
+      is_enabled: boolean;
+    };
+  };
 }
 
 // ── API Response Wrapper ──────────────────────────────────────────────────────

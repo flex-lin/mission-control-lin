@@ -45,6 +45,7 @@ function makeFakeDbConfig(overrides: Partial<Record<string, unknown>> = {}) {
     workspaceName: null,
     botToken: TEST_BOT_TOKEN,
     signingSecret: TEST_SIGNING_SECRET,
+    appToken: null,
     channelId: null,
     createdAt: new Date(),
     updatedAt: new Date(),

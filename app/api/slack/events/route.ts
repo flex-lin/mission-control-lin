@@ -66,6 +66,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  if (!config.signingSecret) {
+    return NextResponse.json(
+      { error: "Signing secret not configured (HTTP mode requires signingSecret)" },
+      { status: 503 }
+    );
+  }
+
   const isValid = await verifySlackSignature(
     rawBody,
     timestamp,

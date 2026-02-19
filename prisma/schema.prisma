@@ -181,7 +181,8 @@ model SlackConfig {
   workspaceId   String   @unique @map("workspace_id")
   workspaceName String?  @map("workspace_name")
   botToken      String   @map("bot_token")       // xoxb-...
-  signingSecret String   @map("signing_secret")  // For request verification
+  signingSecret String?  @map("signing_secret")  // For HTTP request verification (optional with Socket Mode)
+  appToken      String?  @map("app_token")       // xapp-... for Socket Mode connections
   channelId     String?  @map("channel_id")      // Default channel for notifications
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")

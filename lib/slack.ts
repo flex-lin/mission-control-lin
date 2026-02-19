@@ -54,7 +54,8 @@ export async function getSlackConfigRaw(): Promise<{
   workspaceId: string;
   workspaceName: string | null;
   botToken: string;
-  signingSecret: string;
+  signingSecret: string | null;
+  appToken: string | null;
   channelId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -75,7 +76,8 @@ export async function getSlackConfig(): Promise<SlackConfig | null> {
     workspaceName: raw.workspaceName,
     // Show only the last 4 characters of secrets
     botToken: maskSecret(raw.botToken),
-    signingSecret: maskSecret(raw.signingSecret),
+    signingSecret: raw.signingSecret ? maskSecret(raw.signingSecret) : null,
+    appToken: raw.appToken ? maskSecret(raw.appToken) : null,
     channelId: raw.channelId,
     createdAt: raw.createdAt.toISOString(),
     updatedAt: raw.updatedAt.toISOString(),
