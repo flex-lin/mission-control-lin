@@ -25,7 +25,14 @@ echo ""
 
 while true; do
   echo "[daemon] Starting queue worker at $(date)..."
-  pnpm queue || true
+  # caffeinate -i prevents system idle sleep while the worker is running.
+  # When the worker exits (tasks done or crash), sleep is re-allowed.
+  # On Linux, caffeinate is not available — fall back to running without it.
+  if command -v caffeinate &>/dev/null; then
+    caffeinate -i pnpm queue || true
+  else
+    pnpm queue || true
+  fi
   EXIT_CODE=$?
   if [ "$EXIT_CODE" -eq 0 ]; then
     echo "[daemon] Worker exited cleanly. Daemon stopped."
