@@ -220,6 +220,15 @@ export function createProxyServer(): http.Server {
     // Collect request body
     const reqChunks: Buffer[] = []
     clientReq.on("data", (chunk: Buffer) => reqChunks.push(chunk))
+    clientReq.on("error", (err) => {
+      console.error("[proxy] client request error:", err.message)
+      if (!clientRes.headersSent) {
+        clientRes.writeHead(400)
+        clientRes.end("Bad Request")
+      } else {
+        clientRes.destroy()
+      }
+    })
 
     clientReq.on("end", () => {
       const reqBody = Buffer.concat(reqChunks)
@@ -253,6 +262,15 @@ export function createProxyServer(): http.Server {
         proxyRes.on("data", (chunk: Buffer) => {
           resChunks.push(chunk)
           clientRes.write(chunk)
+        })
+        proxyRes.on("error", (err) => {
+          console.error("[proxy] upstream response error:", err.message)
+          if (!clientRes.headersSent) {
+            clientRes.writeHead(502)
+            clientRes.end("Bad Gateway")
+          } else {
+            clientRes.destroy()
+          }
         })
 
         proxyRes.on("end", () => {
@@ -328,8 +346,12 @@ export function createProxyServer(): http.Server {
 
       proxyReq.on("error", (err) => {
         console.error("[proxy] upstream error:", err.message)
-        clientRes.writeHead(502)
-        clientRes.end("Bad Gateway")
+        if (!clientRes.headersSent) {
+          clientRes.writeHead(502)
+          clientRes.end("Bad Gateway")
+        } else {
+          clientRes.destroy()
+        }
       })
 
       if (reqBody.length > 0) {

@@ -12,11 +12,11 @@ export function getCutoffDate(period: string): Date {
   return cutoff;
 }
 
-/** Format a Date as YYYY-MM-DD in local timezone (not UTC) */
+/** Format a Date as YYYY-MM-DD in UTC (consistent with getCutoffDate) */
 export function toLocalDateString(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
 

@@ -66,11 +66,11 @@ describe("api-helpers", () => {
   });
 
   describe("serverError", () => {
-    it("extracts message from Error objects", async () => {
+    it("returns generic message for Error objects (no internal leak)", async () => {
       const res = serverError(new Error("DB connection lost"));
       expect(res.status).toBe(500);
       const body = await res.json();
-      expect(body.error).toBe("DB connection lost");
+      expect(body.error).toBe("Internal server error");
       expect(body.code).toBe("SERVER_ERROR");
     });
 

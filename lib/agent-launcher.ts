@@ -162,9 +162,11 @@ function writeLeaderLauncher(teamName: string, projectPath: string): string {
 
   // Write launcher script
   const scriptFile = path.join(teamDir, "launch-leader.sh");
+  // Escape projectPath for safe shell embedding (single-quote with escaping)
+  const escapedPath = projectPath.replace(/'/g, "'\\''");
   const script = [
     "#!/bin/bash",
-    `cd "${projectPath}"`,
+    `cd '${escapedPath}'`,
     // Unset CLAUDECODE so a nested Claude Code session is permitted.
     // When the queue worker runs inside an existing Claude Code session,
     // this env var is set and would block the child claude process.

@@ -311,7 +311,7 @@ describe("GET /api/queue — group filtering", () => {
       const { status, body } = await callGET("/api/queue");
 
       expect(status).toBe(500);
-      expect(body.error).toBe("DB connection failed");
+      expect(body.error).toBe("Internal server error");
       expect(body.code).toBe("SERVER_ERROR");
     });
   });

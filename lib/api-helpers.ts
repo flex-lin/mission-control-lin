@@ -17,7 +17,7 @@ export function err(
   status = 400
 ): NextResponse {
   return NextResponse.json(
-    { error: message, code } satisfies { error: string; code: string },
+    { error: message, code } satisfies ApiResponse<never>,
     { status }
   );
 }
@@ -27,7 +27,8 @@ export function notFound(message = "Not found"): NextResponse {
 }
 
 export function serverError(e: unknown): NextResponse {
-  const message =
-    e instanceof Error ? e.message : "Internal server error";
-  return err(message, "SERVER_ERROR", 500);
+  if (e instanceof Error) {
+    console.error("[api] server error:", e.message);
+  }
+  return err("Internal server error", "SERVER_ERROR", 500);
 }

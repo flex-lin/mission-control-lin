@@ -1057,7 +1057,7 @@ describe("POST /api/chatbot — SDK error handling", () => {
     const res = await POST(makeReq({ messages: [{ role: "user", content: "Hello" }] }));
     expect(res.status).toBe(500);
     const body = await res.json() as { error: string };
-    expect(body.error).toBe("Authentication failed: invalid API key");
+    expect(body.error).toBe("Internal server error");
   });
 });
 
