@@ -62,6 +62,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       goal?: string;
       projectPath?: string;
       priority?: number;
+      teamMembers?: unknown;
     };
 
     if (!body.goal || typeof body.goal !== "string" || !body.goal.trim()) {
@@ -71,11 +72,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       ? body.projectPath.trim()
       : process.cwd();
 
+    // teamMembers: optional array of TeamRole objects (with at least id or name), stored as JSON string
+    let teamMembersJson = "[]";
+    if (Array.isArray(body.teamMembers) && body.teamMembers.length > 0) {
+      // Validate that each member has at minimum a name field
+      const invalid = body.teamMembers.find(
+        (m) => typeof m !== "object" || m === null || !("name" in m) || typeof (m as Record<string, unknown>).name !== "string"
+      );
+      if (invalid) {
+        return err("Each teamMember must be an object with a 'name' field", "VALIDATION_ERROR");
+      }
+      teamMembersJson = JSON.stringify(body.teamMembers);
+    }
+
     const task = await db.queuedTask.create({
       data: {
         goal: body.goal.trim(),
         projectPath,
         priority: body.priority ?? 0,
+        teamMembers: teamMembersJson,
       },
     });
 

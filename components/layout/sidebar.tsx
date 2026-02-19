@@ -13,6 +13,7 @@ import {
   ListOrdered,
   MessageSquare,
   Wrench,
+  UserCog,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAutoRefresh } from "@/lib/hooks/use-auto-refresh"
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/stuck", label: "Stuck", icon: AlertTriangle },
   { href: "/self-healing", label: "Self-Healing", icon: Wrench },
   { href: "/agent-teams", label: "Agent Teams", icon: Users },
+  { href: "/roles", label: "Team Roles", icon: UserCog },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
   { href: "/settings", label: "Settings", icon: Settings },

@@ -65,7 +65,7 @@ export async function DELETE(req: NextRequest, ctx: RouteContext): Promise<NextR
   }
 }
 
-// Update a pending task (goal, priority)
+// Update a pending task (goal, priority, teamMembers)
 export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<NextResponse> {
   try {
     const { id } = await ctx.params;
@@ -87,6 +87,14 @@ export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<NextRe
     }
     if (typeof body.priority === "number" && body.priority >= 0 && body.priority <= 3) {
       data.priority = body.priority;
+    }
+    // teamMembers: optional array of role objects; null/empty array clears the selection
+    if (body.teamMembers !== undefined) {
+      if (body.teamMembers === null || (Array.isArray(body.teamMembers) && body.teamMembers.length === 0)) {
+        data.teamMembers = "[]";
+      } else if (Array.isArray(body.teamMembers)) {
+        data.teamMembers = JSON.stringify(body.teamMembers);
+      }
     }
 
     if (Object.keys(data).length === 0) {

@@ -18,9 +18,17 @@ interface QueuedTaskRow {
   team_name: string | null;
   priority: number;
   result: string | null;
+  team_members: string; // JSON array of role objects
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
+}
+
+interface SelectedRole {
+  name: string;
+  role: string;
+  agentType: string;
+  description: string;
 }
 
 interface TaskFileData {
@@ -58,11 +66,18 @@ function openDb(): Database.Database {
       team_name TEXT,
       priority INTEGER NOT NULL DEFAULT 0,
       result TEXT,
+      team_members TEXT NOT NULL DEFAULT '[]',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       started_at TEXT,
       completed_at TEXT
     )
   `);
+  // Ensure team_members column exists in older DBs (migration safety)
+  try {
+    db.exec(`ALTER TABLE queued_tasks ADD COLUMN team_members TEXT NOT NULL DEFAULT '[]'`);
+  } catch {
+    // Column already exists — ignore
+  }
   return db;
 }
 
@@ -395,6 +410,27 @@ async function processTask(db: Database.Database, task: QueuedTaskRow): Promise<
 
     console.log(`[queue] Generating team plan for: ${task.goal}`);
     const plan = await generateTeamPlan(task.goal, task.project_path);
+
+    // If the queued task has explicitly configured team members, override the AI-generated personas
+    let configuredMembers: SelectedRole[] = [];
+    try {
+      const parsed = JSON.parse(task.team_members || "[]");
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        configuredMembers = parsed as SelectedRole[];
+      }
+    } catch {
+      // Ignore parse errors — fall back to AI-generated plan
+    }
+
+    if (configuredMembers.length > 0) {
+      console.log(`[queue] Using ${configuredMembers.length} configured team members for task #${task.id}`);
+      plan.personas = configuredMembers.map((m) => ({
+        name: m.name,
+        role: m.role,
+        agentType: m.agentType ?? "general-purpose",
+        description: m.description ?? "",
+      }));
+    }
 
     // Use plan's AI-generated name with queue prefix, ensure uniqueness
     teamName = ensureUniqueName(`q-${task.id}-${plan.teamName}`);

@@ -269,6 +269,35 @@ export interface WakeResponse {
   message: string;
 }
 
+// ── Team Role Types ──────────────────────────────────────────────────────────
+
+export type AgentType = "general-purpose" | "Bash" | "Explore" | "Plan";
+
+export interface TeamRole {
+  id: number;
+  name: string;
+  role: string;
+  agentType: AgentType;
+  description: string;
+  isPreset: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTeamRoleRequest {
+  name: string;
+  role: string;
+  agentType: AgentType;
+  description: string;
+}
+
+export interface UpdateTeamRoleRequest {
+  name?: string;
+  role?: string;
+  agentType?: AgentType;
+  description?: string;
+}
+
 // ── Task Queue Types ────────────────────────────────────────────────────────
 
 export type QueuedTaskStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
@@ -301,6 +330,7 @@ export interface QueuedTask {
   priority: number;
   result?: string | null;
   attachments?: TaskAttachment[];
+  teamMembers?: TeamRole[] | null;
   createdAt: string;
   startedAt?: string | null;
   completedAt?: string | null;

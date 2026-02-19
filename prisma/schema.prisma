@@ -61,6 +61,7 @@ model QueuedTask {
   priority    Int       @default(0)
   result      String?
   attachments String    @default("[]")         // JSON array of TaskAttachment objects
+  teamMembers String    @default("[]")         @map("team_members") // JSON array of selected TeamMemberRole ids or inline role objects
   createdAt   DateTime  @default(now()) @map("created_at")
   startedAt   DateTime? @map("started_at")
   completedAt DateTime? @map("completed_at")
@@ -68,6 +69,20 @@ model QueuedTask {
   @@index([status, createdAt])
   @@index([teamName])
   @@map("queued_tasks")
+}
+
+/// User-defined and preset roles available for team composition
+model TeamMemberRole {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique                // kebab-case agent name, e.g. "frontend-dev"
+  role        String                          // display title, e.g. "Frontend Developer"
+  agentType   String   @map("agent_type")    // "general-purpose" | "Bash" | "Explore" | "Plan"
+  description String                          // what this role is responsible for
+  isPreset    Boolean  @default(false) @map("is_preset")  // true = shipped with app; false = user-created
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("team_member_roles")
 }
 
 /// Record synced from Anthropic Usage API (per-bucket, per-model)

@@ -47,8 +47,9 @@ import {
   Paperclip,
   TriangleAlert,
 } from "lucide-react"
-import type { QueuedTask, QueuedTaskStatus, TeamHealthStatus, TaskAttachment } from "@/types"
+import type { QueuedTask, QueuedTaskStatus, TeamHealthStatus, TaskAttachment, TeamRole } from "@/types"
 import { ALLOWED_UPLOAD_TYPES, MAX_FILE_SIZE, MAX_FILES_PER_TASK } from "@/types"
+import { RolePicker } from "@/components/queue/role-picker"
 
 interface TeamHealthInfo {
   status: TeamHealthStatus
@@ -162,6 +163,7 @@ function formatFileSize(bytes: number): string {
 export default function QueuePage() {
   const [goal, setGoal] = useState("")
   const [projectPath, setProjectPath] = useState("")
+  const [selectedRoles, setSelectedRoles] = useState<TeamRole[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -260,6 +262,16 @@ export default function QueuePage() {
     }
   }
 
+  function parseTeamMembers(task: QueuedTask): TeamRole[] {
+    if (!task.teamMembers) return []
+    if (Array.isArray(task.teamMembers)) return task.teamMembers
+    try {
+      return JSON.parse(task.teamMembers as unknown as string)
+    } catch {
+      return []
+    }
+  }
+
   const validateAndAddFiles = useCallback((incoming: File[]) => {
     setFileError(null)
     for (const f of incoming) {
@@ -337,7 +349,11 @@ export default function QueuePage() {
       const res = await fetch("/api/queue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal: goal.trim(), ...(projectPath.trim() && { projectPath: projectPath.trim() }) }),
+        body: JSON.stringify({
+          goal: goal.trim(),
+          ...(projectPath.trim() && { projectPath: projectPath.trim() }),
+          ...(selectedRoles.length > 0 && { teamMembers: selectedRoles }),
+        }),
       })
       if (!res.ok) {
         const json = await res.json()
@@ -350,6 +366,7 @@ export default function QueuePage() {
       }
       setGoal("")
       setProjectPath("")
+      setSelectedRoles([])
       setFiles([])
       setFileError(null)
       await refetch()
@@ -617,6 +634,18 @@ export default function QueuePage() {
               />
             </div>
           </div>
+          {/* Team Members */}
+          <div className="space-y-2">
+            <Label>
+              Team Members <span className="text-muted-foreground font-normal">(optional)</span>
+            </Label>
+            <RolePicker
+              selectedRoles={selectedRoles}
+              onChange={setSelectedRoles}
+              disabled={submitting}
+            />
+          </div>
+
           {/* File Upload Zone */}
           <div>
             <input
@@ -771,19 +800,31 @@ export default function QueuePage() {
                             </Button>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1 group">
-                            <span className="truncate">{task.goal}</span>
-                            <AttachmentIndicator attachments={parseAttachments(task)} taskId={task.id} activePopover={attachmentPopover} setActivePopover={setAttachmentPopover} />
-                            {isPending && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => startEditing(task)}
-                                title="Edit goal"
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1 group">
+                              <span className="truncate">{task.goal}</span>
+                              <AttachmentIndicator attachments={parseAttachments(task)} taskId={task.id} activePopover={attachmentPopover} setActivePopover={setAttachmentPopover} />
+                              {isPending && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => startEditing(task)}
+                                  title="Edit goal"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                            {parseTeamMembers(task).length > 0 && (
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <Users className="h-3 w-3 text-muted-foreground shrink-0" />
+                                {parseTeamMembers(task).map((member) => (
+                                  <span key={member.id} className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">
+                                    {member.name}
+                                  </span>
+                                ))}
+                              </div>
                             )}
                           </div>
                         )}
