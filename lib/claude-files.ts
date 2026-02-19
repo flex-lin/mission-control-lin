@@ -276,10 +276,10 @@ export function findInternalTeamName(mcTeamName: string): string | null {
       const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
       if (!config.createdAt) continue;
 
-      // Guard: skip candidates that are intentionally named external teams.
-      // If config.name matches the directory name, it's an explicitly named team
-      // (not a Claude-generated whimsical name) — don't claim it as our internal team.
-      if (config.name && config.name === entry.name) continue;
+      // Guard: skip candidates that are the MC team itself (already handled above)
+      // or the queried MC team name.
+      // Note: we no longer skip teams just because config.name === entry.name,
+      // since Claude-generated teams also set config.name to the directory name.
 
       const createdAt = parseCreatedAt(config.createdAt);
       const timeDiff = Math.abs(createdAt - mcCreatedAt);
@@ -417,8 +417,9 @@ export function readTaskList(teamName: string): TeamTask[] {
 
   if (!fs.existsSync(dir)) return [];
 
-  // Priority 2: Auto-symlink via internal team name heuristic (MC-spawned teams)
-  const internalTeamName = findInternalTeamName(safe);
+  // Priority 2: Auto-symlink via internal team name heuristic (MC-spawned teams only)
+  const isMcTeam = safe.startsWith("q-");
+  const internalTeamName = isMcTeam ? findInternalTeamName(safe) : null;
   if (internalTeamName) {
     const internalDir = tasksDir(internalTeamName);
     symlinkInternalTaskDir(dir, internalDir);

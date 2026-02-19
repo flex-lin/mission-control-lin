@@ -208,7 +208,7 @@ describe("A. Leader system prompt — self-healing build instructions", () => {
     // The leader system prompt is written to CLAUDE_DIR at module load time.
     // We verify that the actual source in agent-launcher.ts contains the expected
     // self-healing sections by reading it directly.
-    const agentLauncherPath = path.resolve("/Users/linjin/mission-control-lin/lib/agent-launcher.ts");
+    const agentLauncherPath = path.resolve(process.cwd(), "lib/agent-launcher.ts");
     const source = fs.readFileSync(agentLauncherPath, "utf-8");
 
     expect(source).toContain("COMPLETION & CLEANUP");
@@ -217,7 +217,7 @@ describe("A. Leader system prompt — self-healing build instructions", () => {
 
   it("system prompt instructs leader to fix build failures and retry", async () => {
     // Verify the self-healing instructions are present in the source
-    const agentLauncherPath = path.resolve("/Users/linjin/mission-control-lin/lib/agent-launcher.ts");
+    const agentLauncherPath = path.resolve(process.cwd(), "lib/agent-launcher.ts");
     const source = fs.readFileSync(agentLauncherPath, "utf-8");
 
     // Must contain instructions to fix and rebuild if the build fails
@@ -227,7 +227,7 @@ describe("A. Leader system prompt — self-healing build instructions", () => {
   });
 
   it("system prompt instructs leader to commit after successful build", async () => {
-    const agentLauncherPath = path.resolve("/Users/linjin/mission-control-lin/lib/agent-launcher.ts");
+    const agentLauncherPath = path.resolve(process.cwd(), "lib/agent-launcher.ts");
     const source = fs.readFileSync(agentLauncherPath, "utf-8");
 
     expect(source).toContain("commit");
@@ -252,7 +252,7 @@ describe("A. Leader system prompt — self-healing build instructions", () => {
 
   it("system prompt contains instructions to update task files on disk", async () => {
     // Verify the monitoring mode disk-write instructions are in the source
-    const agentLauncherPath = path.resolve("/Users/linjin/mission-control-lin/lib/agent-launcher.ts");
+    const agentLauncherPath = path.resolve(process.cwd(), "lib/agent-launcher.ts");
     const source = fs.readFileSync(agentLauncherPath, "utf-8");
 
     expect(source).toContain("update the disk files");
@@ -261,7 +261,7 @@ describe("A. Leader system prompt — self-healing build instructions", () => {
 
   it("agent-launcher source uses 0o600 mode for prompt file and 0o755 for launch script", async () => {
     // Verify the source code specifies the correct file permissions
-    const agentLauncherPath = path.resolve("/Users/linjin/mission-control-lin/lib/agent-launcher.ts");
+    const agentLauncherPath = path.resolve(process.cwd(), "lib/agent-launcher.ts");
     const source = fs.readFileSync(agentLauncherPath, "utf-8");
 
     // Prompt file uses mode 0o600 (owner read/write only) for security
