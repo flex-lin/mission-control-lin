@@ -283,63 +283,28 @@ export function createProxyServer(): http.Server {
           const contentType = proxyRes.headers["content-type"] ?? ""
           const isSSE = streaming || contentType.includes("text/event-stream")
 
-          if (isSSE) {
-            // Parse SSE streaming response
-            const usage = extractUsageFromSSE(resBody)
-            if (usage) {
-              insertLog(db, {
-                ...usage,
-                teamName,
-                memberName,
-                endpoint,
-                latencyMs,
-                statusCode,
-              })
-            } else {
-              // Streaming but couldn't extract usage — log with what we know
-              insertLog(db, {
-                model: "unknown",
-                inputTokens: 0,
-                outputTokens: 0,
-                cacheReadTokens: 0,
-                cacheCreationTokens: 0,
-                teamName,
-                memberName,
-                endpoint,
-                latencyMs,
-                statusCode,
-              })
-            }
-          } else {
-            // Non-streaming: parse as JSON
-            try {
-              const parsed = JSON.parse(resBody) as AnthropicResponseBody
-              if (parsed.usage || parsed.model) {
-                const usage = extractUsage(parsed)
-                insertLog(db, {
-                  ...usage,
-                  teamName,
-                  memberName,
-                  endpoint,
-                  latencyMs,
-                  statusCode,
-                })
+          // Log usage — wrapped in try/catch so logging failures never affect the API call
+          try {
+            if (isSSE) {
+              const usage = extractUsageFromSSE(resBody)
+              if (usage) {
+                insertLog(db, { ...usage, teamName, memberName, endpoint, latencyMs, statusCode })
+              } else {
+                insertLog(db, { model: "unknown", inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, teamName, memberName, endpoint, latencyMs, statusCode })
               }
-            } catch {
-              // Non-JSON response — log basic info
-              insertLog(db, {
-                model: "unknown",
-                inputTokens: 0,
-                outputTokens: 0,
-                cacheReadTokens: 0,
-                cacheCreationTokens: 0,
-                teamName,
-                memberName,
-                endpoint,
-                latencyMs,
-                statusCode,
-              })
+            } else {
+              try {
+                const parsed = JSON.parse(resBody) as AnthropicResponseBody
+                if (parsed.usage || parsed.model) {
+                  const usage = extractUsage(parsed)
+                  insertLog(db, { ...usage, teamName, memberName, endpoint, latencyMs, statusCode })
+                }
+              } catch {
+                insertLog(db, { model: "unknown", inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheCreationTokens: 0, teamName, memberName, endpoint, latencyMs, statusCode })
+              }
             }
+          } catch (logErr) {
+            console.error("[proxy] logging failed (request was still forwarded):", (logErr as Error).message)
           }
         })
       })
@@ -377,6 +342,14 @@ export function startProxy(): void {
     }
   })
 }
+
+// Prevent uncaught errors from crashing the proxy process
+process.on("uncaughtException", (err) => {
+  console.error("[proxy] uncaught exception (proxy still running):", err.message)
+})
+process.on("unhandledRejection", (reason) => {
+  console.error("[proxy] unhandled rejection (proxy still running):", reason)
+})
 
 // Run directly if this is the entry point
 if (require.main === module) {
