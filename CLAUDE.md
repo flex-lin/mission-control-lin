@@ -17,13 +17,20 @@ Local dashboard for managing Claude Code agent teams, tracking token usage, and 
 
 ## Quick Start
 ```bash
-pnpm install
+pnpm install        # deps + auto-registers MCP server in .claude/settings.json
 npx prisma generate
 pnpm dev            # Next.js on :3777
 pnpm proxy          # API proxy on :8787 (optional, for proxy-based token tracking)
-pnpm queue          # Queue worker (optional, for background automated task execution)
-pnpm mcp            # MCP stdio server (used by Claude Code leader agents)
+pnpm queue:daemon   # Queue worker in persistent tmux session (recommended)
+# pnpm queue        # Queue worker in foreground (dies on terminal close)
 ```
+
+### MCP Setup (automatic)
+`pnpm install` runs `scripts/setup-mcp.js` (postinstall) which patches
+`.claude/settings.json` with the absolute path to `scripts/mcp-server.sh`
+for the current machine. Re-run `pnpm mcp:setup` if the project moves.
+The MCP server exposes `TeamCreate`, `TeamDelete`, and `SendMessage` to all
+Claude Code leader agents spawned by the queue worker.
 
 ## Project Structure
 ```
