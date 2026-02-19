@@ -159,3 +159,45 @@ model SessionCheckpoint {
   @@index([teamName])
   @@map("session_checkpoints")
 }
+
+/// Tracks compilation errors that have been detected and queued for self-healing
+model CompilationError {
+  id              Int       @id @default(autoincrement())
+  projectPath     String    @map("project_path")
+  errorMessage    String    @map("error_message")    // full compiler error output
+  errorType       String    @map("error_type")        // "typescript" | "build" | "lint" | "runtime"
+  filePath        String?   @map("file_path")         // source file where error occurred (if parseable)
+  lineNumber      Int?      @map("line_number")
+  status          String    @default("pending")       // "pending" | "healing" | "healed" | "failed" | "skipped"
+  healingStrategy String?   @map("healing_strategy")  // strategy chosen by AI: "fix_types" | "fix_imports" | "fix_syntax" | "custom"
+  resolution      String?                             // human-readable description of what was fixed
+  retryCount      Int       @default(0) @map("retry_count")
+  maxRetries      Int       @default(3) @map("max_retries")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  healedAt        DateTime? @map("healed_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  healingAttempts HealingAttempt[]
+
+  @@index([projectPath, status])
+  @@index([status, createdAt])
+  @@map("compilation_errors")
+}
+
+/// Records each individual healing attempt for a CompilationError
+model HealingAttempt {
+  id               Int      @id @default(autoincrement())
+  compilationError   CompilationError @relation(fields: [compilationErrorId], references: [id], onDelete: Cascade)
+  compilationErrorId Int    @map("compilation_error_id")
+  attemptNumber    Int      @map("attempt_number")
+  strategy         String                               // healing strategy used
+  patch            String?                              // JSON-encoded file patches applied
+  buildOutput      String?  @map("build_output")        // compiler output after this attempt
+  success          Boolean  @default(false)
+  errorAfter       String?  @map("error_after")         // remaining errors if not fully healed
+  durationMs       Int?     @map("duration_ms")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([compilationErrorId])
+  @@map("healing_attempts")
+}

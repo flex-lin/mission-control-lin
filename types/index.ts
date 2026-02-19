@@ -440,6 +440,86 @@ export interface UsageSummary {
   monthly: UsageSummaryPeriod;
 }
 
+// ── Build Record Types ────────────────────────────────────────────────────────
+
+export interface BuildRecord {
+  id: string;
+  projectPath: string;
+  status: "running" | "success" | "failed";
+  startedAt: string;
+  completedAt: string | null;
+  exitCode: number | null;
+  output: string;
+  errorOutput: string;
+  autoHeal: boolean;
+  healTaskId: number | null;
+}
+
+// ── Self-Healing Types ────────────────────────────────────────────────────────
+
+export type CompilationErrorStatus = "pending" | "healing" | "healed" | "failed" | "skipped";
+export type CompilationErrorType = "typescript" | "build" | "lint" | "runtime";
+export type HealingStrategy = "fix_types" | "fix_imports" | "fix_syntax" | "custom";
+
+export interface CompilationError {
+  id: number;
+  projectPath: string;
+  errorMessage: string;
+  errorType: CompilationErrorType;
+  filePath?: string | null;
+  lineNumber?: number | null;
+  status: CompilationErrorStatus;
+  healingStrategy?: HealingStrategy | null;
+  resolution?: string | null;
+  retryCount: number;
+  maxRetries: number;
+  createdAt: string;
+  healedAt?: string | null;
+  updatedAt: string;
+  healingAttempts?: HealingAttempt[];
+}
+
+export interface HealingAttempt {
+  id: number;
+  compilationErrorId: number;
+  attemptNumber: number;
+  strategy: string;
+  patch?: string | null;
+  buildOutput?: string | null;
+  success: boolean;
+  errorAfter?: string | null;
+  durationMs?: number | null;
+  createdAt: string;
+}
+
+export interface ReportCompilationErrorRequest {
+  projectPath: string;
+  errorMessage: string;
+  errorType?: CompilationErrorType;
+  filePath?: string;
+  lineNumber?: number;
+}
+
+export interface HealingResult {
+  compilationErrorId: number;
+  success: boolean;
+  attemptNumber: number;
+  strategy: string;
+  resolution?: string;
+  remainingErrors?: string;
+  durationMs: number;
+}
+
+export interface SelfHealingStats {
+  total: number;
+  pending: number;
+  healing: number;
+  healed: number;
+  failed: number;
+  skipped: number;
+  successRate: number;
+}
+
 // ── API Response Wrapper ──────────────────────────────────────────────────────
 
 export interface ApiResponse<T> {
