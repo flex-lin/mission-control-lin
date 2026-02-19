@@ -45,6 +45,7 @@ import {
   ImageIcon,
   FileText,
   Paperclip,
+  TriangleAlert,
 } from "lucide-react"
 import type { QueuedTask, QueuedTaskStatus, TeamHealthStatus, TaskAttachment } from "@/types"
 import { ALLOWED_UPLOAD_TYPES, MAX_FILE_SIZE, MAX_FILES_PER_TASK } from "@/types"
@@ -60,6 +61,14 @@ interface QueueStatus {
   queueDepth: number
   counts: { pending: number; running: number; completed: number; failed: number }
   currentTask: { id: number; goal: string; teamName: string | null; startedAt: string | null } | null
+}
+
+interface WorkerInfo {
+  sessionAlive: boolean
+  heartbeatFresh: boolean
+  lastHeartbeat: string | null
+  sessionName: string
+  attachCmd: string
 }
 
 const statusConfig: Record<QueuedTaskStatus, { icon: React.ElementType; variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning"; label: string }> = {
@@ -163,6 +172,7 @@ export default function QueuePage() {
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [cancellingIds, setCancellingIds] = useState<Set<number>>(new Set())
+  const [workerActionLoading, setWorkerActionLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadAbortRef = useRef<AbortController | null>(null)
   const [attachmentPopover, setAttachmentPopover] = useState<number | null>(null)
@@ -206,6 +216,11 @@ export default function QueuePage() {
 
   const { data: status } = useAutoRefresh<QueueStatus>({
     url: "/api/queue/status",
+    intervalMs: 10000,
+  })
+
+  const { data: workerInfo, refetch: refetchWorker } = useAutoRefresh<WorkerInfo>({
+    url: "/api/queue/worker",
     intervalMs: 10000,
   })
 
@@ -436,6 +451,32 @@ export default function QueuePage() {
     setEditGoal("")
   }
 
+  async function handleStartWorker() {
+    setWorkerActionLoading(true)
+    try {
+      await fetch("/api/queue/worker", { method: "POST" })
+      await new Promise((r) => setTimeout(r, 1500))
+      await refetchWorker()
+    } catch {
+      setSubmitError("Failed to start worker")
+    } finally {
+      setWorkerActionLoading(false)
+    }
+  }
+
+  async function handleStopWorker() {
+    setWorkerActionLoading(true)
+    try {
+      await fetch("/api/queue/worker", { method: "DELETE" })
+      await new Promise((r) => setTimeout(r, 500))
+      await refetchWorker()
+    } catch {
+      setSubmitError("Failed to stop worker")
+    } finally {
+      setWorkerActionLoading(false)
+    }
+  }
+
   async function handleReorder(task: QueuedTask, direction: "up" | "down") {
     if (!tasks) return
     const pendingTasks = tasks.filter((t) => t.status === "pending")
@@ -479,24 +520,74 @@ export default function QueuePage() {
       <div className="p-6 space-y-6">
         {/* Worker Status */}
         <div className="flex items-center gap-4 rounded-lg border p-4">
-          <div className={`h-3 w-3 rounded-full ${status?.workerRunning ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`} />
-          <div className="flex-1">
+          <div className={`h-3 w-3 rounded-full shrink-0 ${status?.workerRunning ? "bg-emerald-500 animate-pulse" : workerInfo?.sessionAlive ? "bg-amber-400 animate-pulse" : "bg-red-500"}`} />
+          <div className="flex-1 min-w-0">
             <p className="text-sm font-medium">
-              Queue Worker: {status?.workerRunning ? "Running" : "Stopped"}
+              Queue Worker:{" "}
+              {status?.workerRunning
+                ? "Running"
+                : workerInfo?.sessionAlive
+                  ? "Starting…"
+                  : "Stopped"}
             </p>
             {status?.currentTask && (
               <p className="text-xs text-muted-foreground mt-0.5">
-                Currently executing: &ldquo;{status.currentTask.goal}&rdquo;
-                {status.currentTask.teamName && ` (team: ${status.currentTask.teamName})`}
+                Executing: &ldquo;{status.currentTask.goal}&rdquo;
+                {status.currentTask.teamName && ` (${status.currentTask.teamName})`}
+              </p>
+            )}
+            {!status?.workerRunning && !workerInfo?.sessionAlive && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Runs in tmux session <code className="font-mono">mc-queue-worker</code> — persists across sleep
               </p>
             )}
           </div>
-          <div className="flex gap-3 text-xs text-muted-foreground">
-            <span>{status?.counts.pending ?? 0} pending</span>
-            <span>{status?.counts.running ?? 0} running</span>
-            <span>{status?.counts.completed ?? 0} completed</span>
+          <div className="flex items-center gap-3">
+            <div className="flex gap-3 text-xs text-muted-foreground">
+              <span>{status?.counts.pending ?? 0} pending</span>
+              <span>{status?.counts.running ?? 0} running</span>
+              <span>{status?.counts.completed ?? 0} completed</span>
+            </div>
+            {workerInfo?.sessionAlive ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleStopWorker}
+                disabled={workerActionLoading}
+                className="gap-1.5 shrink-0"
+              >
+                {workerActionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+                Stop
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleStartWorker}
+                disabled={workerActionLoading}
+                className="gap-1.5 shrink-0"
+              >
+                {workerActionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                Start Worker
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Orphaned running tasks warning */}
+        {status && !status.workerRunning && (status.counts.running ?? 0) > 0 && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+            <TriangleAlert className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-amber-500">
+                {status.counts.running} task{status.counts.running !== 1 ? "s" : ""} stuck in &ldquo;running&rdquo; state
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                The queue worker stopped while processing. Use the reset button (<RotateCcw className="inline h-3 w-3" />) next to each task to re-queue it, then restart <code className="font-mono">pnpm queue</code>.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Submit Form */}
         <form onSubmit={handleSubmit} className="rounded-lg border p-4 space-y-4">
@@ -813,6 +904,17 @@ export default function QueuePage() {
                                 <ChevronDown className="h-3.5 w-3.5" />
                               </Button>
                             </>
+                          )}
+                          {task.status === "running" && status && !status.workerRunning && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-amber-500 hover:text-amber-400"
+                              onClick={() => handleRetry(task.id)}
+                              title="Reset to pending (worker is stopped)"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </Button>
                           )}
                           <Button
                             variant="ghost"

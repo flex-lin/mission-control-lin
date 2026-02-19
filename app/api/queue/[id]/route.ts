@@ -114,9 +114,12 @@ export async function POST(req: NextRequest, ctx: RouteContext): Promise<NextRes
     const task = await db.queuedTask.findUnique({ where: { id: taskId } });
     if (!task) return notFound("Queued task not found");
 
-    if (task.status !== "failed" && task.status !== "cancelled") {
-      return err("Only failed or cancelled tasks can be retried", "INVALID_STATE");
+    if (task.status !== "failed" && task.status !== "cancelled" && task.status !== "running") {
+      return err("Only failed, cancelled, or stuck running tasks can be retried", "INVALID_STATE");
     }
+    // Note: resetting a "running" task while the queue worker is actively monitoring
+    // it is a race condition — the monitor could still write status = 'completed'.
+    // The UI guards against this by only showing the reset button when the worker is stopped.
 
     const updated = await db.queuedTask.update({
       where: { id: taskId },

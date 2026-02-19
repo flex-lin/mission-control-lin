@@ -10,6 +10,7 @@
     "lint": "eslint",
     "proxy": "tsx --tsconfig tsconfig.server.json server/start-proxy.ts",
     "queue": "tsx --tsconfig tsconfig.server.json server/start-queue-worker.ts",
+    "queue:daemon": "bash scripts/start-queue-daemon.sh",
     "mcp": "tsx --tsconfig tsconfig.server.json server/mcp-server.ts",
     "db:push": "prisma db push",
     "db:generate": "prisma generate"

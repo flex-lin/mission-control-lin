@@ -474,7 +474,7 @@ async function runQueueWorker(): Promise<void> {
 
       // Leader is dead — check task completion state
       const taskState = getTaskCompletionState(stuck.team_name);
-      if (taskState === "completed" || taskState === "cleaned_up") {
+      if (taskState === "completed") {
         console.log(`[queue] Task #${stuck.id} team "${stuck.team_name}" leader dead but tasks done, marking completed`);
         db.prepare(
           `UPDATE queued_tasks SET status = 'completed', result = ?, completed_at = datetime('now') WHERE id = ?`
@@ -482,6 +482,8 @@ async function runQueueWorker(): Promise<void> {
         cleanupTeam(stuck.team_name);
         continue;
       }
+      // "cleaned_up" (task dir missing) means team was never fully spawned or
+      // worker crashed before completing — treat as failed, not completed.
     }
 
     // No team, or leader dead with pending tasks — mark as failed (original behavior)
