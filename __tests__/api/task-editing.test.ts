@@ -160,7 +160,7 @@ describe("Task Editing API", () => {
 
     it("supports all priority levels", async () => {
       const { mod, teamName } = await setupTeamWithTasks();
-      const priorities = ["low", "medium", "high", "critical"] as const;
+      const priorities = ["low", "medium", "high", "urgent"] as const;
 
       for (const priority of priorities) {
         const tasks = mod.readTaskList(teamName);
@@ -197,7 +197,7 @@ describe("Task Editing API", () => {
       // Set priority
       const tasks = mod.readTaskList(teamName);
       const task = tasks.find((t) => t.id === "1")!;
-      task.priority = "critical";
+      task.priority = "urgent";
       mod.writeTask(teamName, task);
 
       // Update a different field
@@ -207,7 +207,7 @@ describe("Task Editing API", () => {
 
       const updated = mod.readTaskList(teamName);
       const found = updated.find((t) => t.id === "1")!;
-      expect(found.priority).toBe("critical");
+      expect(found.priority).toBe("urgent");
       expect(found.subject).toBe("New subject");
     });
   });
@@ -308,7 +308,7 @@ describe("Task Editing API", () => {
     it("can sort tasks by priority then order", async () => {
       const { mod, teamName } = await setupTeamWithTasks();
 
-      const priorityWeight = { critical: 0, high: 1, medium: 2, low: 3 };
+      const priorityWeight = { urgent: 0, high: 1, medium: 2, low: 3 };
 
       // Assign priorities and orders
       const tasks = mod.readTaskList(teamName);
@@ -318,7 +318,7 @@ describe("Task Editing API", () => {
       mod.writeTask(teamName, t1);
 
       const t2 = tasks.find((t) => t.id === "2")!;
-      t2.priority = "critical";
+      t2.priority = "urgent";
       t2.order = 1;
       mod.writeTask(teamName, t2);
 
@@ -336,7 +336,7 @@ describe("Task Editing API", () => {
         return (a.order ?? 0) - (b.order ?? 0);
       });
 
-      expect(sorted[0].id).toBe("2"); // critical
+      expect(sorted[0].id).toBe("2"); // urgent
       expect(sorted[1].id).toBe("3"); // high
       expect(sorted[2].id).toBe("1"); // low
     });

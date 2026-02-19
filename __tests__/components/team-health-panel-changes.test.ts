@@ -129,7 +129,7 @@ describe("team-detail-live structural changes", () => {
   });
 
   it("falls back to empty array when no session data", () => {
-    const sessionData = null;
+    const sessionData = null as { sessions: SessionInfo[] } | null;
     const sessions = sessionData?.sessions ?? [];
     expect(sessions).toEqual([]);
   });

@@ -461,7 +461,7 @@ describe("stuck tasks — data layer", () => {
       ["dependency", "Dependency"],
       ["error", "Error"],
       ["permission", "Permission"],
-    ] as const)("recognizes blocker type '%s'", async (blockerType) => {
+    ] as const)("recognizes blocker type '%s'", async (blockerType, _label) => {
       const mod = await getModule();
 
       createTeamWithTasks(

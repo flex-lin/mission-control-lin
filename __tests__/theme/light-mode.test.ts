@@ -359,17 +359,17 @@ describe("SettingsForm - theme support", () => {
 
   it("provides dark option in theme selector", () => {
     expect(source).toContain('value="dark"');
-    expect(source).toMatch(/SelectItem.*dark.*Dark/s);
+    expect(source).toMatch(/SelectItem[\s\S]*dark[\s\S]*Dark/);
   });
 
   it("provides light option in theme selector", () => {
     expect(source).toContain('value="light"');
-    expect(source).toMatch(/SelectItem.*light.*Light/s);
+    expect(source).toMatch(/SelectItem[\s\S]*light[\s\S]*Light/);
   });
 
   it("provides system option in theme selector", () => {
     expect(source).toContain('value="system"');
-    expect(source).toMatch(/SelectItem.*system.*System/s);
+    expect(source).toMatch(/SelectItem[\s\S]*system[\s\S]*System/);
   });
 
   it("defaults to dark theme in form state", () => {

@@ -9,6 +9,7 @@ export interface Teammate {
   model?: string;
   status?: "active" | "idle" | "offline";
   tmuxSession?: string;
+  tmuxPaneId?: string;
 }
 
 export interface Team {

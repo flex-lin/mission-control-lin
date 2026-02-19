@@ -21,13 +21,13 @@ const mockKillSession = vi.fn();
 
 vi.mock("@/lib/tmux-manager", () => ({
   getSessionName: (team: string, member: string) => `mc-${team}-${member}`,
-  sessionExists: (...args: unknown[]) => mockSessionExists(...args),
-  createSession: (...args: unknown[]) => mockCreateSession(...args),
-  sessionProcessAlive: (...args: unknown[]) => mockSessionProcessAlive(...args),
-  killSession: (...args: unknown[]) => mockKillSession(...args),
-  sendKeysAndSubmit: (...args: unknown[]) => mockSendKeysAndSubmit(...args),
-  capturePane: (...args: unknown[]) => mockCapturePane(...args),
-  sendRawKey: (...args: unknown[]) => mockSendRawKey(...args),
+  sessionExists: (...args: unknown[]) => mockSessionExists(...(args as [string])),
+  createSession: (...args: unknown[]) => mockCreateSession(...(args as [string, string])),
+  sessionProcessAlive: (...args: unknown[]) => mockSessionProcessAlive(...(args as [string])),
+  killSession: (...args: unknown[]) => mockKillSession(...(args as [string])),
+  sendKeysAndSubmit: (...args: unknown[]) => mockSendKeysAndSubmit(...(args as [string, string])),
+  capturePane: (...args: unknown[]) => mockCapturePane(...(args as [string])),
+  sendRawKey: (...args: unknown[]) => mockSendRawKey(...(args as [string, string])),
   getTeamSessionStatus: vi.fn(() => []),
 }));
 

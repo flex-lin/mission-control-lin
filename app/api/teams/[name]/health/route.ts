@@ -183,8 +183,8 @@ export async function GET(
     let sleepDetected = false;
     let autoWakeTriggered = false;
 
-    // Only run sleep detection for non-completed, non-exited teams
-    if (status !== "completed" && status !== "exited") {
+    // Only run sleep detection for non-completed teams
+    if (status !== "completed") {
       sleepDetected = detectSleep(name);
 
       if (sleepDetected && !anyTmuxAlive) {

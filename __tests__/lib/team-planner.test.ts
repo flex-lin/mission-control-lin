@@ -504,14 +504,14 @@ describe("generateTeamPlan", () => {
     vi.spyOn(fs, "existsSync").mockImplementation((p: fs.PathLike) => {
       return String(p) === teamsDir;
     });
-    vi.spyOn(fs, "readdirSync").mockImplementation((p: fs.PathLike) => {
+    vi.spyOn(fs, "readdirSync").mockImplementation(((p: fs.PathLike) => {
       if (String(p) === teamsDir) {
         return [
           { name: "user-auth-impl", isDirectory: () => true },
         ] as unknown as fs.Dirent[];
       }
       return [] as unknown as fs.Dirent[];
-    });
+    }) as typeof fs.readdirSync);
 
     mockCreate.mockResolvedValue({
       content: [
@@ -597,14 +597,14 @@ describe("queue worker team naming", () => {
     vi.spyOn(fs, "existsSync").mockImplementation((p: fs.PathLike) => {
       return String(p) === teamsDir;
     });
-    vi.spyOn(fs, "readdirSync").mockImplementation((p: fs.PathLike) => {
+    vi.spyOn(fs, "readdirSync").mockImplementation(((p: fs.PathLike) => {
       if (String(p) === teamsDir) {
         return [
           { name: "q-1-rest-api-inventory", isDirectory: () => true },
         ] as unknown as fs.Dirent[];
       }
       return [] as unknown as fs.Dirent[];
-    });
+    }) as typeof fs.readdirSync);
 
     const plan = generateLocalPlan("Build REST API for inventory");
     const name1 = `q-1-${plan.teamName}`;

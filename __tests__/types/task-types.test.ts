@@ -34,7 +34,7 @@ describe("TeamTask type contract", () => {
   });
 
   it("supports all TaskPriority values", () => {
-    const priorities: TaskPriority[] = ["low", "medium", "high", "critical"];
+    const priorities: TaskPriority[] = ["low", "medium", "high", "urgent"];
     expect(priorities).toHaveLength(4);
 
     for (const p of priorities) {

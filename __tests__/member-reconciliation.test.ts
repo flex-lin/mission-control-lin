@@ -278,7 +278,7 @@ describe("member reconciliation — subagent detection via tmuxPaneId", () => {
     const team = readTeamConfig(TEST_TEAM)!;
     const analyst = team.members.find((m) => m.name === "analyst")!;
     // tmuxPaneId should be carried over from spawned member
-    expect((analyst as Record<string, unknown>).tmuxPaneId).toBe("%6");
+    expect((analyst as unknown as Record<string, unknown>).tmuxPaneId).toBe("%6");
   });
 
   it("health endpoint uses leader session for subagent members", () => {
@@ -304,7 +304,7 @@ describe("member reconciliation — subagent detection via tmuxPaneId", () => {
     expect(worker).toBeDefined();
     // The worker has tmuxPaneId but no tmuxSession of its own
     // Health endpoint should use leader's session for the attach cmd
-    expect((worker as Record<string, unknown>).tmuxPaneId).toBe("%7");
+    expect((worker as unknown as Record<string, unknown>).tmuxPaneId).toBe("%7");
     expect(worker.tmuxSession).toBeUndefined();
   });
 });
