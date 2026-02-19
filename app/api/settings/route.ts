@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readSettings, writeSettings } from "@/lib/claude-files";
 import { db } from "@/lib/db";
 import { ok, serverError } from "@/lib/api-helpers";
+import { spawnProxyProcess, killProxyProcess } from "@/lib/proxy-manager";
 import type { Settings } from "@/types";
 
 // GET /api/settings — read ~/.claude/settings.json + DB preferences
@@ -52,7 +53,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
       });
     }
 
-    // Claude-specific settings (env, permissions, model, hooks) → file
+    // Claude-specific settings (env, permissions, model, hooks, proxy) → file
     const currentFile = readSettings();
     const {
       theme: _theme,
@@ -62,6 +63,22 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
 
     if (Object.keys(fileUpdates).length > 0) {
       writeSettings({ ...currentFile, ...fileUpdates });
+    }
+
+    // Auto-start or stop proxy when proxyConfig.enabled changes
+    if (body.proxyConfig !== undefined) {
+      const wasEnabled = currentFile.proxyConfig?.enabled ?? false;
+      const nowEnabled = body.proxyConfig.enabled ?? false;
+      const port = body.proxyConfig.port ?? currentFile.proxyConfig?.port ?? 8787;
+      const targetUrl = body.proxyConfig.targetUrl ?? currentFile.proxyConfig?.targetUrl ?? "https://api.anthropic.com";
+
+      if (!wasEnabled && nowEnabled) {
+        // User turned on proxy — start the process
+        spawnProxyProcess(port, targetUrl);
+      } else if (wasEnabled && !nowEnabled) {
+        // User turned off proxy — stop the process
+        killProxyProcess();
+      }
     }
 
     return ok({ saved: true });

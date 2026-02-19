@@ -17,7 +17,7 @@ Track token usage, costs, and latency across models, teams, and individual agent
 ![Analytics](public/screenshots/analytics.png)
 
 ### Settings
-Configure theme, polling intervals, API proxy, sleep prevention, and indexed project directories.
+Configure theme, polling intervals, API proxy (with auto-start/stop), and sleep prevention. Enabling the proxy from Settings automatically launches the proxy process — no separate terminal required.
 
 ![Settings](public/screenshots/settings.png)
 
@@ -50,13 +50,19 @@ Open [http://localhost:3777](http://localhost:3777).
 
 ### Optional: API Proxy
 
-The proxy intercepts Anthropic API calls to record token usage per team/member:
+The proxy intercepts Anthropic API calls to record token usage per team/member.
 
+**Option A — Toggle via Settings UI (recommended):**
+Enable the proxy directly from the Settings page. Mission Control auto-starts and auto-stops the proxy process when the toggle changes, so no separate terminal is needed.
+
+**Option B — Manual start:**
 ```bash
 pnpm proxy   # Starts on port 8787
 ```
 
-Point Claude Code at the proxy by setting `ANTHROPIC_BASE_URL=http://localhost:8787`.
+Either way, point Claude Code at the proxy by setting `ANTHROPIC_BASE_URL=http://localhost:8787`.
+
+The Analytics page shows a status banner indicating whether the proxy is capturing traffic, with a copy-paste env-var command to help onboard new sessions.
 
 ## Scripts
 

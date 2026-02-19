@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { useSettings } from "@/lib/settings-context"
 import { RepoUsageChart } from "@/components/analytics/repo-usage-chart"
+import { ProxyStatusBanner } from "@/components/analytics/proxy-status-banner"
 import type { ProxyLog, DailyEntry, ModelEntry, TeamEntry, MemberEntry } from "@/types"
 
 interface AnalyticsData {
@@ -119,6 +120,9 @@ export function AnalyticsDashboard({ initialData }: AnalyticsDashboardProps) {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Proxy status banner */}
+      <ProxyStatusBanner />
+
       {/* Period selector */}
       <div className="flex items-center justify-between">
         <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>

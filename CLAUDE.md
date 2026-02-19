@@ -13,6 +13,7 @@ Local dashboard for managing Claude Code agent teams, tracking token usage, and 
 - **Proxy**: Node HTTP proxy for API request interception
 - **MCP**: Model Context Protocol server for agent tool exposure (`server/mcp-server.ts`)
 - **Task Queue**: Standalone background worker (`server/queue-worker.ts`) for automated agent execution
+- **Testing**: Vitest (unit + integration tests in `__tests__/` and co-located `lib/*.test.ts`)
 - **Validation**: Zod
 
 ## Quick Start
@@ -23,6 +24,7 @@ pnpm dev            # Next.js on :3777
 pnpm proxy          # API proxy on :8787 (optional, for proxy-based token tracking)
 pnpm queue:daemon   # Queue worker in persistent tmux session (recommended)
 # pnpm queue        # Queue worker in foreground (dies on terminal close)
+# pnpm dev:all      # prisma generate + all servers via scripts/start-all.sh
 ```
 
 ### MCP Setup (automatic)
@@ -39,7 +41,7 @@ app/
 │   ├── page.tsx              # Overview — stat cards, activity feed
 │   ├── agent-teams/          # Team listing, creation, detail views
 │   │   └── [name]/page.tsx   # Individual team (live-updating)
-│   ├── analytics/page.tsx    # Token usage, model/team/member breakdowns
+│   ├── analytics/page.tsx    # Token usage, model/team/member breakdowns, proxy status banner
 │   ├── knowledge-base/       # Registered project directory browser
 │   │   └── [id]/page.tsx     # Individual project detail view
 │   ├── queue/page.tsx        # Task queue — submit and monitor queued tasks
@@ -47,22 +49,27 @@ app/
 │   └── settings/page.tsx     # Theme, refresh interval, proxy config, admin API key
 ├── api/
 │   ├── teams/                # CRUD, smart-create, spawn, stuck
-│   │   └── [name]/           # health, wake, shutdown, tasks, sessions, message, background
-│   ├── analytics/            # Daily aggregation, by-model, by-team, by-member, ingest
+│   │   └── [name]/           # health, wake, shutdown, sessions, message, background
+│   │       └── tasks/        # task CRUD + reorder; [id]/respond for stuck-task actions
+│   ├── analytics/            # Daily aggregation, by-model, by-team, by-member, by-task, ingest, usage-summary
 │   ├── usage/                # Anthropic Admin API sync: sync, status, summary, by-model, by-workspace, claude-code
 │   ├── queue/                # Task queue CRUD + file attachment upload
+│   │   ├── status/           # Worker heartbeat + queue depth summary
+│   │   ├── worker/           # Start/stop/inspect the mc-queue-worker tmux session
+│   │   └── [id]/attachments/ # Per-task attachment list; [filename] for serve/delete
 │   ├── skills/               # MCP skill registry
 │   ├── dashboard/stats/      # Overview metrics
-│   ├── proxy/                # Proxy status and control
-│   ├── proxy-logs/           # Request logging
-│   ├── settings/             # User preferences
-│   ├── projects/             # Indexed project management
+│   ├── proxy/                # Proxy status (GET /status) and control (POST /control: start|stop)
+│   ├── proxy-logs/           # Request logging (GET list with filters, POST insert)
+│   ├── settings/             # User preferences (GET/PUT); usage-limits sub-route (GET/PUT)
+│   ├── knowledge-base/       # Knowledge base entries (GET list, POST add, [id] CRUD)
+│   ├── projects/             # Indexed project management (same DB as knowledge-base)
 │   └── activity/             # Activity feed
 └── layout.tsx                # Root layout (fonts, theme, toaster)
 
 components/
 ├── agent-teams/              # Team cards, health panels, dialogs, task forms, background config
-├── analytics/                # Charts, tables, ingest button, usage limits card
+├── analytics/                # Charts, tables, ingest button, usage limits card, proxy status banner, repo usage chart, task token table
 ├── dashboard/                # Stat cards, activity feed, quick actions
 ├── knowledge-base/           # Project path management, skills section and tab
 ├── layout/                   # Sidebar, topbar, command palette, breadcrumbs
@@ -80,39 +87,61 @@ lib/
 ├── agent-launcher.ts         # Build prompts, launch agents in tmux
 ├── anthropic-usage.ts        # Admin API client: fetchUsageReport, fetchCostReport, fetchClaudeCodeReport, syncUsageData
 ├── pricing.ts                # MODEL_PRICING table, computeCost()
+├── proxy-manager.ts          # Singleton proxy child-process manager: spawnProxyProcess(), killProxyProcess(), isProxyRunning()
 ├── api-helpers.ts            # ok(), err(), serverError() response wrappers
-├── analytics-helpers.ts      # getCutoffDate(), period parsing
+├── analytics-helpers.ts      # getCutoffDate(), period parsing, UNTRACKED_TEAM_LABEL constant
 ├── sleep-detector.ts         # System sleep detection for session checkpoints
 ├── settings-context.tsx      # React context for user settings
 ├── hooks/use-auto-refresh.ts # Client-side polling hook
 └── utils.ts                  # cn() class merge
 
 server/
-├── proxy.ts                  # HTTP proxy — intercepts Anthropic API, extracts tokens
+├── proxy.ts                  # HTTP proxy — intercepts Anthropic API, extracts tokens (exports extractUsage, extractUsageFromSSE, isStreamingRequest)
 ├── start-proxy.ts            # Proxy entry point
 ├── mcp-server.ts             # MCP stdio server (TeamCreate/TeamDelete/SendMessage tools)
 ├── queue-worker.ts           # Background queue processor — AI planning + team spawn + monitoring
 ├── start-queue-worker.ts     # Queue worker entry point
-└── file-watcher.ts           # File change monitoring (experimental)
+└── file-watcher.ts           # File change monitoring (auto-started via instrumentation.ts on server boot)
+
+scripts/
+├── setup-mcp.js              # Postinstall: patches .claude/settings.json with absolute MCP server path
+├── mcp-server.sh             # Shell wrapper to launch the MCP stdio server
+├── start-all.sh              # Starts all servers (Next.js + queue worker) — used by pnpm dev:all
+├── start-queue-daemon.sh     # Launches queue worker in a persistent tmux session
+├── queue-daemon-inner.sh     # Inner script executed inside the daemon tmux session
+└── monitor-queue.sh          # Monitors queue worker heartbeat and restarts if stale (pnpm queue:monitor)
 
 prisma/
 ├── schema.prisma             # All DB models (see Database Models section)
 └── mission-control.db        # SQLite database (gitignored: no)
 
+__tests__/                    # Vitest test suite
+├── api/                      # End-to-end API integration tests (e.g., e2e-proxy-enabled-analytics.test.ts)
+├── components/               # Component tests
+├── helpers/                  # Test helper utilities
+├── lib/                      # Unit tests for lib modules
+└── types/                    # Type-level tests
+# Note: some lib unit tests are co-located in lib/ (pricing.test.ts, team-planner.test.ts, team-spawner.test.ts, agent-launcher.test.ts, etc.)
+
+docs/
+└── usage-api-spec.md         # Anthropic Usage/Cost API integration specification
+
 types/index.ts                # All shared interfaces (Team, Teammate, Analytics, Usage, etc.)
+instrumentation.ts            # Next.js server instrumentation — auto-starts file-watcher on server boot
+Procfile                      # Process declarations: web (pnpm dev) + worker (pnpm queue)
 ```
 
 ## Database Models (prisma/schema.prisma)
-- **ProxyLog** — per-request record: model, tokens, team/member, latency, status
+- **ProxyLog** — per-request record: model, tokens (input/output/cacheRead/cacheCreation), team/member, endpoint, latencyMs, statusCode
 - **AnalyticsSnapshot** — daily aggregated cost/token totals by model
-- **IndexedProject** — registered project paths with tags
-- **Preference** — key-value settings store
-- **QueuedTask** — task queue entries with goal, project path, status, priority, and file attachments
-- **UsageRecord** — billing-accurate token data synced from Anthropic Usage API (per bucket/model)
-- **CostRecord** — billing-accurate cost data synced from Anthropic Cost API (daily, per model/token-type)
+- **IndexedProject** — registered project paths with name and tags (DB-only; no filesystem auto-population)
+- **Preference** — key-value settings store (theme, refreshInterval, admin API key, usage limits)
+- **QueuedTask** — task queue entries with goal, projectPath, status, priority, result, and file attachments (JSON)
+- **UsageRecord** — billing-accurate token data synced from Anthropic Usage API (per bucket/model/workspace/serviceTier)
+- **CostRecord** — billing-accurate cost data synced from Anthropic Cost API (daily, per model/costType/tokenType)
 - **ClaudeCodeDailyMetric** — per-user daily productivity metrics from Anthropic Claude Code Analytics API
 - **UsageSyncCursor** — tracks incremental sync position for each data source (usage, cost, claude_code)
-- **SessionCheckpoint** — captures team state before sleep for auto-resume
+- **SessionCheckpoint** — captures team state (task statuses, pane content, member liveness) before sleep for auto-resume
 
 ## Key Architectural Patterns
 
@@ -142,11 +171,30 @@ types/index.ts                # All shared interfaces (Team, Teammate, Analytics
 - Queue page (`app/(dashboard)/queue/`) provides full task management UI with status tracking
 - `POST /api/queue` — create task; `GET /api/queue` — list tasks; `PATCH /api/queue/[id]` — update; `DELETE /api/queue/[id]` — cancel
 - `POST /api/queue/upload` — upload file attachment, returns stored filename
+- `GET /api/queue/status` — worker heartbeat freshness, queue depth, and per-status counts (pending/running/completed/failed)
+- `GET /api/queue/worker` — inspect whether `mc-queue-worker` tmux session is alive and heartbeat is fresh
+- `POST /api/queue/worker` — start (or restart) the queue worker in a persistent tmux daemon session
+- `DELETE /api/queue/worker` — kill the `mc-queue-worker` tmux session
+- `GET /api/queue/[id]/attachments` — list attachments for a task
+- `GET /api/queue/[id]/attachments/[filename]` — serve attachment file inline (path-traversal protected)
+- `DELETE /api/queue/[id]/attachments/[filename]` — delete attachment from disk and DB
+
+### Task Management (within teams)
+- `GET /api/teams/[name]/tasks` — list all tasks (ordered by `order` field)
+- `PATCH /api/teams/[name]/tasks/[id]` — update task fields: status, owner, subject, description, priority, order, blockedBy, blocks, metadata
+  - Valid statuses: `pending | in_progress | completed | deleted`
+  - Valid priorities: `low | medium | high | urgent`
+- `PATCH /api/teams/[name]/tasks/reorder` — reorder tasks by providing ordered `taskIds` array; assigns `order` as multiples of 10
+- `POST /api/teams/[name]/tasks/[id]/respond` — act on a stuck/blocked task:
+  - `action: "message"` — sends message to task owner's inbox and clears blocker metadata
+  - `action: "reassign"` — reassigns task to another team member (`assignTo`) and notifies via inbox
+  - `action: "cancel"` — marks task as `deleted` and notifies the owner
 
 ### Stuck Task Detection
 - `GET /api/teams/stuck` — scans all active teams for tasks that have been `in_progress` beyond a threshold
 - Stuck page (`app/(dashboard)/stuck/`) surfaces blocked/stalled tasks across all teams with filter controls
 - `StuckTask` type extends `TeamTask` with `blockerType`, `blockerSummary`, `blockerDetails`, and `blockerSince` fields
+- Resolve stuck tasks via `POST /api/teams/[name]/tasks/[id]/respond` (message, reassign, or cancel)
 
 ### MCP Server
 - `server/mcp-server.ts` exposes `TeamCreate`, `TeamDelete`, and `SendMessage` tools via MCP stdio protocol
@@ -159,11 +207,32 @@ types/index.ts                # All shared interfaces (Team, Teammate, Analytics
 - `BackgroundConfig` in team config controls: `persistent`, `wakeStrategy` (immediate/scheduled), `wakeDelaySeconds`, `maxWakeRetries`
 - Background status surfaced in team health panel via `backgroundExecution` field on `TeamHealth`
 
+### Analytics Endpoints (Proxy-Based Data)
+- `GET /api/analytics?period=7d|30d|all` — daily token totals from proxy logs, grouped by day
+- `GET /api/analytics/by-model?period=...` — tokens/cost grouped by model
+- `GET /api/analytics/by-team?period=...` — tokens/cost grouped by team (null teamName becomes "untracked")
+- `GET /api/analytics/by-member?period=...&team=name` — tokens/cost per team member
+- `GET /api/analytics/by-task?period=...` — per-team/member token attribution with `"exact"` or `"team-level"` flag
+- `GET /api/analytics/usage-summary` — daily + monthly totals with configured usage limits from Preferences
+- `POST /api/analytics/ingest` — bulk-ingest analytics snapshots
+
 ### Token Tracking (Proxy-Based)
 - Proxy server (`server/proxy.ts`) intercepts Anthropic API requests on port 8787
+- Exports `extractUsage()` (non-streaming JSON), `extractUsageFromSSE()` (streaming SSE), `isStreamingRequest()` for testability
 - Extracts tokens from JSON responses or SSE streams (`message_start`/`message_delta`)
 - Records to SQLite via direct better-sqlite3 (not Prisma, for performance)
 - Custom headers `x-claude-team` / `x-claude-member` for attribution
+- `lib/proxy-manager.ts` — module-level singleton managing the proxy child process:
+  - `spawnProxyProcess(port, targetUrl)` — spawns `server/proxy.ts` via `npx tsx`; no-ops if already running
+  - `killProxyProcess()` — sends SIGTERM; no-ops if not running
+  - `isProxyRunning()` / `getProxyProcess()` — status accessors
+  - Used by both `PUT /api/settings` (auto-start on save) and `POST /api/proxy/control` (manual toggle), sharing the same handle to prevent duplicate processes
+- `GET /api/proxy/status` — TCP port probe to check if proxy is running; returns `{ running, port, targetUrl }`
+- `POST /api/proxy/control` — manually `{ action: "start" }` or `{ action: "stop" }` the proxy process
+- `components/analytics/proxy-status-banner.tsx` — renders at top of analytics dashboard:
+  - Full banner when proxy is off: step-by-step instructions, copy button for `ANTHROPIC_BASE_URL` env var, link to Settings
+  - Active banner when proxy is on: shows port, confirms live capture
+  - Compact mode (`compact` prop): small inline dot-indicator for embedding elsewhere
 
 ### Token Tracking (Anthropic Admin API)
 - `lib/anthropic-usage.ts` provides `fetchUsageReport`, `fetchCostReport`, `fetchClaudeCodeReport`, and `syncUsageData`
@@ -190,6 +259,13 @@ types/index.ts                # All shared interfaces (Team, Teammate, Analytics
 
 ### API Response Convention
 All API routes return: `{ data?, error?, meta? }` via helpers in `lib/api-helpers.ts`
+
+## Testing
+- **Framework**: Vitest with `globals: true`; configured in `vitest.config.ts` with `@` alias pointing to project root
+- **Test locations**: `__tests__/` (api, components, helpers, lib, types) and co-located `lib/*.test.ts` files
+- Run: `pnpm vitest` (watch) or `pnpm vitest run` (CI)
+- E2E API tests mock the DB (`@/lib/db`) and file system; import route handlers directly and invoke with `NextRequest`
+- Co-located lib tests: `lib/pricing.test.ts`, `lib/team-planner.test.ts`, `lib/team-spawner.test.ts`, `lib/agent-launcher.test.ts`, `lib/analytics-helpers.test.ts`, etc.
 
 ## Conventions
 - Use `pnpm` as the package manager
@@ -230,4 +306,8 @@ All API routes return: `{ data?, error?, meta? }` via helpers in `lib/api-helper
 - Admin API usage sync requires an `sk-ant-admin...` key (not a standard API key)
 - Claude Code Analytics API (`/api/usage/claude-code`) requires the organization to have active Claude Code users
 - Knowledge Base entries are DB-only (filesystem auto-population was removed — only manually added entries)
-- Queue worker must be run separately (`pnpm queue`) — it is not embedded in the Next.js process
+- Queue worker must be run separately (`pnpm queue` foreground or `pnpm queue:daemon` persistent tmux) — not embedded in Next.js
+- `POST /api/proxy/control` maintains its own child-process handle separate from `lib/proxy-manager.ts`; Settings page (which uses `lib/proxy-manager.ts`) is the canonical toggle to avoid duplicate processes
+- `GET /api/settings/usage-limits` and `PUT /api/settings/usage-limits` manage token/cost limits stored as Preferences; not documented in the original settings route comments
+- `lib/proxy-manager.ts` singleton only tracks processes spawned in the current server process lifetime; a previously detached proxy will not be tracked after a server restart (use `/api/proxy/status` port probe to detect it)
+- `instrumentation.ts` auto-starts `file-watcher.ts` on server boot (Node.js runtime only) — this is experimental
