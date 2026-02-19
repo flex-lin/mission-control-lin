@@ -166,6 +166,10 @@ function writeLeaderLauncher(teamName: string, projectPath: string): string {
   const script = [
     "#!/bin/bash",
     `cd "${projectPath}"`,
+    // Unset CLAUDECODE so a nested Claude Code session is permitted.
+    // When the queue worker runs inside an existing Claude Code session,
+    // this env var is set and would block the child claude process.
+    "unset CLAUDECODE",
     `exec claude --dangerously-skip-permissions --append-system-prompt "$(cat '${promptFile}')"`,
   ].join("\n");
   fs.writeFileSync(scriptFile, script, { mode: 0o755, encoding: "utf-8" });
@@ -199,7 +203,10 @@ function buildSetupMessage(
       const taskDesc = assignedTask
         ? `Task [${assignedTask.id}] "${assignedTask.subject}": ${assignedTask.description ?? ""}`
         : `Role: ${m.description}`;
-      return `- name="${m.name}", subagent_type="general-purpose", mode="bypassPermissions", prompt="You are ${m.name} (${m.role}) on team ${teamName}. ${taskDesc}. cd ${projectPath} and start immediately."`;
+      const markInProgress = assignedTask
+        ? ` FIRST: edit ~/.claude/tasks/${teamName}/${assignedTask.id}.json and set \\"status\\" to \\"in_progress\\" before doing any other work.`
+        : "";
+      return `- name="${m.name}", subagent_type="general-purpose", mode="bypassPermissions", prompt="You are ${m.name} (${m.role}) on team ${teamName}. ${taskDesc}.${markInProgress} cd ${projectPath} and start immediately."`;
     })
     .join("\n");
 
@@ -260,7 +267,10 @@ function buildResumeMessage(
       const taskDesc = assignedTask
         ? `Task [${assignedTask.id}] "${assignedTask.subject}": ${assignedTask.description ?? ""}`
         : `Role: ${m.description}`;
-      return `- name="${m.name}", subagent_type="general-purpose", mode="bypassPermissions", prompt="You are ${m.name} (${m.role}) on team ${teamName}. ${taskDesc}. cd ${projectPath} and start immediately."`;
+      const markInProgress = assignedTask
+        ? ` FIRST: edit ~/.claude/tasks/${teamName}/${assignedTask.id}.json and set \\"status\\" to \\"in_progress\\" before doing any other work.`
+        : "";
+      return `- name="${m.name}", subagent_type="general-purpose", mode="bypassPermissions", prompt="You are ${m.name} (${m.role}) on team ${teamName}. ${taskDesc}.${markInProgress} cd ${projectPath} and start immediately."`;
     })
     .join("\n");
 

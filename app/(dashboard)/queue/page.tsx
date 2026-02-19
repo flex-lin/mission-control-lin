@@ -703,13 +703,20 @@ export default function QueuePage() {
                       <TableCell>
                         {task.teamName ? (
                           <div className="flex flex-col gap-0.5">
-                            <Link
-                              href={`/agent-teams/${encodeURIComponent(task.teamName)}`}
-                              className="inline-flex items-center gap-1 text-xs text-blue-400 hover:underline"
-                            >
-                              <Users className="h-3 w-3" />
-                              <span className="max-w-[100px] truncate">{task.teamName}</span>
-                            </Link>
+                            {task.status === "running" ? (
+                              <Link
+                                href={`/agent-teams/${encodeURIComponent(task.teamName)}`}
+                                className="inline-flex items-center gap-1 text-xs text-blue-400 hover:underline"
+                              >
+                                <Users className="h-3 w-3" />
+                                <span className="max-w-[100px] truncate">{task.teamName}</span>
+                              </Link>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                <Users className="h-3 w-3" />
+                                <span className="max-w-[100px] truncate">{task.teamName}</span>
+                              </span>
+                            )}
                             {(() => {
                               const health = teamHealthMap.get(task.teamName)
                               if (!health) return null
@@ -874,13 +881,11 @@ export default function QueuePage() {
                         <TableCell>
                           {task.teamName ? (
                             <div className="flex flex-col gap-0.5">
-                              <Link
-                                href={`/agent-teams/${encodeURIComponent(task.teamName)}`}
-                                className="inline-flex items-center gap-1 text-xs text-blue-400 hover:underline"
-                              >
+                              {/* Completed tasks are never "running" — always show as plain text */}
+                              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                                 <Users className="h-3 w-3" />
                                 <span className="max-w-[100px] truncate">{task.teamName}</span>
-                              </Link>
+                              </span>
                               {(() => {
                                 const health = teamHealthMap.get(task.teamName)
                                 if (!health) return (

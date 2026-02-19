@@ -88,7 +88,7 @@ export function KnowledgeBaseClient({ initialEntries }: KnowledgeBaseClientProps
           <TableBody>
             {entries.map((entry) => (
               <TableRow
-                key={`${entry.source}-${entry.id}`}
+                key={entry.path}
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => {
                   // DB entries use numeric ID for reliable lookup; filesystem-only entries use path-encoded ID
