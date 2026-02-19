@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CreateTeamDialog } from "@/components/agent-teams/create-team-dialog"
 import { SmartCreateDialog } from "@/components/agent-teams/smart-create-dialog"
-import { SubmitTaskDialog } from "@/components/agent-teams/submit-task-dialog"
 import { TeamActionsMenu } from "@/components/agent-teams/team-actions-menu"
 import { TeamHealthBadge } from "@/components/agent-teams/team-health-badge"
 import { CheckCircle2, Users } from "lucide-react"
@@ -45,7 +44,6 @@ export default async function AgentTeamsPage() {
   return (
     <div className="flex flex-col">
       <Topbar title="Agent Teams" subtitle={`${teams.length} team${teams.length !== 1 ? "s" : ""} configured`}>
-        <SubmitTaskDialog />
         <SmartCreateDialog />
         <CreateTeamDialog />
       </Topbar>

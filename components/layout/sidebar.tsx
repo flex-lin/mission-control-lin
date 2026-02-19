@@ -11,22 +11,16 @@ import {
   Cpu,
   AlertTriangle,
   ListOrdered,
-  MessageSquare,
-  Wrench,
-  UserCog,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAutoRefresh } from "@/lib/hooks/use-auto-refresh"
-import type { StuckTask, SelfHealingStats } from "@/types"
+import type { StuckTask } from "@/types"
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/chatbot", label: "Chatbot", icon: MessageSquare },
   { href: "/queue", label: "Task Queue", icon: ListOrdered },
   { href: "/stuck", label: "Stuck", icon: AlertTriangle },
-  { href: "/self-healing", label: "Self-Healing", icon: Wrench },
   { href: "/agent-teams", label: "Agent Teams", icon: Users },
-  { href: "/roles", label: "Team Roles", icon: UserCog },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -39,12 +33,6 @@ export function Sidebar() {
     intervalMs: 15000,
   })
   const stuckCount = stuckTasks?.length ?? 0
-
-  const { data: healingStats } = useAutoRefresh<SelfHealingStats>({
-    url: "/api/compilation-errors?stats=true",
-    intervalMs: 30000,
-  })
-  const pendingHealCount = healingStats ? (healingStats.pending + healingStats.healing) : 0
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r bg-[hsl(var(--sidebar))] border-[hsl(var(--sidebar-border))]">
@@ -77,11 +65,6 @@ export function Sidebar() {
               {label === "Stuck" && stuckCount > 0 && (
                 <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500/90 px-1 text-[10px] font-medium text-white">
                   {stuckCount}
-                </span>
-              )}
-              {label === "Self-Healing" && pendingHealCount > 0 && (
-                <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500/90 px-1 text-[10px] font-medium text-white">
-                  {pendingHealCount}
                 </span>
               )}
             </Link>

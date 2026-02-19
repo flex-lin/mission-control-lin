@@ -10,7 +10,7 @@ import {
   Settings,
   Plus,
   Sparkles,
-  ListPlus,
+  ListOrdered,
 } from "lucide-react"
 import {
   CommandDialog,
@@ -73,9 +73,9 @@ export function CommandPalette() {
             <Sparkles className="mr-2 h-4 w-4" />
             Smart Create Team
           </CommandItem>
-          <CommandItem onSelect={() => navigate("/agent-teams?action=submit-task")}>
-            <ListPlus className="mr-2 h-4 w-4" />
-            Submit Task to Team
+          <CommandItem onSelect={() => navigate("/queue")}>
+            <ListOrdered className="mr-2 h-4 w-4" />
+            Submit Task to Queue
           </CommandItem>
         </CommandGroup>
       </CommandList>
