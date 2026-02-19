@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "mission-control": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["tsx", "--tsconfig", "tsconfig.server.json", "server/mcp-server.ts"]
+    }
+  }
+}

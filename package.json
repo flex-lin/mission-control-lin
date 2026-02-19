@@ -10,11 +10,13 @@
     "lint": "eslint",
     "proxy": "tsx --tsconfig tsconfig.server.json server/start-proxy.ts",
     "queue": "tsx --tsconfig tsconfig.server.json server/start-queue-worker.ts",
+    "mcp": "tsx --tsconfig tsconfig.server.json server/mcp-server.ts",
     "db:push": "prisma db push",
     "db:generate": "prisma generate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.76.0",
+    "@modelcontextprotocol/sdk": "^1.15.1",
     "@prisma/adapter-better-sqlite3": "^7.4.0",
     "@prisma/client": "^7.4.0",
     "@radix-ui/react-avatar": "^1.1.11",
