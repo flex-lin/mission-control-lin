@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readTaskList, writeTask, readTeamConfig } from "@/lib/claude-files";
-import { ok, notFound, err, serverError } from "@/lib/api-helpers";
+import { ok, notFound, err, serverError, safeName } from "@/lib/api-helpers";
 
 // PATCH /api/teams/[name]/tasks/reorder — reorder tasks by providing ordered IDs
 export async function PATCH(
@@ -9,6 +9,7 @@ export async function PATCH(
 ): Promise<NextResponse> {
   try {
     const { name } = await params;
+    if (!safeName(name)) return err("Invalid team name", "VALIDATION_ERROR");
     const team = readTeamConfig(name);
     if (!team) return notFound(`Team "${name}" not found`);
 

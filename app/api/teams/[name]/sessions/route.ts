@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readTeamConfig } from "@/lib/claude-files";
-import { ok, notFound, serverError } from "@/lib/api-helpers";
+import { ok, err, notFound, serverError, safeName } from "@/lib/api-helpers";
 import { getTeamSessionStatus, sessionExists, sessionProcessAlive } from "@/lib/tmux-manager";
 import { getLeaderSessionName } from "@/lib/agent-launcher";
 
@@ -11,6 +11,7 @@ export async function GET(
 ): Promise<NextResponse> {
   try {
     const { name } = await params;
+    if (!safeName(name)) return err("Invalid team name", "VALIDATION_ERROR");
 
     const team = readTeamConfig(name);
     if (!team) return notFound(`Team "${name}" not found`);

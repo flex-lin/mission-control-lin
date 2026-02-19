@@ -320,8 +320,17 @@ async function executeTool(
           timestamp: new Date().toISOString(),
         };
 
+        // Validate recipient name to prevent path traversal (safeName: alphanumeric, dash, underscore only)
+        if (!/^[\w-]+$/.test(recipient)) {
+          return JSON.stringify({ error: `Invalid recipient name: "${recipient}"` });
+        }
         const inboxDir = path.join(CLAUDE_DIR, "teams", teamName, "inboxes");
         const inboxFile = path.join(inboxDir, `${recipient}.json`);
+        // Double-check resolved path stays within CLAUDE_DIR
+        const resolvedInbox = path.resolve(inboxFile);
+        if (!resolvedInbox.startsWith(path.resolve(CLAUDE_DIR) + path.sep)) {
+          return JSON.stringify({ error: "Path traversal blocked" });
+        }
         fs.mkdirSync(inboxDir, { recursive: true });
 
         let messages: typeof message[] = [];
@@ -599,8 +608,8 @@ async function executeTool(
         return JSON.stringify({ error: `Unknown tool: ${toolName}` });
     }
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Tool execution failed";
-    return JSON.stringify({ error: message });
+    console.error("[chatbot] tool execution error:", e instanceof Error ? e.message : e);
+    return JSON.stringify({ error: "Tool execution failed" });
   }
 }
 

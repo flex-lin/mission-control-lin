@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readSettings, writeSettings } from "@/lib/claude-files";
+import { readSettings, writeSettings, setProjectProxyEnv } from "@/lib/claude-files";
 import { db } from "@/lib/db";
-import { ok, serverError } from "@/lib/api-helpers";
+import { ok, err, serverError, validateUrl } from "@/lib/api-helpers";
 import { spawnProxyProcess, killProxyProcess } from "@/lib/proxy-manager";
 import type { Settings } from "@/types";
+
+// Only these top-level keys are allowed to be written to the settings file.
+// Prevents injection of arbitrary configuration keys via the PUT endpoint.
+const ALLOWED_FILE_KEYS = new Set([
+  "proxyConfig", "backgroundExecution", "env", "permissions",
+  "model", "hooks", "teammateMode", "mcpServers",
+]);
 
 // GET /api/settings — read ~/.claude/settings.json + DB preferences
 export async function GET(): Promise<NextResponse> {
@@ -54,12 +61,20 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     }
 
     // Claude-specific settings (env, permissions, model, hooks, proxy) → file
+    // Only allow known keys to prevent arbitrary config injection
     const currentFile = readSettings();
     const {
       theme: _theme,
       refreshInterval: _ri,
-      ...fileUpdates
+      ...rawFileUpdates
     } = body;
+
+    const fileUpdates: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(rawFileUpdates)) {
+      if (ALLOWED_FILE_KEYS.has(key)) {
+        fileUpdates[key] = value;
+      }
+    }
 
     if (Object.keys(fileUpdates).length > 0) {
       writeSettings({ ...currentFile, ...fileUpdates });
@@ -73,11 +88,21 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
       const targetUrl = body.proxyConfig.targetUrl ?? currentFile.proxyConfig?.targetUrl ?? "https://api.anthropic.com";
 
       if (!wasEnabled && nowEnabled) {
+        // Validate targetUrl before spawning to prevent SSRF
+        const urlCheck = validateUrl(targetUrl, "proxyConfig.targetUrl");
+        if (!urlCheck.valid) return urlCheck.error;
         // User turned on proxy — start the process
         spawnProxyProcess(port, targetUrl);
+        // Set ANTHROPIC_BASE_URL in project settings so Claude Code routes through proxy
+        setProjectProxyEnv(`http://localhost:${port}`);
       } else if (wasEnabled && !nowEnabled) {
         // User turned off proxy — stop the process
         killProxyProcess();
+        // Remove ANTHROPIC_BASE_URL so Claude Code goes directly to Anthropic
+        setProjectProxyEnv(null);
+      } else if (nowEnabled) {
+        // Proxy stays enabled but port/targetUrl may have changed — update env
+        setProjectProxyEnv(`http://localhost:${port}`);
       }
     }
 

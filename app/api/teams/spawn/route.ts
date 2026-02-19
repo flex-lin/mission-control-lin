@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ok, err, serverError } from "@/lib/api-helpers";
+import { ok, err, serverError, validateProjectPath } from "@/lib/api-helpers";
 import { spawnTeam, DuplicateTeamError } from "@/lib/team-spawner";
 import { findTeamBySourceTaskId } from "@/lib/claude-files";
 import { db } from "@/lib/db";
@@ -9,7 +9,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const body = (await req.json()) as { plan?: TeamPlan; projectPath?: string; persistent?: boolean };
     const plan = body.plan;
-    const projectPath = body.projectPath?.trim() || undefined;
+    let projectPath: string | undefined;
+    if (body.projectPath && typeof body.projectPath === "string" && body.projectPath.trim()) {
+      const pathCheck = validateProjectPath(body.projectPath);
+      if (!pathCheck.valid) return pathCheck.error;
+      projectPath = pathCheck.resolved;
+    }
 
     if (!plan || !plan.teamName || !plan.personas || !Array.isArray(plan.personas)) {
       return err("Invalid plan: teamName and personas are required", "VALIDATION_ERROR");

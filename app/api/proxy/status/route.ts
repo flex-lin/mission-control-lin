@@ -1,6 +1,6 @@
 import net from "net"
 import { ok, serverError } from "@/lib/api-helpers"
-import { readSettings } from "@/lib/claude-files"
+import { readSettings, readProjectClaudeSettings } from "@/lib/claude-files"
 
 export const dynamic = "force-dynamic"
 
@@ -31,7 +31,12 @@ export async function GET() {
     const targetUrl = settings.proxyConfig?.targetUrl ?? "https://api.anthropic.com"
     const running = await checkPort(port)
 
-    return ok({ running, port, targetUrl })
+    // Check if project-level env is configured to route through proxy
+    const projectSettings = readProjectClaudeSettings()
+    const envConfigured = !!projectSettings.env?.ANTHROPIC_BASE_URL
+    const configuredBaseUrl = projectSettings.env?.ANTHROPIC_BASE_URL ?? null
+
+    return ok({ running, port, targetUrl, envConfigured, configuredBaseUrl })
   } catch (e) {
     return serverError(e)
   }

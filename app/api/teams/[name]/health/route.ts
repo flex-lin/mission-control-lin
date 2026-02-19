@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readTeamConfig, readTaskList, getTeamLastActivity } from "@/lib/claude-files";
-import { ok, notFound, serverError } from "@/lib/api-helpers";
+import { ok, err, notFound, serverError, safeName } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
 import { sessionExists, getSessionName, sessionProcessAlive, anyTeamPaneAlive, killAllTeamSessions } from "@/lib/tmux-manager";
 import { getLeaderSessionName, resumeTeamAsLeader, personaToLaunchable } from "@/lib/agent-launcher";
@@ -39,6 +39,7 @@ export async function GET(
 ): Promise<NextResponse> {
   try {
     const { name } = await params;
+    if (!safeName(name)) return err("Invalid team name", "VALIDATION_ERROR");
 
     const team = readTeamConfig(name);
     if (!team) return notFound(`Team "${name}" not found`);
@@ -119,6 +120,8 @@ export async function GET(
     const tasksBasePath = path.join(CLAUDE_DIR, "tasks", name);
     for (const task of tasks) {
       if (task.status !== "in_progress") continue;
+      // Validate task.id before using in file path
+      if (!/^[\w-]+$/.test(String(task.id))) continue;
       try {
         const taskFile = path.join(tasksBasePath, `${task.id}.json`);
         const stat = fs.statSync(taskFile);

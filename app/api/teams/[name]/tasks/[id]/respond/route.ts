@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readTeamConfig, readTask, writeTask } from "@/lib/claude-files";
-import { ok, notFound, err, serverError } from "@/lib/api-helpers";
+import { ok, notFound, err, serverError, safeName } from "@/lib/api-helpers";
 import fs from "fs";
 import path from "path";
 
@@ -13,6 +13,8 @@ export async function POST(
 ): Promise<NextResponse> {
   try {
     const { name, id } = await params;
+    if (!safeName(name)) return err("Invalid team name", "VALIDATION_ERROR");
+    if (!safeName(id)) return err("Invalid task ID", "VALIDATION_ERROR");
     const team = readTeamConfig(name);
     if (!team) return notFound(`Team "${name}" not found`);
 

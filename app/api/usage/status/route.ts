@@ -18,7 +18,7 @@ export async function GET() {
         cost: cursorMap.get("cost") ?? null,
         claudeCode: cursorMap.get("claude_code") ?? null,
       },
-      keyPrefix: apiKey ? apiKey.slice(0, 12) : null,
+      keyPrefix: apiKey ? apiKey.slice(0, 8) + "…" : null,
     };
 
     return ok(status);

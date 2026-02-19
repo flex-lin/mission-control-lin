@@ -7,35 +7,54 @@ set -euo pipefail
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="$DIR/node_modules/.bin"
 
-# Clear stale Turbopack cache to prevent corruption
-if [ -d "$DIR/.next" ]; then
-  echo "Cleaning stale .next cache..."
-  rm -rf "$DIR/.next"
-fi
-
-# Kill any existing services on our ports / from a previous run
+# --- Phase 1: Stop old processes FIRST (before touching .next) ---
+# Turbopack uses LSM-tree SST files; deleting .next while a process holds
+# open file descriptors corrupts the cache. Always stop, wait, THEN clean.
 echo "Stopping any existing services..."
 for port in 3777 8787; do
-  # Use fuser which reliably finds listeners on both IPv4 and IPv6
   if fuser "$port"/tcp >/dev/null 2>&1; then
-    echo "  Killing processes on port $port"
-    fuser -k "$port"/tcp >/dev/null 2>&1 || true
+    echo "  Sending SIGTERM to processes on port $port"
+    fuser -TERM "$port"/tcp >/dev/null 2>&1 || true
   fi
 done
-pkill -9 -f 'start-queue-worker' 2>/dev/null || true
+pkill -TERM -f 'start-queue-worker' 2>/dev/null || true
 
-# Wait until ports are actually free
+# Wait for graceful shutdown (up to 6 seconds)
 for port in 3777 8787; do
   for _ in $(seq 1 20); do
     fuser "$port"/tcp >/dev/null 2>&1 || break
     sleep 0.3
   done
+  if fuser "$port"/tcp >/dev/null 2>&1; then
+    echo "  Force-killing stubborn processes on port $port"
+    fuser -KILL "$port"/tcp >/dev/null 2>&1 || true
+    sleep 0.5  # let OS reclaim file descriptors after SIGKILL
+  fi
 done
 
+# --- Phase 2: Clean cache AFTER all old processes are dead ---
+if [ -d "$DIR/.next" ]; then
+  echo "Cleaning stale .next cache..."
+  rm -rf "$DIR/.next"
+fi
+
+# --- Shutdown handler: give Turbopack time to flush its cache ---
+# Guard against re-entry (INT fires cleanup, then EXIT fires it again).
+_cleaning_up=0
 cleanup() {
+  [ "$_cleaning_up" -ne 0 ] && return
+  _cleaning_up=1
   echo ""
   echo "Shutting down all services..."
-  kill $PID_DEV $PID_PROXY $PID_QUEUE 2>/dev/null || true
+  # SIGTERM all children
+  kill "$PID_DEV" "$PID_PROXY" "$PID_QUEUE" 2>/dev/null || true
+  # Wait up to 5s for Next.js to flush its persistent cache
+  for _ in $(seq 1 10); do
+    kill -0 "$PID_DEV" 2>/dev/null || break
+    sleep 0.5
+  done
+  # Force-kill anything still alive
+  kill -9 "$PID_DEV" "$PID_PROXY" "$PID_QUEUE" 2>/dev/null || true
   wait 2>/dev/null
 }
 trap cleanup EXIT INT TERM

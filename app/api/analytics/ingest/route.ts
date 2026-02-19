@@ -45,7 +45,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       daysBack?: number;
     };
 
-    const daysBack = body.daysBack ?? 7;
+    const daysBack = Math.min(Math.max(body.daysBack ?? 7, 1), 90); // clamp to 1-90 days
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - daysBack);
 

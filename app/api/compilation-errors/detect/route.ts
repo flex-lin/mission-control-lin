@@ -9,7 +9,7 @@
  * If autoHeal is true, healing is triggered immediately for each detected error.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { ok, err, serverError } from "@/lib/api-helpers";
+import { ok, err, serverError, validateProjectPath } from "@/lib/api-helpers";
 import {
   classifyError,
   parseErrorLocation,
@@ -73,7 +73,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const projectPath = body.projectPath.trim();
+    const pathCheck = validateProjectPath(body.projectPath);
+    if (!pathCheck.valid) return pathCheck.error;
+    const projectPath = pathCheck.resolved;
     const autoHeal    = body.autoHeal ?? false;
 
     // Run the build to capture current errors

@@ -48,6 +48,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
         // Case 2: task file has not been modified for more than the staleness threshold
         try {
+          // Validate task.id to prevent path traversal from crafted task files
+          if (!/^[\w-]+$/.test(String(task.id))) continue;
           const taskFile = path.join(tasksBasePath, `${task.id}.json`);
           const stat = fs.statSync(taskFile);
           const ageMs = now - stat.mtimeMs;

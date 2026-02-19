@@ -9,7 +9,8 @@
 
 INTERVAL=30
 LOG="$HOME/.claude/queue-monitor.log"
-DB="/Users/linjin/mission-control-lin/prisma/mission-control.db"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+DB="$SCRIPT_DIR/../prisma/mission-control.db"
 HEARTBEAT="$HOME/.claude/queue-worker.heartbeat"
 STALE_SECS=60
 

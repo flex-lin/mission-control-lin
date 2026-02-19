@@ -2,7 +2,7 @@ import { spawn } from "child_process"
 import path from "path"
 import fs from "fs"
 import os from "os"
-import { ok, err, serverError } from "@/lib/api-helpers"
+import { ok, err, serverError, validateProjectPath } from "@/lib/api-helpers"
 import { NextRequest } from "next/server"
 import type { BuildRecord } from "@/types"
 
@@ -77,7 +77,10 @@ export async function POST(request: NextRequest) {
       return err("A build is already in progress.", "BUILD_IN_PROGRESS", 409)
     }
 
-    const projectPath = body.projectPath ?? process.cwd()
+    const rawPath = body.projectPath ?? process.cwd()
+    const pathCheck = validateProjectPath(rawPath)
+    if (!pathCheck.valid) return pathCheck.error
+    const projectPath = pathCheck.resolved
     const autoHeal = body.autoHeal ?? false
 
     const id = `build-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -123,7 +126,7 @@ async function runBuild(buildId: string, projectPath: string, autoHeal: boolean)
         // Ensure nvm node is on PATH if available
         PATH: process.env.PATH ?? "",
       },
-      shell: true,
+      // shell: false (default) — prevents command injection via cwd or env
     })
 
     let stdout = ""

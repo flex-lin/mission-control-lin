@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ok, err, created, serverError } from "@/lib/api-helpers";
+import { ok, err, created, serverError, validateProjectPath } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
 
 const ACTIVE_STATUSES = ["pending", "running"];
@@ -68,9 +68,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (!body.goal || typeof body.goal !== "string" || !body.goal.trim()) {
       return err("goal is required", "VALIDATION_ERROR");
     }
-    const projectPath = (body.projectPath && typeof body.projectPath === "string" && body.projectPath.trim())
+    const rawPath = (body.projectPath && typeof body.projectPath === "string" && body.projectPath.trim())
       ? body.projectPath.trim()
       : process.cwd();
+    const pathCheck = validateProjectPath(rawPath);
+    if (!pathCheck.valid) return pathCheck.error;
+    const projectPath = pathCheck.resolved;
 
     // teamMembers: optional array of TeamRole objects (with at least id or name), stored as JSON string
     let teamMembersJson = "[]";

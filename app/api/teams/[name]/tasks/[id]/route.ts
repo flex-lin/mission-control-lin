@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readTask, writeTask, readTeamConfig } from "@/lib/claude-files";
-import { ok, notFound, err, serverError } from "@/lib/api-helpers";
+import { ok, notFound, err, serverError, safeName } from "@/lib/api-helpers";
 import type { TeamTask, TaskPriority } from "@/types";
 
 // PATCH /api/teams/[name]/tasks/[id] — update task status, owner, etc.
@@ -10,6 +10,8 @@ export async function PATCH(
 ): Promise<NextResponse> {
   try {
     const { name, id } = await params;
+    if (!safeName(name)) return err("Invalid team name", "VALIDATION_ERROR");
+    if (!safeName(id)) return err("Invalid task ID", "VALIDATION_ERROR");
     const team = readTeamConfig(name);
     if (!team) return notFound(`Team "${name}" not found`);
 

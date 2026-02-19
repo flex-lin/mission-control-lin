@@ -430,10 +430,12 @@ describe("PUT /api/settings — auto-start proxy when proxyConfig.enabled flips 
   const mockKillProxy = vi.fn();
   const mockPreferenceFindMany = vi.fn();
   const mockPreferenceUpsert = vi.fn();
+  const mockSetProjectProxyEnv = vi.fn();
 
   beforeEach(() => {
     mockSpawnProxy.mockReset();
     mockKillProxy.mockReset();
+    mockSetProjectProxyEnv.mockReset();
     mockPreferenceFindMany.mockResolvedValue([]);
     mockPreferenceUpsert.mockResolvedValue({ key: "k", value: "v" });
 
@@ -443,6 +445,11 @@ describe("PUT /api/settings — auto-start proxy when proxyConfig.enabled flips 
       isProxyRunning: vi.fn(() => false),
       getProxyProcess: vi.fn(() => null),
     }));
+
+    vi.doMock("@/lib/claude-files", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/claude-files")>("@/lib/claude-files");
+      return { ...actual, setProjectProxyEnv: mockSetProjectProxyEnv };
+    });
 
     vi.doMock("@/lib/db", () => ({
       db: {
@@ -591,10 +598,12 @@ describe("PUT /api/settings — auto-stop proxy when proxyConfig.enabled flips f
   const mockKillProxy = vi.fn();
   const mockPreferenceFindMany = vi.fn();
   const mockPreferenceUpsert = vi.fn();
+  const mockSetProjectProxyEnv = vi.fn();
 
   beforeEach(() => {
     mockSpawnProxy.mockReset();
     mockKillProxy.mockReset();
+    mockSetProjectProxyEnv.mockReset();
     mockPreferenceFindMany.mockResolvedValue([]);
     mockPreferenceUpsert.mockResolvedValue({ key: "k", value: "v" });
 
@@ -604,6 +613,11 @@ describe("PUT /api/settings — auto-stop proxy when proxyConfig.enabled flips f
       isProxyRunning: vi.fn(() => false),
       getProxyProcess: vi.fn(() => null),
     }));
+
+    vi.doMock("@/lib/claude-files", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/claude-files")>("@/lib/claude-files");
+      return { ...actual, setProjectProxyEnv: mockSetProjectProxyEnv };
+    });
 
     vi.doMock("@/lib/db", () => ({
       db: {
@@ -719,6 +733,11 @@ describe("PUT /api/settings — no proxy side effects when proxyConfig not in bo
       getProxyProcess: vi.fn(() => null),
     }));
 
+    vi.doMock("@/lib/claude-files", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/claude-files")>("@/lib/claude-files");
+      return { ...actual, setProjectProxyEnv: vi.fn() };
+    });
+
     vi.doMock("@/lib/db", () => ({
       db: {
         preference: {
@@ -821,6 +840,11 @@ describe("GET /api/settings — proxyConfig is included in response", () => {
       isProxyRunning: vi.fn(() => false),
       getProxyProcess: vi.fn(() => null),
     }));
+
+    vi.doMock("@/lib/claude-files", async () => {
+      const actual = await vi.importActual<typeof import("@/lib/claude-files")>("@/lib/claude-files");
+      return { ...actual, setProjectProxyEnv: vi.fn() };
+    });
   });
 
   it("returns proxyConfig.enabled=true when set in settings file", async () => {
@@ -924,6 +948,12 @@ function stopServer(server: net.Server): Promise<void> {
 }
 
 describe("GET /api/proxy/status — proxy port probing", () => {
+  beforeEach(() => {
+    // Clear any lingering mocks from prior describe blocks
+    vi.doUnmock("@/lib/claude-files");
+    vi.doUnmock("@/lib/proxy-manager");
+  });
+
   it("returns running=false when port is closed (connection refused)", async () => {
     // Use a port that's almost certainly not listening (OS picks a random high port
     // and we immediately verify it is closed by not starting any server on it).
@@ -1059,28 +1089,43 @@ describe("GET /api/proxy/status — proxy port probing", () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("POST /api/proxy/control — action=start", () => {
-  interface FakeProcess {
-    killed: boolean;
-    kill: ReturnType<typeof vi.fn>;
-    unref: ReturnType<typeof vi.fn>;
-    once: ReturnType<typeof vi.fn>;
-  }
+  const mockSpawnProxy = vi.fn();
+  const mockKillProxy = vi.fn();
+  let mockIsRunning = false;
+  const mockSetProjectProxyEnv = vi.fn();
 
-  function makeFakeProcess(): FakeProcess {
-    return {
-      killed: false,
-      kill: vi.fn(),
-      unref: vi.fn(),
-      once: vi.fn(),
-    };
-  }
+  beforeEach(() => {
+    mockSpawnProxy.mockReset();
+    mockKillProxy.mockReset();
+    mockSetProjectProxyEnv.mockReset();
+    mockIsRunning = false;
+
+    vi.doMock("@/lib/proxy-manager", () => ({
+      spawnProxyProcess: mockSpawnProxy,
+      killProxyProcess: mockKillProxy,
+      isProxyRunning: () => mockIsRunning,
+      getProxyProcess: vi.fn(() => null),
+    }));
+
+    vi.doMock("@/lib/claude-files", () => ({
+      readSettings: () => {
+        const settingsPath = path.join(tmpDir, ".claude", "settings.json");
+        try {
+          return JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
+        } catch {
+          return {};
+        }
+      },
+      writeSettings: vi.fn(),
+      setProjectProxyEnv: mockSetProjectProxyEnv,
+      readProjectClaudeSettings: vi.fn(() => ({})),
+      writeProjectClaudeSettings: vi.fn(),
+    }));
+  });
 
   it("starts the proxy and returns success with port", async () => {
     createSettingsFile({ proxyConfig: { port: 8787, targetUrl: "https://api.anthropic.com" } });
-    const fakeProc = makeFakeProcess();
-    const spawnMock = vi.fn(() => fakeProc);
 
-    vi.doMock("child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
@@ -1096,16 +1141,13 @@ describe("POST /api/proxy/control — action=start", () => {
     expect(body.data.success).toBe(true);
     expect(body.data.action).toBe("start");
     expect(body.data.port).toBe(8787);
-    expect(spawnMock).toHaveBeenCalledOnce();
-
-    vi.doUnmock("child_process");
+    expect(mockSpawnProxy).toHaveBeenCalledOnce();
+    expect(mockSpawnProxy).toHaveBeenCalledWith(8787, "https://api.anthropic.com");
   });
 
   it("uses custom port from settings", async () => {
     createSettingsFile({ proxyConfig: { port: 9999, targetUrl: "https://api.anthropic.com" } });
-    const spawnMock = vi.fn(() => makeFakeProcess());
 
-    vi.doMock("child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
@@ -1118,19 +1160,14 @@ describe("POST /api/proxy/control — action=start", () => {
     const body = (await res.json()) as { data: { port: number } };
 
     expect(body.data.port).toBe(9999);
-    const [, , opts] = spawnMock.mock.calls[0] as [string, string[], { env: Record<string, string> }];
-    expect(opts.env.PROXY_PORT).toBe("9999");
-
-    vi.doUnmock("child_process");
+    expect(mockSpawnProxy).toHaveBeenCalledWith(9999, "https://api.anthropic.com");
   });
 
   it("spawns with the targetUrl from settings", async () => {
     createSettingsFile({
       proxyConfig: { port: 8787, targetUrl: "https://my-proxy.example.com" },
     });
-    const spawnMock = vi.fn(() => makeFakeProcess());
 
-    vi.doMock("child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
@@ -1141,17 +1178,12 @@ describe("POST /api/proxy/control — action=start", () => {
       })
     );
 
-    const [, , opts] = spawnMock.mock.calls[0] as [string, string[], { env: Record<string, string> }];
-    expect(opts.env.PROXY_TARGET_URL).toBe("https://my-proxy.example.com");
-
-    vi.doUnmock("child_process");
+    expect(mockSpawnProxy).toHaveBeenCalledWith(8787, "https://my-proxy.example.com");
   });
 
   it("uses default port 8787 and default targetUrl when settings has no proxyConfig", async () => {
     createSettingsFile({});
-    const spawnMock = vi.fn(() => makeFakeProcess());
 
-    vi.doMock("child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
@@ -1162,18 +1194,12 @@ describe("POST /api/proxy/control — action=start", () => {
       })
     );
 
-    const [, , opts] = spawnMock.mock.calls[0] as [string, string[], { env: Record<string, string> }];
-    expect(opts.env.PROXY_PORT).toBe("8787");
-    expect(opts.env.PROXY_TARGET_URL).toBe("https://api.anthropic.com");
-
-    vi.doUnmock("child_process");
+    expect(mockSpawnProxy).toHaveBeenCalledWith(8787, "https://api.anthropic.com");
   });
 
-  it("spawns with npx tsx server/proxy.ts command", async () => {
+  it("sets ANTHROPIC_BASE_URL in project settings on start", async () => {
     createSettingsFile({ proxyConfig: { port: 8787, targetUrl: "https://api.anthropic.com" } });
-    const spawnMock = vi.fn(() => makeFakeProcess());
 
-    vi.doMock("child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
@@ -1184,32 +1210,16 @@ describe("POST /api/proxy/control — action=start", () => {
       })
     );
 
-    const [cmd, args] = spawnMock.mock.calls[0] as [string, string[]];
-    expect(cmd).toBe("npx");
-    expect(args[0]).toBe("tsx");
-    expect(args[1]).toMatch(/server\/proxy\.ts$/);
-
-    vi.doUnmock("child_process");
+    expect(mockSetProjectProxyEnv).toHaveBeenCalledWith("http://localhost:8787");
   });
 
-  it("returns 400 ALREADY_RUNNING on second start call", async () => {
+  it("returns 400 ALREADY_RUNNING when proxy is already running", async () => {
     createSettingsFile({ proxyConfig: { port: 8787 } });
-    const spawnMock = vi.fn(() => makeFakeProcess());
+    mockIsRunning = true;
 
-    vi.doMock("child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
-
-    // First start — succeeds
-    await POST(
-      makeReq("http://localhost:3777/api/proxy/control", {
-        method: "POST",
-        body: JSON.stringify({ action: "start" }),
-      })
-    );
-
-    // Second start — should fail
     const res = await POST(
       makeReq("http://localhost:3777/api/proxy/control", {
         method: "POST",
@@ -1220,13 +1230,11 @@ describe("POST /api/proxy/control — action=start", () => {
 
     expect(res.status).toBe(400);
     expect(body.code).toBe("ALREADY_RUNNING");
-
-    vi.doUnmock("child_process");
   });
 
   it("returns 400 INVALID_ACTION for unknown action", async () => {
     createSettingsFile({});
-    vi.doMock("child_process", () => ({ spawn: vi.fn() }));
+
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
@@ -1240,13 +1248,11 @@ describe("POST /api/proxy/control — action=start", () => {
 
     expect(res.status).toBe(400);
     expect(body.code).toBe("INVALID_ACTION");
-
-    vi.doUnmock("child_process");
   });
 
   it("returns 400 INVALID_ACTION for missing action field", async () => {
     createSettingsFile({});
-    vi.doMock("child_process", () => ({ spawn: vi.fn() }));
+
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
@@ -1260,49 +1266,51 @@ describe("POST /api/proxy/control — action=start", () => {
 
     expect(res.status).toBe(400);
     expect(body.code).toBe("INVALID_ACTION");
-
-    vi.doUnmock("child_process");
   });
 });
 
 describe("POST /api/proxy/control — action=stop", () => {
-  interface FakeProcess {
-    killed: boolean;
-    kill: ReturnType<typeof vi.fn>;
-    unref: ReturnType<typeof vi.fn>;
-    once: ReturnType<typeof vi.fn>;
-  }
+  const mockSpawnProxy = vi.fn();
+  const mockKillProxy = vi.fn();
+  let mockIsRunning = false;
+  const mockSetProjectProxyEnv = vi.fn();
 
-  function makeFakeProcess(): FakeProcess {
-    return {
-      killed: false,
-      kill: vi.fn(function (this: FakeProcess) {
-        this.killed = true;
-      }),
-      unref: vi.fn(),
-      once: vi.fn(),
-    };
-  }
+  beforeEach(() => {
+    mockSpawnProxy.mockReset();
+    mockKillProxy.mockReset();
+    mockSetProjectProxyEnv.mockReset();
+    mockIsRunning = false;
+
+    vi.doMock("@/lib/proxy-manager", () => ({
+      spawnProxyProcess: mockSpawnProxy,
+      killProxyProcess: mockKillProxy,
+      isProxyRunning: () => mockIsRunning,
+      getProxyProcess: vi.fn(() => null),
+    }));
+
+    vi.doMock("@/lib/claude-files", () => ({
+      readSettings: () => {
+        const settingsPath = path.join(tmpDir, ".claude", "settings.json");
+        try {
+          return JSON.parse(fs.readFileSync(settingsPath, "utf-8"));
+        } catch {
+          return {};
+        }
+      },
+      writeSettings: vi.fn(),
+      setProjectProxyEnv: mockSetProjectProxyEnv,
+      readProjectClaudeSettings: vi.fn(() => ({})),
+      writeProjectClaudeSettings: vi.fn(),
+    }));
+  });
 
   it("stops the proxy and returns success", async () => {
     createSettingsFile({ proxyConfig: { port: 8787 } });
-    const fakeProc = makeFakeProcess();
-    const spawnMock = vi.fn(() => fakeProc);
+    mockIsRunning = true;
 
-    vi.doMock("child_process", () => ({ spawn: spawnMock }));
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
-
-    // Start first
-    await POST(
-      makeReq("http://localhost:3777/api/proxy/control", {
-        method: "POST",
-        body: JSON.stringify({ action: "start" }),
-      })
-    );
-
-    // Now stop
     const res = await POST(
       makeReq("http://localhost:3777/api/proxy/control", {
         method: "POST",
@@ -1314,14 +1322,30 @@ describe("POST /api/proxy/control — action=stop", () => {
     expect(res.status).toBe(200);
     expect(body.data.success).toBe(true);
     expect(body.data.action).toBe("stop");
-    expect(fakeProc.kill).toHaveBeenCalledWith("SIGTERM");
+    expect(mockKillProxy).toHaveBeenCalledOnce();
+  });
 
-    vi.doUnmock("child_process");
+  it("removes ANTHROPIC_BASE_URL from project settings on stop", async () => {
+    createSettingsFile({ proxyConfig: { port: 8787 } });
+    mockIsRunning = true;
+
+    vi.resetModules();
+
+    const { POST } = await import("@/app/api/proxy/control/route");
+    await POST(
+      makeReq("http://localhost:3777/api/proxy/control", {
+        method: "POST",
+        body: JSON.stringify({ action: "stop" }),
+      })
+    );
+
+    expect(mockSetProjectProxyEnv).toHaveBeenCalledWith(null);
   });
 
   it("returns 400 NOT_RUNNING when no proxy is active", async () => {
     createSettingsFile({});
-    vi.doMock("child_process", () => ({ spawn: vi.fn() }));
+    mockIsRunning = false;
+
     vi.resetModules();
 
     const { POST } = await import("@/app/api/proxy/control/route");
@@ -1335,8 +1359,6 @@ describe("POST /api/proxy/control — action=stop", () => {
 
     expect(res.status).toBe(400);
     expect(body.code).toBe("NOT_RUNNING");
-
-    vi.doUnmock("child_process");
   });
 });
 

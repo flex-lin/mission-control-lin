@@ -820,7 +820,7 @@ describe("POST /api/queue — submit task with optional team members", () => {
       method: "POST",
       body: JSON.stringify({
         goal: "Build a REST API",
-        projectPath: "/tmp/project",
+        projectPath: "/tmp",
       }),
     });
 

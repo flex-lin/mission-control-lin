@@ -175,8 +175,8 @@ describe("POST /api/slack/events — url_verification", () => {
     expect(body.challenge).toBe("setup-challenge-abc");
   });
 
-  it("does not require Slack config to be set for url_verification", async () => {
-    // Config not found — but url_verification should still work
+  it("returns 404 when Slack config is not set for url_verification", async () => {
+    // Config not found — url_verification requires config to prevent endpoint fingerprinting
     mockSlackConfigFindMany.mockResolvedValue([]);
 
     const req = makeUnsignedReq({
@@ -186,8 +186,8 @@ describe("POST /api/slack/events — url_verification", () => {
 
     const { status, body } = await callPOST(req);
 
-    expect(status).toBe(200);
-    expect(body.challenge).toBe("challenge-without-config");
+    expect(status).toBe(404);
+    expect(body.error).toBe("Not configured");
   });
 });
 

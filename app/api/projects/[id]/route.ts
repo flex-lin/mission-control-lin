@@ -119,24 +119,9 @@ export async function GET(
 
     if (dbRecord) return buildDbProjectResponse(dbRecord);
 
-    // Strategy 4: Path exists on disk but isn't indexed anywhere — still show it
-    if (fs.existsSync(decodedPath) && fs.statSync(decodedPath).isDirectory()) {
-      const context: ProjectContext = { memoryFiles: {} };
-      const claudeMdPath = path.join(decodedPath, "CLAUDE.md");
-      if (fs.existsSync(claudeMdPath)) {
-        context.claudeMd = fs.readFileSync(claudeMdPath, "utf-8");
-      }
-      const fileTree = buildFileTree(decodedPath);
-
-      return ok({
-        id,
-        path: decodedPath,
-        name: path.basename(decodedPath),
-        tags: [],
-        ...context,
-        fileTree,
-      });
-    }
+    // Strategy 4 removed: previously allowed reading arbitrary filesystem directories
+    // via the lossy idToPath() decoder. This was an information disclosure vulnerability.
+    // Only DB-indexed and ~/.claude/projects/ entries are supported.
 
     return notFound(`Project "${id}" not found`);
   } catch (e) {

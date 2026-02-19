@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/layout/sidebar"
 import { CommandPalette } from "@/components/layout/command-palette"
+import { ChatPanel } from "@/components/chat/chat-panel"
 import { SettingsProvider } from "@/lib/settings-context"
 
 export default function DashboardLayout({
@@ -15,6 +16,7 @@ export default function DashboardLayout({
           <main className="flex-1 overflow-y-auto">{children}</main>
         </div>
         <CommandPalette />
+        <ChatPanel />
       </div>
     </SettingsProvider>
   )

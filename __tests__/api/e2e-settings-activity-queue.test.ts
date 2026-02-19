@@ -691,10 +691,14 @@ describe("GET /api/queue — list queued tasks", () => {
 
 describe("POST /api/queue — enqueue task", () => {
   it("creates a queued task with goal and projectPath", async () => {
+    // Use tmpDir as a real existing directory for projectPath validation
+    const projectDir = path.join(tmpDir, "test-project");
+    fs.mkdirSync(projectDir, { recursive: true });
+
     const newTask = {
       id: 1,
       goal: "Implement feature X",
-      projectPath: "/home/user/project",
+      projectPath: projectDir,
       priority: 0,
       status: "pending",
       createdAt: new Date(),
@@ -705,7 +709,7 @@ describe("POST /api/queue — enqueue task", () => {
     const { POST } = await import("@/app/api/queue/route");
     const req = makeReq("http://localhost:3777/api/queue", {
       method: "POST",
-      body: JSON.stringify({ goal: "Implement feature X", projectPath: "/home/user/project" }),
+      body: JSON.stringify({ goal: "Implement feature X", projectPath: projectDir }),
     });
 
     const res = await POST(req);
@@ -713,7 +717,7 @@ describe("POST /api/queue — enqueue task", () => {
 
     expect(res.status).toBe(201);
     expect(body.data.goal).toBe("Implement feature X");
-    expect(body.data.projectPath).toBe("/home/user/project");
+    expect(body.data.projectPath).toBe(projectDir);
   });
 
   it("defaults projectPath to cwd when not provided", async () => {

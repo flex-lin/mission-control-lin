@@ -730,7 +730,7 @@ describe("GET /api/usage/status — route handler", () => {
     const res = await GET();
     const body = await res.json();
     expect(body.data.configured).toBe(true);
-    expect(body.data.keyPrefix).toBe("sk-ant-admin");
+    expect(body.data.keyPrefix).toBe("sk-ant-a…");
 
     delete process.env.ANTHROPIC_ADMIN_API_KEY;
   });

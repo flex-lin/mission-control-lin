@@ -48,9 +48,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Handle url_verification without signature check (Slack sends it during initial setup)
+  // Handle url_verification — Slack sends this during initial app setup.
+  // Require a valid challenge string to prevent endpoint fingerprinting abuse.
   if (payload.type === "url_verification") {
     const uvPayload = payload as SlackUrlVerification;
+    if (!uvPayload.challenge || typeof uvPayload.challenge !== "string") {
+      return NextResponse.json({ error: "Missing challenge" }, { status: 400 });
+    }
+    // Verify Slack config exists — refuse if app is not configured at all
+    const configCheck = await getSlackConfigRaw();
+    if (!configCheck) {
+      return NextResponse.json({ error: "Not configured" }, { status: 404 });
+    }
     return NextResponse.json({ challenge: uvPayload.challenge });
   }
 

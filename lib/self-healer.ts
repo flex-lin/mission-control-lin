@@ -175,26 +175,33 @@ export function verifyBuild(projectPath: string): {
   success: boolean;
   output: string;
 } {
-  // Prefer `pnpm build`; fall back to `npx tsc --noEmit` if no package.json build script
-  const packageJsonPath = path.join(projectPath, "package.json");
-  let buildCmd = "npx tsc --noEmit";
+  // Validate projectPath is an absolute, existing directory
+  const resolved = path.resolve(projectPath);
+  if (!path.isAbsolute(resolved) || !fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
+    return { success: false, output: `Invalid project path: ${projectPath}` };
+  }
 
+  // Choose build command from a fixed allowlist — never execute user-controlled strings
+  const ALLOWED_CMDS = ["pnpm type-check", "pnpm build", "npx tsc --noEmit"] as const;
+  let buildCmd: string = ALLOWED_CMDS[2]; // default: npx tsc --noEmit
+
+  const packageJsonPath = path.join(resolved, "package.json");
   if (fs.existsSync(packageJsonPath)) {
     try {
       const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8")) as {
         scripts?: Record<string, string>;
       };
       if (pkg.scripts?.["type-check"]) {
-        buildCmd = "pnpm type-check";
+        buildCmd = ALLOWED_CMDS[0];
       } else if (pkg.scripts?.build) {
-        buildCmd = "pnpm build";
+        buildCmd = ALLOWED_CMDS[1];
       }
     } catch {
       // fallthrough to default
     }
   }
 
-  const { output, exitCode } = runCommand(buildCmd, projectPath);
+  const { output, exitCode } = runCommand(buildCmd, resolved);
   return { success: exitCode === 0, output };
 }
 

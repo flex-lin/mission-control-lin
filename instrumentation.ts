@@ -10,24 +10,20 @@ export async function register() {
     }
 
     // Auto-start Slack Socket Mode if configured
-    void autoStartSocketMode()
-  }
-}
+    try {
+      const { db } = await import("@/lib/db")
+      const configs = await db.slackConfig.findMany({ take: 1 })
+      const config = configs[0]
 
-async function autoStartSocketMode(): Promise<void> {
-  try {
-    const { db } = await import("@/lib/db")
-    const configs = await db.slackConfig.findMany({ take: 1 })
-    const config = configs[0]
-
-    if (config?.appToken && config.botToken) {
-      const { startSocketMode } = await import("@/lib/slack-socket")
-      await startSocketMode(config.appToken, config.botToken)
-      console.log("[instrumentation] Slack Socket Mode auto-started")
+      if (config?.appToken && config.botToken) {
+        const { startSocketMode } = await import("@/lib/slack-socket")
+        await startSocketMode(config.appToken, config.botToken)
+        console.log("[instrumentation] Slack Socket Mode auto-started")
+      }
+    } catch (e) {
+      // Don't crash the server if Slack connection fails
+      const message = e instanceof Error ? e.message : String(e)
+      console.warn("[instrumentation] Failed to auto-start Slack Socket Mode:", message)
     }
-  } catch (e) {
-    // Don't crash the server if Slack connection fails
-    const message = e instanceof Error ? e.message : String(e)
-    console.warn("[instrumentation] Failed to auto-start Slack Socket Mode:", message)
   }
 }

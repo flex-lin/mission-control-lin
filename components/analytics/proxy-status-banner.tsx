@@ -12,6 +12,7 @@ interface ProxyStatusInfo {
   running: boolean
   port: number
   targetUrl: string
+  envConfigured?: boolean
 }
 
 interface ProxyStatusBannerProps {
@@ -23,7 +24,6 @@ export function ProxyStatusBanner({ compact = false }: ProxyStatusBannerProps) {
   const [status, setStatus] = useState<ProxyStatusInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
-
   const fetchStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/proxy/status", { cache: "no-store" })
@@ -39,6 +39,8 @@ export function ProxyStatusBanner({ compact = false }: ProxyStatusBannerProps) {
   useEffect(() => {
     void fetchStatus()
   }, [fetchStatus])
+
+  const envConfigured = status?.envConfigured ?? false
 
   async function handleCopy(text: string) {
     try {
@@ -64,8 +66,8 @@ export function ProxyStatusBanner({ compact = false }: ProxyStatusBannerProps) {
         />
         <span className="text-xs text-muted-foreground">
           {status?.running
-            ? `Proxy capturing on :${status.port}`
-            : "Proxy off — no live capture"}
+            ? `Tracking on :${status.port}${envConfigured ? " (auto-configured)" : ""}`
+            : "Not tracking — direct to Anthropic"}
         </span>
       </div>
     )
@@ -83,16 +85,27 @@ export function ProxyStatusBanner({ compact = false }: ProxyStatusBannerProps) {
           </Badge>
         </AlertTitle>
         <AlertDescription className="mt-1 text-xs text-muted-foreground">
-          The proxy is capturing all Anthropic API traffic and counting tokens in real time.
-          Point Claude Code to{" "}
-          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
-            http://localhost:{status.port}
-          </code>{" "}
-          via the{" "}
-          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
-            ANTHROPIC_BASE_URL
-          </code>{" "}
-          environment variable to enable tracking.
+          {envConfigured ? (
+            <>
+              The proxy is capturing all Anthropic API traffic and counting tokens in real time.
+              ANTHROPIC_BASE_URL is configured in{" "}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">.claude/settings.json</code>
+              {" "}&mdash; new Claude Code sessions in this directory will route through the proxy automatically.
+            </>
+          ) : (
+            <>
+              The proxy is capturing all Anthropic API traffic and counting tokens in real time.
+              Point Claude Code to{" "}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
+                http://localhost:{status.port}
+              </code>{" "}
+              via the{" "}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
+                ANTHROPIC_BASE_URL
+              </code>{" "}
+              environment variable to enable tracking.
+            </>
+          )}
         </AlertDescription>
       </Alert>
     )

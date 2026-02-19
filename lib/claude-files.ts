@@ -549,6 +549,69 @@ export function writeSettings(settings: Settings): void {
   fs.writeFileSync(resolved, JSON.stringify(settings, null, 2), "utf-8");
 }
 
+// ── Project-level Claude settings (.claude/settings.json in project dir) ────
+
+interface ProjectClaudeSettings {
+  permissions?: Record<string, unknown>;
+  teammateMode?: string;
+  mcpServers?: Record<string, unknown>;
+  env?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+/**
+ * Read the project-level .claude/settings.json for a given project directory.
+ * Falls back to the current working directory if no projectPath is given.
+ */
+export function readProjectClaudeSettings(projectPath?: string): ProjectClaudeSettings {
+  const dir = projectPath ?? process.cwd();
+  const filePath = path.join(dir, ".claude", "settings.json");
+  try {
+    const raw = fs.readFileSync(filePath, "utf-8");
+    return JSON.parse(raw) as ProjectClaudeSettings;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Write the project-level .claude/settings.json for a given project directory.
+ * Merges env vars without clobbering other settings (permissions, mcpServers, etc).
+ */
+export function writeProjectClaudeSettings(
+  settings: ProjectClaudeSettings,
+  projectPath?: string
+): void {
+  const dir = projectPath ?? process.cwd();
+  const filePath = path.join(dir, ".claude", "settings.json");
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(settings, null, 2) + "\n", "utf-8");
+}
+
+/**
+ * Set ANTHROPIC_BASE_URL in the project-level .claude/settings.json env block.
+ * When proxyUrl is null, removes the env var so Claude goes direct to Anthropic.
+ */
+export function setProjectProxyEnv(proxyUrl: string | null, projectPath?: string): void {
+  const settings = readProjectClaudeSettings(projectPath);
+
+  if (proxyUrl) {
+    // Set ANTHROPIC_BASE_URL to route through proxy
+    settings.env = { ...settings.env, ANTHROPIC_BASE_URL: proxyUrl };
+  } else {
+    // Remove ANTHROPIC_BASE_URL so Claude goes directly to Anthropic
+    if (settings.env) {
+      delete settings.env.ANTHROPIC_BASE_URL;
+      // Clean up empty env object
+      if (Object.keys(settings.env).length === 0) {
+        delete settings.env;
+      }
+    }
+  }
+
+  writeProjectClaudeSettings(settings, projectPath);
+}
+
 // ── Project functions ─────────────────────────────────────────────────────────
 
 /**
