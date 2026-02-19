@@ -18,7 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useSettings } from "@/lib/settings-context"
 import type { Settings } from "@/types"
-import { Save, RotateCcw, Moon } from "lucide-react"
+import { Save, RotateCcw, Moon, MessageSquare } from "lucide-react"
+import type { SlackConfig, SlackConfigInput } from "@/types"
 
 const DEFAULT_PROXY_PORT = 8787
 const DEFAULT_PROXY_TARGET = "https://api.anthropic.com"
@@ -65,6 +66,19 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
   const [proxyStatus, setProxyStatus] = useState<ProxyStatus | null>(null)
   const [proxyLoading, setProxyLoading] = useState(false)
 
+  // Slack config fields
+  const [slackConfig, setSlackConfig] = useState<SlackConfig | null>(null)
+  const [slackLoading, setSlackLoading] = useState(false)
+  const [slackSaving, setSlackSaving] = useState(false)
+  const [slackTesting, setSlackTesting] = useState(false)
+  const [slackInput, setSlackInput] = useState<SlackConfigInput>({
+    workspaceId: "",
+    workspaceName: "",
+    botToken: "",
+    signingSecret: "",
+    channelId: "",
+  })
+
   const fetchProxyStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/proxy/status")
@@ -75,9 +89,33 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
     }
   }, [])
 
+  const fetchSlackConfig = useCallback(async () => {
+    setSlackLoading(true)
+    try {
+      const res = await fetch("/api/slack/config")
+      const json = (await res.json()) as { data?: SlackConfig }
+      if (res.ok && json.data) {
+        setSlackConfig(json.data)
+        // Populate input fields with workspace info (not secrets — they're masked)
+        setSlackInput((prev) => ({
+          ...prev,
+          workspaceId: json.data?.workspaceId ?? "",
+          workspaceName: json.data?.workspaceName ?? "",
+          channelId: json.data?.channelId ?? "",
+          // Leave botToken / signingSecret blank so user must re-enter to change
+        }))
+      }
+    } catch {
+      // Not configured yet — ignore
+    } finally {
+      setSlackLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     void fetchProxyStatus()
-  }, [fetchProxyStatus])
+    void fetchSlackConfig()
+  }, [fetchProxyStatus, fetchSlackConfig])
 
   async function handleProxyToggle(enable: boolean) {
     setProxyLoading(true)
@@ -108,6 +146,89 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
       toast.error(`Failed to ${action} proxy`)
     } finally {
       setProxyLoading(false)
+    }
+  }
+
+  async function handleSlackSave() {
+    if (!slackInput.workspaceId) {
+      toast.error("Workspace ID is required")
+      return
+    }
+    // When updating existing config, allow empty token/secret (they stay unchanged server-side via separate PATCH)
+    // When creating new config, require both
+    const isNew = !slackConfig
+    if (isNew && (!slackInput.botToken || !slackInput.signingSecret)) {
+      toast.error("Bot Token and Signing Secret are required for new configuration")
+      return
+    }
+    if (slackInput.botToken && !slackInput.botToken.startsWith("xoxb-")) {
+      toast.error("Bot Token must start with xoxb-")
+      return
+    }
+    setSlackSaving(true)
+    try {
+      // For updates where secrets are omitted, re-use existing config's raw values via re-fetch
+      // The API always requires botToken + signingSecret, so we need to pass something valid.
+      // If fields are blank we inform the user they need to re-enter.
+      if (!isNew && (!slackInput.botToken || !slackInput.signingSecret)) {
+        toast.error("Please enter Bot Token and Signing Secret to update the configuration (they cannot be retrieved for security reasons)")
+        return
+      }
+      const res = await fetch("/api/slack/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(slackInput),
+      })
+      const json = (await res.json()) as { data?: SlackConfig; error?: string }
+      if (res.ok && json.data) {
+        setSlackConfig(json.data)
+        // Reset secret fields after save
+        setSlackInput((prev) => ({ ...prev, botToken: "", signingSecret: "" }))
+        toast.success("Slack configuration saved")
+      } else {
+        toast.error(json.error ?? "Failed to save Slack configuration")
+      }
+    } catch {
+      toast.error("Network error — could not save Slack configuration")
+    } finally {
+      setSlackSaving(false)
+    }
+  }
+
+  async function handleSlackDelete() {
+    if (!slackConfig) return
+    setSlackSaving(true)
+    try {
+      const res = await fetch("/api/slack/config", { method: "DELETE" })
+      if (res.ok) {
+        setSlackConfig(null)
+        setSlackInput({ workspaceId: "", workspaceName: "", botToken: "", signingSecret: "", channelId: "" })
+        toast.success("Slack configuration removed")
+      } else {
+        const json = (await res.json()) as { error?: string }
+        toast.error(json.error ?? "Failed to remove Slack configuration")
+      }
+    } catch {
+      toast.error("Network error — could not remove Slack configuration")
+    } finally {
+      setSlackSaving(false)
+    }
+  }
+
+  async function handleSlackTest() {
+    setSlackTesting(true)
+    try {
+      const res = await fetch("/api/slack/config")
+      const json = (await res.json()) as { data?: SlackConfig; error?: string }
+      if (!res.ok || !json.data) {
+        toast.error("No Slack configuration found — save config first")
+        return
+      }
+      toast.success(`Connected to Slack workspace: ${json.data.workspaceId}`)
+    } catch {
+      toast.error("Failed to test Slack connection")
+    } finally {
+      setSlackTesting(false)
     }
   }
 
@@ -350,6 +471,144 @@ export function SettingsForm({ initialSettings }: SettingsFormProps) {
                 </Select>
               </div>
             </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Slack Integration */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-semibold">Slack Integration</CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              <span
+                className={`inline-block h-2.5 w-2.5 rounded-full ${
+                  slackConfig ? "bg-emerald-500" : "bg-slate-400"
+                }`}
+              />
+              <span className="text-xs text-muted-foreground">
+                {slackLoading ? "Loading..." : slackConfig ? `Workspace: ${slackConfig.workspaceId}` : "Not configured"}
+              </span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Connect a Slack workspace to interact with Mission Control via Slack messages and slash commands.
+            Requires a Slack App with the <code className="rounded bg-muted px-1 py-0.5 text-xs">chat:write</code> and <code className="rounded bg-muted px-1 py-0.5 text-xs">channels:history</code> scopes.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="slack-workspace-id">Workspace ID</Label>
+              <Input
+                id="slack-workspace-id"
+                value={slackInput.workspaceId}
+                onChange={(e) => setSlackInput((prev) => ({ ...prev, workspaceId: e.target.value }))}
+                placeholder="T0XXXXXXX"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="slack-workspace-name">Workspace Name (optional)</Label>
+              <Input
+                id="slack-workspace-name"
+                value={slackInput.workspaceName ?? ""}
+                onChange={(e) => setSlackInput((prev) => ({ ...prev, workspaceName: e.target.value }))}
+                placeholder="my-company"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="slack-bot-token">Bot Token</Label>
+            <Input
+              id="slack-bot-token"
+              type="password"
+              value={slackInput.botToken}
+              onChange={(e) => setSlackInput((prev) => ({ ...prev, botToken: e.target.value }))}
+              placeholder={slackConfig ? "Leave blank to keep existing token" : "xoxb-..."}
+              autoComplete="off"
+            />
+            <p className="text-xs text-muted-foreground">
+              {slackConfig
+                ? `Current: ${slackConfig.botToken} — enter a new value to replace`
+                : "Starts with xoxb-"}
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="slack-signing-secret">Signing Secret</Label>
+            <Input
+              id="slack-signing-secret"
+              type="password"
+              value={slackInput.signingSecret}
+              onChange={(e) => setSlackInput((prev) => ({ ...prev, signingSecret: e.target.value }))}
+              placeholder={slackConfig ? "Leave blank to keep existing secret" : "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+              autoComplete="off"
+            />
+            <p className="text-xs text-muted-foreground">
+              {slackConfig
+                ? `Current: ${slackConfig.signingSecret} — enter a new value to replace`
+                : "Found in your Slack App's Basic Information page"}
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="slack-channel-id">Default Channel ID (optional)</Label>
+            <Input
+              id="slack-channel-id"
+              value={slackInput.channelId ?? ""}
+              onChange={(e) => setSlackInput((prev) => ({ ...prev, channelId: e.target.value }))}
+              placeholder="C0XXXXXXX"
+            />
+            <p className="text-xs text-muted-foreground">
+              Channel where the bot will send proactive notifications
+            </p>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <Button
+              onClick={handleSlackSave}
+              disabled={slackSaving}
+              className="gap-1.5"
+            >
+              <Save className="h-3.5 w-3.5" />
+              {slackSaving ? "Saving..." : "Save Slack Config"}
+            </Button>
+            {slackConfig && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleSlackTest}
+                  disabled={slackTesting}
+                  className="gap-1.5"
+                >
+                  {slackTesting ? "Testing..." : "Test Connection"}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleSlackDelete}
+                  disabled={slackSaving}
+                  className="gap-1.5"
+                >
+                  Remove Config
+                </Button>
+              </>
+            )}
+          </div>
+
+          {slackConfig && (
+            <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground">Webhook Setup</p>
+              <p>Events URL: <code className="rounded bg-muted px-1">&#123;your-domain&#125;/api/slack/events</code></p>
+              <p>Slash command URL: <code className="rounded bg-muted px-1">&#123;your-domain&#125;/api/slack/slash</code></p>
+              <p>Slash command: <code className="rounded bg-muted px-1">/mc</code></p>
+            </div>
           )}
         </CardContent>
       </Card>

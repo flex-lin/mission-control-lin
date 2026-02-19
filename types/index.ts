@@ -550,6 +550,29 @@ export interface SelfHealingStats {
   successRate: number;
 }
 
+// ── Slack Integration Types ───────────────────────────────────────────────────
+
+export interface SlackConfig {
+  id: number;
+  workspaceId: string;
+  workspaceName?: string | null;
+  /** Masked bot token (only last 4 chars shown when reading) */
+  botToken: string;
+  /** Masked signing secret (only last 4 chars shown when reading) */
+  signingSecret: string;
+  channelId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SlackConfigInput {
+  workspaceId: string;
+  workspaceName?: string;
+  botToken: string;
+  signingSecret: string;
+  channelId?: string;
+}
+
 // ── API Response Wrapper ──────────────────────────────────────────────────────
 
 export interface ApiResponse<T> {

@@ -175,6 +175,20 @@ model SessionCheckpoint {
   @@map("session_checkpoints")
 }
 
+/// Slack workspace integration configuration
+model SlackConfig {
+  id            Int      @id @default(autoincrement())
+  workspaceId   String   @unique @map("workspace_id")
+  workspaceName String?  @map("workspace_name")
+  botToken      String   @map("bot_token")       // xoxb-...
+  signingSecret String   @map("signing_secret")  // For request verification
+  channelId     String?  @map("channel_id")      // Default channel for notifications
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("slack_configs")
+}
+
 /// Tracks compilation errors that have been detected and queued for self-healing
 model CompilationError {
   id              Int       @id @default(autoincrement())
