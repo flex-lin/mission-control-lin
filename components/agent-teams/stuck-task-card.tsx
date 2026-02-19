@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, Clock, ChevronDown, ChevronUp, MessageSquare } from "lucide-react"
+import { AlertCircle, Clock, ChevronDown, ChevronUp, MessageSquare, Key, HelpCircle, GitBranch, XCircle, ShieldAlert } from "lucide-react"
 import type { StuckTask } from "@/types"
 
 interface StuckTaskCardProps {
@@ -26,7 +26,23 @@ const blockerLabels: Record<string, string> = {
   missing_info: "Missing Info",
   dependency: "Dependency",
   error: "Error",
-  permission: "Permission",
+  permission: "Permission / Credential",
+}
+
+const blockerIcons: Record<string, React.ElementType> = {
+  decision_needed: HelpCircle,
+  missing_info: AlertCircle,
+  dependency: GitBranch,
+  error: XCircle,
+  permission: Key,
+}
+
+const blockerGuidance: Record<string, string> = {
+  decision_needed: "The agent needs a decision from you to continue. Click Respond to send your guidance.",
+  missing_info: "The agent is waiting for information it can't find on its own. Click Respond to provide the missing details.",
+  dependency: "This task is blocked by another task or external dependency. Check whether the blocker has been resolved, then click Respond.",
+  error: "The agent hit an error and cannot self-recover. Click Respond to send instructions, or attach to the tmux session to investigate.",
+  permission: "The agent needs a credential, API key, or elevated permission. Provide it via Respond, or add it to your environment and click Respond to let the agent retry.",
 }
 
 function formatRelativeTime(isoString: string | undefined): string {
@@ -43,17 +59,16 @@ function formatRelativeTime(isoString: string | undefined): string {
 export function StuckTaskCard({ task, showTeamName, onRespond }: StuckTaskCardProps) {
   const [expanded, setExpanded] = useState(false)
 
-  const colorClass = task.blockerType
-    ? blockerColors[task.blockerType] ?? blockerColors.dependency
-    : blockerColors.dependency
-
-  const label = task.blockerType
-    ? blockerLabels[task.blockerType] ?? task.blockerType
-    : "Stale"
+  const type = task.blockerType ?? "missing_info"
+  const colorClass = blockerColors[type] ?? blockerColors.missing_info
+  const label = blockerLabels[type] ?? type
+  const Icon = blockerIcons[type] ?? AlertCircle
+  const guidance = blockerGuidance[type]
 
   return (
     <Card className="border-border/50">
       <CardContent className="p-3 space-y-2">
+        {/* Header row */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -77,29 +92,40 @@ export function StuckTaskCard({ task, showTeamName, onRespond }: StuckTaskCardPr
           )}
         </div>
 
+        {/* Agent-reported blocker summary */}
         {task.blockerSummary && (
           <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
-            <AlertCircle className="h-3 w-3 mt-0.5 shrink-0 text-amber-400" />
+            <Icon className="h-3 w-3 mt-0.5 shrink-0 text-amber-400" />
             <span>{task.blockerSummary}</span>
           </div>
         )}
 
+        {/* Actionable guidance */}
+        {guidance && (
+          <div className={`rounded px-2.5 py-1.5 text-xs border ${colorClass} flex items-start gap-1.5`}>
+            <ShieldAlert className="h-3 w-3 mt-0.5 shrink-0" />
+            <span>{guidance}</span>
+          </div>
+        )}
+
+        {/* Expandable details */}
         {task.blockerDetails && (
           <button
             onClick={() => setExpanded(!expanded)}
             className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
           >
             {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            {expanded ? "Less" : "Details"}
+            {expanded ? "Hide details" : "Show details"}
           </button>
         )}
 
         {expanded && task.blockerDetails && (
-          <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+          <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2 whitespace-pre-wrap">
             {task.blockerDetails}
           </p>
         )}
 
+        {/* Footer */}
         <div className="flex items-center justify-between pt-1">
           <span className="text-[10px] text-muted-foreground">
             {task.owner && <>Owner: {task.owner}</>}
