@@ -6,13 +6,13 @@ import os from "os";
 
 /**
  * Tests for Knowledge Base CRUD API endpoints:
- *   GET    /api/knowledge-base       — list all entries
+ *   GET    /api/knowledge-base       — list all entries (DB only)
  *   POST   /api/knowledge-base       — add a path
  *   PATCH  /api/knowledge-base/[id]  — update an entry
  *   DELETE /api/knowledge-base/[id]  — remove an entry
  *
- * Routes merge Prisma IndexedProject records with filesystem projects
- * from ~/.claude/projects/. We mock Prisma and fs where needed.
+ * The GET route returns only DB IndexedProject records — it does NOT
+ * auto-populate from ~/.claude/projects/ filesystem entries.
  */
 
 // ── Mock Prisma DB ───────────────────────────────────────────────────────────
@@ -32,19 +32,7 @@ vi.mock("@/lib/db", () => ({
       update: (...args: unknown[]) => mockUpdate(...args),
       delete: (...args: unknown[]) => mockDelete(...args),
     },
-    preference: {
-      findUnique: vi.fn().mockResolvedValue(null),
-      upsert: vi.fn().mockResolvedValue(null),
-    },
   },
-}));
-
-// ── Mock claude-files ────────────────────────────────────────────────────────
-
-const mockListProjects = vi.fn();
-
-vi.mock("@/lib/claude-files", () => ({
-  listProjects: (...args: unknown[]) => mockListProjects(...args),
 }));
 
 // ── Test data helpers ────────────────────────────────────────────────────────
@@ -113,7 +101,6 @@ async function callDELETE(id: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "mc-kb-test-"));
-  mockListProjects.mockReturnValue([]);
 });
 
 // ── GET /api/knowledge-base — list all entries ──────────────────────────────
@@ -121,7 +108,6 @@ beforeEach(() => {
 describe("GET /api/knowledge-base", () => {
   it("returns empty list when no entries exist", async () => {
     mockFindMany.mockResolvedValue([]);
-    mockListProjects.mockReturnValue([]);
 
     const { status, body } = await callListGET();
 
@@ -135,7 +121,6 @@ describe("GET /api/knowledge-base", () => {
       makeDbRecord({ id: 1, path: "/home/user/alpha", name: "alpha", tags: '["ts"]' }),
       makeDbRecord({ id: 2, path: "/home/user/beta", name: "beta", tags: "[]" }),
     ]);
-    mockListProjects.mockReturnValue([]);
 
     const { status, body } = await callListGET();
 
@@ -157,45 +142,41 @@ describe("GET /api/knowledge-base", () => {
     });
   });
 
-  it("includes filesystem-only projects", async () => {
+  it("does NOT include filesystem projects from ~/.claude/projects/", async () => {
+    // DB is empty — no filesystem auto-population should occur
     mockFindMany.mockResolvedValue([]);
-    mockListProjects.mockReturnValue([
-      { id: "-home-user-project", path: "/home/user/project", name: "project" },
+
+    const { status, body } = await callListGET();
+
+    expect(status).toBe(200);
+    expect(body.data).toHaveLength(0);
+  });
+
+  it("returns only DB entries when both DB and filesystem projects exist", async () => {
+    // DB has one entry; filesystem would have others but they should NOT appear
+    mockFindMany.mockResolvedValue([
+      makeDbRecord({ id: 5, path: "/home/user/dbproject", name: "dbproject", tags: "[]" }),
     ]);
 
     const { status, body } = await callListGET();
 
     expect(status).toBe(200);
     expect(body.data).toHaveLength(1);
-    expect(body.data[0]).toMatchObject({
-      id: -1,
-      path: "/home/user/project",
-      source: "filesystem",
-    });
+    expect(body.data[0]).toMatchObject({ id: 5, source: "db" });
   });
 
-  it("merges DB and filesystem entries, marking shared ones as 'both'", async () => {
-    const sharedPath = "/home/user/shared";
+  it("all returned entries have source='db'", async () => {
     mockFindMany.mockResolvedValue([
-      makeDbRecord({ id: 5, path: sharedPath, name: "shared", tags: "[]" }),
-    ]);
-    mockListProjects.mockReturnValue([
-      { id: "-home-user-shared", path: sharedPath, name: "shared" },
-      { id: "-home-user-fsonly", path: "/home/user/fsonly", name: "fsonly" },
+      makeDbRecord({ id: 1, path: "/a", name: "a" }),
+      makeDbRecord({ id: 2, path: "/b", name: "b" }),
     ]);
 
     const { status, body } = await callListGET();
 
     expect(status).toBe(200);
-    expect(body.data).toHaveLength(2);
-
-    const sharedEntry = body.data.find((e: Record<string, unknown>) => e.path === sharedPath);
-    expect(sharedEntry.source).toBe("both");
-    expect(sharedEntry.id).toBe(5);
-
-    const fsOnlyEntry = body.data.find((e: Record<string, unknown>) => e.path === "/home/user/fsonly");
-    expect(fsOnlyEntry.source).toBe("filesystem");
-    expect(fsOnlyEntry.id).toBe(-1);
+    for (const entry of body.data) {
+      expect(entry.source).toBe("db");
+    }
   });
 });
 
@@ -473,5 +454,21 @@ describe("DELETE /api/knowledge-base/[id]", () => {
 
     expect(status).toBe(400);
     expect(body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 for id=0 (not a valid DB id)", async () => {
+    const { status, body } = await callDELETE("0");
+
+    expect(status).toBe(400);
+    expect(body.code).toBe("VALIDATION_ERROR");
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for negative id (filesystem hide mechanism removed)", async () => {
+    const { status, body } = await callDELETE("-1");
+
+    expect(status).toBe(400);
+    expect(body.code).toBe("VALIDATION_ERROR");
+    expect(mockDelete).not.toHaveBeenCalled();
   });
 });

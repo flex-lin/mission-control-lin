@@ -18,11 +18,6 @@ import { EditPathDialog } from "./edit-path-dialog"
 import { DeletePathDialog } from "./delete-path-dialog"
 import type { KnowledgeBaseEntry } from "@/types"
 
-/** Convert an absolute path to the ~/.claude/projects/ folder name format */
-function pathToProjectId(p: string): string {
-  return p.replace(/\//g, "-")
-}
-
 interface KnowledgeBaseClientProps {
   initialEntries: KnowledgeBaseEntry[]
 }
@@ -48,9 +43,6 @@ export function KnowledgeBaseClient({ initialEntries }: KnowledgeBaseClientProps
     const id = setInterval(refresh, 30_000)
     return () => clearInterval(id)
   }, [refresh])
-
-  const isDbEntry = (entry: KnowledgeBaseEntry) =>
-    entry.source === "db" || entry.source === "both"
 
   if (entries.length === 0) {
     return (
@@ -91,9 +83,8 @@ export function KnowledgeBaseClient({ initialEntries }: KnowledgeBaseClientProps
                 key={entry.path}
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => {
-                  // DB entries use numeric ID for reliable lookup; filesystem-only entries use path-encoded ID
-                  const projectId = entry.id > 0 ? String(entry.id) : encodeURIComponent(pathToProjectId(entry.path))
-                  router.push(`/knowledge-base/${projectId}`)
+                  // All entries are DB entries — use numeric ID for reliable lookup
+                  router.push(`/knowledge-base/${entry.id}`)
                 }}
               >
                 <TableCell>
@@ -118,16 +109,14 @@ export function KnowledgeBaseClient({ initialEntries }: KnowledgeBaseClientProps
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    {isDbEntry(entry) && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={(e) => { e.stopPropagation(); setEditTarget(entry) }}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={(e) => { e.stopPropagation(); setEditTarget(entry) }}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"

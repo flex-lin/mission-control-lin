@@ -34,10 +34,7 @@ export function DeletePathDialog({
 
     setLoading(true)
     try {
-      const url = entry.id === -1
-        ? `/api/knowledge-base/${entry.id}?path=${encodeURIComponent(entry.path)}`
-        : `/api/knowledge-base/${entry.id}`
-      const res = await fetch(url, {
+      const res = await fetch(`/api/knowledge-base/${entry.id}`, {
         method: "DELETE",
       })
       const json = await res.json()

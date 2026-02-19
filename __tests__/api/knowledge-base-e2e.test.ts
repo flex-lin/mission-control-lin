@@ -9,11 +9,13 @@ import os from "os";
  *
  * 1. GET  /api/projects/[id] — numeric ID lookup (Strategy 1: direct DB by id)
  * 2. GET  /api/projects/[id] — path-encoded ID fallback (Strategies 2-4)
- * 3. DELETE /api/knowledge-base/[id] — DB entries (id > 0)
- * 4. DELETE /api/knowledge-base/-1?path= — hide filesystem-only entries
- * 5. GET  /api/knowledge-base — hidden paths filtering
- * 6. Full lifecycle: add → view detail → remove → verify gone
- * 7. Error cases (not found, invalid ID, path traversal)
+ * 3. DELETE /api/knowledge-base/[id] — DB entries only
+ * 4. Full lifecycle: add → view detail → remove → verify gone
+ * 5. Error cases (not found, invalid ID, path traversal)
+ *
+ * The knowledge base API (GET /api/knowledge-base) now returns ONLY DB entries.
+ * Filesystem auto-population from ~/.claude/projects/ has been removed so that
+ * a fresh clone starts with a blank knowledge base.
  */
 
 // ── Mock Prisma DB ───────────────────────────────────────────────────────────
@@ -24,9 +26,6 @@ const mockFindFirst = vi.fn();
 const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
 const mockDelete = vi.fn();
-const mockUpsert = vi.fn();
-
-const mockPrefFindUnique = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -37,10 +36,6 @@ vi.mock("@/lib/db", () => ({
       create: (...args: unknown[]) => mockCreate(...args),
       update: (...args: unknown[]) => mockUpdate(...args),
       delete: (...args: unknown[]) => mockDelete(...args),
-    },
-    preference: {
-      findUnique: (...args: unknown[]) => mockPrefFindUnique(...args),
-      upsert: (...args: unknown[]) => mockUpsert(...args),
     },
   },
 }));
@@ -84,12 +79,10 @@ async function callListGET() {
   return { status: res.status, body: await res.json() };
 }
 
-async function callDELETE(id: string, queryPath?: string) {
+async function callDELETE(id: string) {
   vi.resetModules();
   const mod = await import("@/app/api/knowledge-base/[id]/route");
-  const url = queryPath
-    ? `/api/knowledge-base/${id}?path=${encodeURIComponent(queryPath)}`
-    : `/api/knowledge-base/${id}`;
+  const url = `/api/knowledge-base/${id}`;
   const req = makeRequest(url, { method: "DELETE" });
   const res = await mod.DELETE(req, { params: Promise.resolve({ id }) });
   return { status: res.status, body: await res.json() };
@@ -112,145 +105,87 @@ beforeEach(() => {
   vi.clearAllMocks();
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "mc-kb-e2e-"));
   mockListProjects.mockReturnValue([]);
-  mockPrefFindUnique.mockResolvedValue(null);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 1. DELETE filesystem-only entries (id = -1, hidden paths)
+// 1. GET /api/knowledge-base — DB-only listing
 // ═══════════════════════════════════════════════════════════════════════════════
 
-describe("DELETE /api/knowledge-base/-1 (filesystem entries)", () => {
-  it("hides a filesystem entry by adding to kb_hidden_paths preference", async () => {
-    mockPrefFindUnique.mockResolvedValue(null); // no existing hidden paths
+describe("GET /api/knowledge-base — DB-only listing", () => {
+  it("returns empty list when DB is empty (no filesystem auto-population)", async () => {
+    mockFindMany.mockResolvedValue([]);
 
-    const { status, body } = await callDELETE("-1", "/home/user/fsproject");
+    const { status, body } = await callListGET();
+
+    expect(status).toBe(200);
+    expect(body.data).toHaveLength(0);
+    expect(body.meta.count).toBe(0);
+  });
+
+  it("returns DB entries with source='db'", async () => {
+    mockFindMany.mockResolvedValue([
+      makeDbRecord({ id: 1, path: "/home/user/proj", name: "proj" }),
+    ]);
+
+    const { status, body } = await callListGET();
+
+    expect(status).toBe(200);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].source).toBe("db");
+    expect(body.data[0].id).toBe(1);
+  });
+
+  it("handles DB error gracefully", async () => {
+    mockFindMany.mockRejectedValue(new Error("DB connection failed"));
+
+    const { status, body } = await callListGET();
+
+    expect(status).toBe(500);
+    expect(body.code).toBe("SERVER_ERROR");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 2. DELETE /api/knowledge-base/[id] — DB entries only
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("DELETE /api/knowledge-base/[id]", () => {
+  it("deletes a DB entry and returns { deleted: true }", async () => {
+    const record = makeDbRecord({ id: 10 });
+    mockFindUnique.mockResolvedValue(record);
+    mockDelete.mockResolvedValue(record);
+
+    const { status, body } = await callDELETE("10");
 
     expect(status).toBe(200);
     expect(body.data).toEqual({ deleted: true });
-    expect(mockUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { key: "kb_hidden_paths" },
-        create: expect.objectContaining({
-          key: "kb_hidden_paths",
-          value: JSON.stringify(["/home/user/fsproject"]),
-        }),
-        update: expect.objectContaining({
-          value: JSON.stringify(["/home/user/fsproject"]),
-        }),
-      })
-    );
+    expect(mockDelete).toHaveBeenCalledWith({ where: { id: 10 } });
   });
 
-  it("appends to existing hidden paths without duplicating", async () => {
-    mockPrefFindUnique.mockResolvedValue({
-      key: "kb_hidden_paths",
-      value: JSON.stringify(["/already/hidden"]),
-    });
+  it("returns 404 for non-existent DB id", async () => {
+    mockFindUnique.mockResolvedValue(null);
 
-    const { status } = await callDELETE("-1", "/home/user/newpath");
+    const { status, body } = await callDELETE("999");
 
-    expect(status).toBe(200);
-    const upsertCall = mockUpsert.mock.calls[0][0];
-    const hiddenList = JSON.parse(upsertCall.update.value);
-    expect(hiddenList).toContain("/already/hidden");
-    expect(hiddenList).toContain("/home/user/newpath");
-    expect(hiddenList).toHaveLength(2);
+    expect(status).toBe(404);
+    expect(body.code).toBe("NOT_FOUND");
+    expect(mockDelete).not.toHaveBeenCalled();
   });
 
-  it("does not duplicate an already-hidden path", async () => {
-    const existingPath = "/home/user/already";
-    mockPrefFindUnique.mockResolvedValue({
-      key: "kb_hidden_paths",
-      value: JSON.stringify([existingPath]),
-    });
+  it("returns 400 for id=0 (invalid)", async () => {
+    const { status, body } = await callDELETE("0");
 
-    const { status } = await callDELETE("-1", existingPath);
-
-    expect(status).toBe(200);
-    const upsertCall = mockUpsert.mock.calls[0][0];
-    const hiddenList = JSON.parse(upsertCall.update.value);
-    expect(hiddenList).toEqual([existingPath]);
+    expect(status).toBe(400);
+    expect(body.code).toBe("VALIDATION_ERROR");
+    expect(mockDelete).not.toHaveBeenCalled();
   });
 
-  it("returns 400 when id=-1 but no path query param", async () => {
+  it("returns 400 for id=-1 (filesystem hide mechanism removed)", async () => {
     const { status, body } = await callDELETE("-1");
 
     expect(status).toBe(400);
     expect(body.code).toBe("VALIDATION_ERROR");
-    expect(body.error).toContain("path query param required");
-    expect(mockUpsert).not.toHaveBeenCalled();
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 2. Hidden paths filtering in GET listing
-// ═══════════════════════════════════════════════════════════════════════════════
-
-describe("GET /api/knowledge-base — hidden paths filtering", () => {
-  it("excludes filesystem entries whose paths are in kb_hidden_paths", async () => {
-    mockFindMany.mockResolvedValue([]);
-    mockListProjects.mockReturnValue([
-      { id: "-home-user-visible", path: "/home/user/visible", name: "visible" },
-      { id: "-home-user-hidden", path: "/home/user/hidden", name: "hidden" },
-    ]);
-    mockPrefFindUnique.mockResolvedValue({
-      key: "kb_hidden_paths",
-      value: JSON.stringify(["/home/user/hidden"]),
-    });
-
-    const { status, body } = await callListGET();
-
-    expect(status).toBe(200);
-    expect(body.data).toHaveLength(1);
-    expect(body.data[0].path).toBe("/home/user/visible");
-  });
-
-  it("does not hide DB entries (only filesystem-only entries are filtered)", async () => {
-    mockFindMany.mockResolvedValue([
-      makeDbRecord({ id: 1, path: "/home/user/dbproject", name: "dbproject" }),
-    ]);
-    mockListProjects.mockReturnValue([]);
-    mockPrefFindUnique.mockResolvedValue({
-      key: "kb_hidden_paths",
-      value: JSON.stringify(["/home/user/dbproject"]),
-    });
-
-    const { status, body } = await callListGET();
-
-    expect(status).toBe(200);
-    expect(body.data).toHaveLength(1);
-    expect(body.data[0].path).toBe("/home/user/dbproject");
-    expect(body.data[0].source).toBe("db");
-  });
-
-  it("shows all filesystem entries when no hidden paths preference exists", async () => {
-    mockFindMany.mockResolvedValue([]);
-    mockListProjects.mockReturnValue([
-      { id: "-home-user-a", path: "/home/user/a", name: "a" },
-      { id: "-home-user-b", path: "/home/user/b", name: "b" },
-    ]);
-    mockPrefFindUnique.mockResolvedValue(null);
-
-    const { status, body } = await callListGET();
-
-    expect(status).toBe(200);
-    expect(body.data).toHaveLength(2);
-  });
-
-  it("handles malformed kb_hidden_paths gracefully (treats as empty)", async () => {
-    mockFindMany.mockResolvedValue([]);
-    mockListProjects.mockReturnValue([
-      { id: "-home-user-proj", path: "/home/user/proj", name: "proj" },
-    ]);
-    mockPrefFindUnique.mockResolvedValue({
-      key: "kb_hidden_paths",
-      value: "not-valid-json",
-    });
-
-    const { status, body } = await callListGET();
-
-    expect(status).toBe(200);
-    expect(body.data).toHaveLength(1);
+    expect(mockDelete).not.toHaveBeenCalled();
   });
 });
 
@@ -438,7 +373,7 @@ describe("GET /api/projects/[id] — path-encoded ID", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 4. Full lifecycle: add → list → delete → verify removed
+// 5. Full lifecycle: add → list → delete → verify removed
 // ═══════════════════════════════════════════════════════════════════════════════
 
 describe("Knowledge Base full lifecycle", () => {
@@ -467,8 +402,6 @@ describe("Knowledge Base full lifecycle", () => {
 
     // Step 2: Verify it appears in listing
     mockFindMany.mockResolvedValue([newRecord]);
-    mockListProjects.mockReturnValue([]);
-    mockPrefFindUnique.mockResolvedValue(null);
 
     const listResult = await callListGET();
 
@@ -495,93 +428,13 @@ describe("Knowledge Base full lifecycle", () => {
     expect(finalList.body.data).toHaveLength(0);
   });
 
-  it("hide filesystem project → verify hidden → still shows if added to DB", async () => {
-    const fsPath = "/home/user/fs-only-project";
-
-    // Step 1: Filesystem project visible
+  it("fresh clone scenario: DB is empty → knowledge base is blank", async () => {
+    // On a fresh clone the DB has no entries — listing should be empty
     mockFindMany.mockResolvedValue([]);
-    mockListProjects.mockReturnValue([
-      { id: "-home-user-fs-only-project", path: fsPath, name: "fs-only-project" },
-    ]);
-    mockPrefFindUnique.mockResolvedValue(null);
-
-    const before = await callListGET();
-    expect(before.status).toBe(200);
-    expect(before.body.data).toHaveLength(1);
-    expect(before.body.data[0].source).toBe("filesystem");
-
-    // Step 2: Hide it
-    mockPrefFindUnique.mockResolvedValue(null);
-    const hideResult = await callDELETE("-1", fsPath);
-    expect(hideResult.status).toBe(200);
-
-    // Step 3: Verify hidden from listing
-    mockPrefFindUnique.mockResolvedValue({
-      key: "kb_hidden_paths",
-      value: JSON.stringify([fsPath]),
-    });
-
-    const after = await callListGET();
-    expect(after.status).toBe(200);
-    expect(after.body.data).toHaveLength(0);
-
-    // Step 4: If the path is added to DB, it shows as "both" (hidden only filters fs-only)
-    mockFindMany.mockResolvedValue([
-      makeDbRecord({ id: 99, path: fsPath, name: "fs-only-project" }),
-    ]);
-
-    const withDb = await callListGET();
-    expect(withDb.status).toBe(200);
-    expect(withDb.body.data).toHaveLength(1);
-    expect(withDb.body.data[0].source).toBe("both");
-    expect(withDb.body.data[0].id).toBe(99);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 5. Edge cases and error handling
-// ═══════════════════════════════════════════════════════════════════════════════
-
-describe("Knowledge Base edge cases", () => {
-  it("DELETE with id=0 attempts DB deletion (not filesystem hide)", async () => {
-    mockFindUnique.mockResolvedValue(null);
-
-    const { status, body } = await callDELETE("0");
-
-    // id=0 is not -1, so it takes the DB deletion path
-    expect(status).toBe(404);
-    expect(body.code).toBe("NOT_FOUND");
-  });
-
-  it("DELETE with negative id other than -1 returns 404", async () => {
-    mockFindUnique.mockResolvedValue(null);
-
-    const { status, body } = await callDELETE("-5");
-
-    // -5 !== -1, so it goes to DB path and finds nothing
-    expect(status).toBe(404);
-    expect(body.code).toBe("NOT_FOUND");
-  });
-
-  it("GET listing handles DB error gracefully", async () => {
-    mockFindMany.mockRejectedValue(new Error("DB connection failed"));
 
     const { status, body } = await callListGET();
 
-    expect(status).toBe(500);
-    expect(body.code).toBe("SERVER_ERROR");
-  });
-
-  it("DELETE with valid DB id deletes and does not touch preferences", async () => {
-    const record = makeDbRecord({ id: 10 });
-    mockFindUnique.mockResolvedValue(record);
-    mockDelete.mockResolvedValue(record);
-
-    const { status, body } = await callDELETE("10");
-
     expect(status).toBe(200);
-    expect(body.data).toEqual({ deleted: true });
-    expect(mockUpsert).not.toHaveBeenCalled(); // should NOT touch hidden paths
-    expect(mockDelete).toHaveBeenCalledWith({ where: { id: 10 } });
+    expect(body.data).toHaveLength(0);
   });
 });

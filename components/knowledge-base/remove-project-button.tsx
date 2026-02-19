@@ -15,7 +15,7 @@ import { Loader2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 interface RemoveProjectButtonProps {
-  /** DB id of the entry, or -1 for filesystem-only */
+  /** DB id of the entry */
   entryId: number
   name: string
   path: string
@@ -29,12 +29,7 @@ export function RemoveProjectButton({ entryId, name, path: entryPath }: RemovePr
   async function handleRemove() {
     setLoading(true)
     try {
-      const url =
-        entryId === -1
-          ? `/api/knowledge-base/${entryId}?path=${encodeURIComponent(entryPath)}`
-          : `/api/knowledge-base/${entryId}`
-
-      const res = await fetch(url, { method: "DELETE" })
+      const res = await fetch(`/api/knowledge-base/${entryId}`, { method: "DELETE" })
       const json = await res.json()
 
       if (!res.ok) {
