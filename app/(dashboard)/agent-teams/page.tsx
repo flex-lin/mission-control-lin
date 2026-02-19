@@ -8,8 +8,8 @@ import { SmartCreateDialog } from "@/components/agent-teams/smart-create-dialog"
 import { SubmitTaskDialog } from "@/components/agent-teams/submit-task-dialog"
 import { TeamActionsMenu } from "@/components/agent-teams/team-actions-menu"
 import { TeamHealthBadge } from "@/components/agent-teams/team-health-badge"
-import { CheckCircle2, Users, ListOrdered } from "lucide-react"
-import type { Team, TeamHealthStatus, QueuedTask } from "@/types"
+import { CheckCircle2, Users } from "lucide-react"
+import type { Team, TeamHealthStatus } from "@/types"
 
 interface TaskStats {
   total: number
@@ -39,28 +39,8 @@ async function getTeams(): Promise<TeamWithHealth[]> {
   }
 }
 
-async function getQueuedTasks(): Promise<QueuedTask[]> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3777"
-  try {
-    const res = await fetch(`${base}/api/queue`, { cache: "no-store" })
-    if (!res.ok) return []
-    const json = await res.json()
-    return json.data ?? []
-  } catch {
-    return []
-  }
-}
-
 export default async function AgentTeamsPage() {
-  const [teams, queuedTasks] = await Promise.all([getTeams(), getQueuedTasks()])
-
-  // Build a map from team name → queued task
-  const teamToQueuedTask = new Map<string, QueuedTask>()
-  for (const qt of queuedTasks) {
-    if (qt.teamName) {
-      teamToQueuedTask.set(qt.teamName, qt)
-    }
-  }
+  const teams = await getTeams()
 
   return (
     <div className="flex flex-col">
@@ -110,27 +90,6 @@ export default async function AgentTeamsPage() {
                     {team.description && (
                       <p className="text-xs text-muted-foreground">{team.description}</p>
                     )}
-                    {teamToQueuedTask.has(team.name) && (() => {
-                      const qt = teamToQueuedTask.get(team.name)!
-                      const isActive = qt.status === "running" || qt.status === "pending"
-                      return (
-                        <div className="mt-1 flex items-center gap-1.5">
-                          <ListOrdered className="h-3 w-3 text-blue-400 shrink-0" />
-                          <span className="text-[10px] text-blue-400">
-                            Queue #{qt.id}
-                          </span>
-                          <Badge
-                            variant={isActive ? "default" : qt.status === "completed" ? "success" : "secondary"}
-                            className="h-4 px-1 text-[9px]"
-                          >
-                            {qt.status}
-                          </Badge>
-                          <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">
-                            {qt.goal}
-                          </span>
-                        </div>
-                      )
-                    })()}
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-1">
