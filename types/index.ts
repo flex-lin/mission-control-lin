@@ -106,14 +106,6 @@ export interface ProxyLog {
   statusCode: number;
 }
 
-export interface AnalyticsEntry {
-  date: string;
-  model: string;
-  totalInput: number;
-  totalOutput: number;
-  estimatedCost: number;
-}
-
 // ── Project Types ─────────────────────────────────────────────────────────────
 
 export interface Project {
@@ -159,19 +151,12 @@ export interface ProxyConfig {
   targetUrl: string;
 }
 
-export interface BackgroundExecutionConfig {
-  enabled: boolean;
-  sleepPreventionMethod: "caffeinate" | "systemd-inhibit" | "auto";
-}
-
 export type BackgroundExecutionStatus = "active" | "idle" | "suspended" | "unavailable";
 
 export interface Settings {
   theme?: "dark" | "light" | "system";
   refreshInterval?: number;
   proxyConfig?: ProxyConfig;
-  backgroundExecution?: BackgroundExecutionConfig;
-  experimental?: Record<string, boolean>;
 }
 
 // ── Activity Feed Types ───────────────────────────────────────────────────────
@@ -212,8 +197,6 @@ export interface TeamPlan {
   sourceTaskId?: number;
 }
 
-export type TeamCreationStatus = "idle" | "generating" | "reviewing" | "spawning" | "done" | "error";
-
 // ── Background Execution Types ───────────────────────────────────────────────
 
 export interface BackgroundConfig {
@@ -236,28 +219,6 @@ export interface BackgroundConfig {
 // ── Team Health Types ────────────────────────────────────────────────────────
 
 export type TeamHealthStatus = "alive" | "asleep" | "exited" | "completed";
-
-export interface TeamMemberHealth {
-  name: string;
-  status: "active" | "idle" | "offline";
-  lastSeen: string | null;
-}
-
-export interface TeamHealth {
-  teamName: string;
-  status: TeamHealthStatus;
-  lastActivity: string | null;
-  memberCount: number;
-  pendingTasks: number;
-  activeTasks: number;
-  staleTasks: TeamTask[];
-  memberHealth: TeamMemberHealth[];
-  backgroundExecution?: {
-    enabled: boolean;
-    status: BackgroundExecutionStatus;
-    sleepPrevented: boolean;
-  };
-}
 
 export interface WakeRequest {
   taskId?: string;
@@ -442,14 +403,6 @@ export interface ResumeAction {
   timestamp: string;
 }
 
-export interface DaemonStatus {
-  running: boolean;
-  pid: number | null;
-  lastHeartbeat: string | null;
-  lastSleepEvent: SleepEvent | null;
-  resumeHistory: ResumeAction[];
-}
-
 // ── Usage Limits Types ───────────────────────────────────────────────────────
 
 export interface UsageLimits {
@@ -579,5 +532,6 @@ export interface SlackConfigInput {
 export interface ApiResponse<T> {
   data?: T;
   error?: string;
+  code?: string;
   meta?: Record<string, unknown>;
 }

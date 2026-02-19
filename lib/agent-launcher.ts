@@ -124,15 +124,14 @@ function writeLeaderLauncher(teamName: string, projectPath: string): string {
     "## NO TASKS — IMMEDIATE EXIT",
     "If the setup message says \"(no tasks)\" or there are ZERO tasks listed:",
     "1. Do NOT spawn any teammates",
-    "2. Do NOT call TeamCreate",
-    "3. Clean up: remove the team directory by running: rm -rf ~/.claude/teams/" + teamName + " ~/.claude/tasks/" + teamName,
-    "4. Say \"No tasks assigned. Team exiting immediately.\" and stop",
+    "2. Clean up: remove the team directory by running: rm -rf ~/.claude/teams/" + teamName + " ~/.claude/tasks/" + teamName,
+    "3. Say \"No tasks assigned. Team exiting immediately.\" and stop",
     "This takes ABSOLUTE priority over all other instructions.",
     "",
     "## INITIAL SETUP (do this ONCE, first turn only)",
-    "1. Call TeamCreate with team_name=\"" + teamName + "\"",
-    "2. Spawn ALL teammates listed in your first message using the Task tool — ALL in a single message, each with team_name=\"" + teamName + "\"",
-    "3. After spawning, say \"Setup complete\" and switch to monitoring mode",
+    "The team directory already exists at ~/.claude/teams/" + teamName + "/config.json — do NOT call TeamCreate (it is already set up).",
+    "1. Spawn ALL teammates listed in your first message using the Task tool — ALL in a single message, each with team_name=\"" + teamName + "\"",
+    "2. After spawning, say \"Setup complete\" and switch to monitoring mode",
     "",
     "## MONITORING MODE (after setup)",
     "- Respond to teammate messages promptly",
@@ -152,7 +151,7 @@ function writeLeaderLauncher(teamName: string, projectPath: string): string {
     "2. If the build fails, fix the issues and rebuild until it passes",
     "3. Stage and commit all changes with a descriptive conventional commit message (feat:, fix:, refactor:, etc.)",
     "4. Send shutdown_request to each teammate via SendMessage",
-    "5. After all teammates confirm shutdown, use TeamDelete to clean up",
+    "5. After all teammates confirm shutdown, clean up by running: rm -rf ~/.claude/teams/" + teamName + " ~/.claude/tasks/" + teamName,
     "6. Say \"All tasks complete. Verified and committed.\" and stop",
     "",
     "TASK FILES: ~/.claude/tasks/" + teamName + "/{id}.json",
@@ -216,27 +215,27 @@ function buildSetupMessage(
 
 There are ZERO tasks assigned to this team. Follow the "NO TASKS — IMMEDIATE EXIT" protocol:
 1. Do NOT spawn any teammates
-2. Do NOT call TeamCreate
-3. Clean up: run: rm -rf ~/.claude/teams/${teamName} ~/.claude/tasks/${teamName}
-4. Say "No tasks assigned. Team exiting immediately." and stop`;
+2. Clean up: run: rm -rf ~/.claude/teams/${teamName} ~/.claude/tasks/${teamName}
+3. Say "No tasks assigned. Team exiting immediately." and stop`;
   }
 
   return `ONE-TIME SETUP for team "${teamName}" (${description}):
 
-STEP 1: Call TeamCreate with team_name="${teamName}"
+IMPORTANT: The team directory already exists at ~/.claude/teams/${teamName}/config.json — do NOT call TeamCreate. It is already configured.
 
-STEP 2: Spawn ALL teammates below via the Task tool — send ALL spawn calls in a SINGLE message, each with team_name="${teamName}":
+STEP 1: Spawn ALL teammates below via the Task tool — send ALL spawn calls in a SINGLE message, each with team_name="${teamName}":
 ${spawnLines}
 
-STEP 3: After ALL teammates are spawned, say "Setup complete." and enter monitoring mode.
+STEP 2: After ALL teammates are spawned, say "Setup complete." and enter monitoring mode.
 
 Tasks to be completed:
 ${taskList}
 
 IMPORTANT:
-- Spawn ALL teammates in step 2, not one at a time
+- Do NOT call TeamCreate — the team directory already exists
+- Spawn ALL teammates in step 1, not one at a time
 - After setup, do NOT spawn more teammates — monitor and coordinate only
-- When ALL tasks are completed, send shutdown_request to each teammate, then TeamDelete
+- When ALL tasks are completed, send shutdown_request to each teammate, then clean up with: rm -rf ~/.claude/teams/${teamName} ~/.claude/tasks/${teamName}
 - Help stuck teammates with guidance but do NOT do their work for them`;
 }
 
@@ -307,7 +306,7 @@ STEP 2: Check task status in ~/.claude/tasks/${teamName}/ and coordinate remaini
 Tasks:
 ${taskList}
 
-After spawning teammates, enter monitoring mode. When ALL tasks are completed, send shutdown_request to each teammate, then TeamDelete.`;
+After spawning teammates, enter monitoring mode. When ALL tasks are completed, send shutdown_request to each teammate, then clean up by running: rm -rf ~/.claude/teams/${teamName} ~/.claude/tasks/${teamName}`;
 }
 
 /**

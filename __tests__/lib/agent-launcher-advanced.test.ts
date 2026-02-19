@@ -102,8 +102,9 @@ describe("agent-launcher advanced", () => {
       expect(sentMsg).toContain('name="tester"');
       expect(sentMsg).toContain("Build feature");
       expect(sentMsg).toContain("Write tests");
-      expect(sentMsg).toContain("STEP 1: Call TeamCreate");
-      expect(sentMsg).toContain("STEP 2: Spawn ALL teammates");
+      // Setup message should tell leader NOT to call TeamCreate (team already exists)
+      expect(sentMsg).toContain("do NOT call TeamCreate");
+      expect(sentMsg).toContain("STEP 1: Spawn ALL teammates");
     });
 
     it("does not launch if session already alive", async () => {
