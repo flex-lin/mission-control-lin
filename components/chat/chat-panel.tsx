@@ -16,7 +16,11 @@ import { ChatSessionList, type ChatSessionSummary } from "./chat-session-list"
 import type { ChatMessageData, ToolCall, ToolResult } from "./chat-message"
 
 function generateId(): string {
-  return crypto.randomUUID()
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID()
+  }
+  // Fallback for environments where crypto.randomUUID is unavailable
+  return Math.random().toString(36).slice(2) + Date.now().toString(36)
 }
 
 type View = "chat" | "sessions"

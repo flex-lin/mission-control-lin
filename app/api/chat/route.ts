@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { listTeams, readTeamConfig, readTaskList } from "@/lib/claude-files";
 import { db } from "@/lib/db";
+import { createOAuthClient } from "@/lib/claude-oauth";
 import { killAllTeamSessions } from "@/lib/tmux-manager";
 import type { KnowledgeBaseEntry } from "@/types";
 import fs from "fs";
@@ -410,15 +411,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Prefer OAuth credentials (from Claude Code login), fall back to API key
+    const oauthClient = createOAuthClient();
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
+    if (!oauthClient && !apiKey) {
       return new Response(
-        JSON.stringify({ error: "ANTHROPIC_API_KEY is not configured" }),
+        JSON.stringify({ error: "No authentication configured. Set up OAuth in Settings or provide ANTHROPIC_API_KEY." }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       );
     }
-
-    const client = new Anthropic({ apiKey });
+    const client = oauthClient ?? new Anthropic({ apiKey });
 
     // Build the message list for the API
     const messages: Anthropic.MessageParam[] = body.messages.map((m) => ({
