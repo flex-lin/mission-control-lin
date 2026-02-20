@@ -77,7 +77,29 @@ async function waitForClaudeReady(sessionName: string, maxWaitMs = 30000): Promi
  * The system prompt is the ONLY mechanism that prevents re-spawning.
  * It persists across all turns regardless of conversation context.
  */
+/** Validate teamName for safe shell/path embedding: alphanumeric, dash, underscore only */
+function validateTeamName(name: string): void {
+  if (!name || !/^[\w-]+$/.test(name) || name.length > 200) {
+    throw new Error(`Invalid team name: must match [\\w-]+ and be ≤200 chars, got "${name.slice(0, 50)}"`);
+  }
+}
+
+/** Validate projectPath for safe shell embedding: absolute, no null bytes, reasonable length */
+function validateProjectPathForShell(p: string): void {
+  if (!p || !path.isAbsolute(p)) {
+    throw new Error("projectPath must be an absolute path");
+  }
+  if (p.includes("\0")) {
+    throw new Error("projectPath must not contain null bytes");
+  }
+  if (p.length > 4096) {
+    throw new Error("projectPath must be ≤4096 characters");
+  }
+}
+
 function writeLeaderLauncher(teamName: string, projectPath: string): string {
+  validateTeamName(teamName);
+  validateProjectPathForShell(projectPath);
   const teamDir = path.join(CLAUDE_DIR, "teams", teamName);
   fs.mkdirSync(teamDir, { recursive: true });
 

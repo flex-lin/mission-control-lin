@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ok, err, created, serverError, validateProjectPath } from "@/lib/api-helpers";
 import { db } from "@/lib/db";
 
+const VALID_STATUSES = new Set(["pending", "running", "completed", "failed", "cancelled"]);
 const ACTIVE_STATUSES = ["pending", "running"];
 const COMPLETED_STATUSES = ["completed", "failed", "cancelled"];
 
@@ -18,7 +19,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     } else if (group === "completed") {
       where = { status: { in: COMPLETED_STATUSES } };
     } else if (statusFilter) {
-      where = { status: { in: statusFilter.split(",") } };
+      const filtered = statusFilter.split(",").filter((s) => VALID_STATUSES.has(s.trim()));
+      if (filtered.length > 0) {
+        where = { status: { in: filtered } };
+      }
     }
 
     const orderBy =

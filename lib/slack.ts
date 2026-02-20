@@ -134,6 +134,20 @@ export async function replyToSlashCommand(
   text: string,
   blocks?: unknown[]
 ): Promise<void> {
+  // Validate that the response URL points to Slack to prevent SSRF
+  try {
+    const url = new URL(responseUrl);
+    if (
+      url.protocol !== "https:" ||
+      !url.hostname.endsWith(".slack.com")
+    ) {
+      throw new Error(`Invalid Slack response URL: hostname must end with .slack.com`);
+    }
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith("Invalid Slack")) throw e;
+    throw new Error(`Invalid Slack response URL: ${responseUrl}`);
+  }
+
   const body: Record<string, unknown> = {
     response_type: "ephemeral",
     text,

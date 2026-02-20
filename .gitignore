@@ -55,3 +55,6 @@ lib/generated/
 
 # user uploads
 public/uploads/
+
+# local planning docs (may contain project-specific notes)
+docs/repo-analytics-plan.md

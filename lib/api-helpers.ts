@@ -70,15 +70,55 @@ export function validateProjectPath(projectPath: string): { valid: true; resolve
   return { valid: true, resolved };
 }
 
+/** Private/reserved IPv4 ranges that should be blocked for SSRF prevention */
+const PRIVATE_IP_PATTERNS = [
+  /^127\./, // loopback
+  /^10\./, // Class A private
+  /^172\.(1[6-9]|2\d|3[01])\./, // Class B private
+  /^192\.168\./, // Class C private
+  /^169\.254\./, // link-local
+  /^0\./, // current network
+];
+
+/** Hostnames and IPv6 patterns to block */
+const BLOCKED_HOSTS = new Set(["localhost", "[::1]", "[0:0:0:0:0:0:0:1]"]);
+const BLOCKED_IPV6_PREFIXES = ["fe80:", "fc00:", "fd00:", "::1"];
+
+function isPrivateHost(hostname: string): boolean {
+  // Check blocked hostnames
+  if (BLOCKED_HOSTS.has(hostname.toLowerCase())) return true;
+
+  // Strip brackets from IPv6
+  const bare = hostname.replace(/^\[|\]$/g, "");
+
+  // Check IPv6 blocked prefixes
+  const lower = bare.toLowerCase();
+  if (BLOCKED_IPV6_PREFIXES.some((p) => lower.startsWith(p))) return true;
+
+  // Check IPv4 private ranges
+  if (PRIVATE_IP_PATTERNS.some((re) => re.test(bare))) return true;
+
+  return false;
+}
+
 /**
  * Validate a URL string: must be http or https scheme.
+ * By default blocks private/reserved IPs to prevent SSRF.
+ * Pass `options.allowPrivate: true` for legitimate local targets (e.g. proxy).
  * Returns the validated URL or an error response.
  */
-export function validateUrl(urlStr: string, fieldName = "url"): { valid: true; url: URL } | { valid: false; error: NextResponse } {
+export function validateUrl(
+  urlStr: string,
+  fieldName = "url",
+  options?: { allowPrivate?: boolean }
+): { valid: true; url: URL } | { valid: false; error: NextResponse } {
   try {
     const url = new URL(urlStr);
     if (url.protocol !== "http:" && url.protocol !== "https:") {
       return { valid: false, error: err(`${fieldName} must use http or https protocol`, "VALIDATION_ERROR") };
+    }
+    if (!options?.allowPrivate && isPrivateHost(url.hostname)) {
+      return { valid: false, error: err(`${fieldName} must not point to a private/reserved address`, "VALIDATION_ERROR") };
     }
     return { valid: true, url };
   } catch {

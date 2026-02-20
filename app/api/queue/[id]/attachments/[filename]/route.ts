@@ -10,11 +10,21 @@ const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "tasks");
 
 type RouteContext = { params: Promise<{ id: string; filename: string }> };
 
+/** Reject filenames with traversal characters before path.resolve as defense-in-depth */
+function isUnsafeFilename(name: string): boolean {
+  return name.includes("/") || name.includes("\\") || name.includes("\0") || name.includes("..");
+}
+
 export async function GET(_req: NextRequest, ctx: RouteContext): Promise<NextResponse> {
   try {
     const { id, filename } = await ctx.params;
     const taskId = parseInt(id, 10);
     if (isNaN(taskId)) return err("Invalid task ID", "VALIDATION_ERROR");
+
+    // Defense-in-depth: reject obviously malicious filenames before any filesystem ops
+    if (isUnsafeFilename(filename)) {
+      return err("Invalid filename", "VALIDATION_ERROR");
+    }
 
     const task = await db.queuedTask.findUnique({ where: { id: taskId } });
     if (!task) return notFound("Task not found");
@@ -52,6 +62,11 @@ export async function DELETE(_req: NextRequest, ctx: RouteContext): Promise<Next
     const { id, filename } = await ctx.params;
     const taskId = parseInt(id, 10);
     if (isNaN(taskId)) return err("Invalid task ID", "VALIDATION_ERROR");
+
+    // Defense-in-depth: reject obviously malicious filenames before any filesystem ops
+    if (isUnsafeFilename(filename)) {
+      return err("Invalid filename", "VALIDATION_ERROR");
+    }
 
     const task = await db.queuedTask.findUnique({ where: { id: taskId } });
     if (!task) return notFound("Task not found");

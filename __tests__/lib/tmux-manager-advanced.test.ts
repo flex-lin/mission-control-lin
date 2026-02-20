@@ -255,12 +255,21 @@ describe("tmux-manager", () => {
   // ── shell quoting ─────────────────────────────────────────────────
 
   describe("shell quoting safety", () => {
-    it("handles session names with special characters safely", async () => {
+    it("rejects session names with special characters", async () => {
+      const mod = await getModule();
+
+      // Session names with special characters are now rejected for security
+      expect(() => mod.killSession("mc-team-it's-leader")).toThrow(/Invalid session name/);
+      expect(() => mod.killSession("team; rm -rf /")).toThrow(/Invalid session name/);
+      expect(() => mod.killSession("team`whoami`")).toThrow(/Invalid session name/);
+    });
+
+    it("accepts valid session names", async () => {
       mockExecSync.mockReturnValue(Buffer.from(""));
       const mod = await getModule();
 
-      // The quote function should escape single quotes
-      expect(() => mod.killSession("mc-team-it's-leader")).not.toThrow();
+      expect(() => mod.killSession("mc-team-leader")).not.toThrow();
+      expect(() => mod.killSession("mc-my_team-worker_1")).not.toThrow();
     });
   });
 });

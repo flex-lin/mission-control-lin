@@ -6,16 +6,56 @@ const execAsync = promisify(exec);
 /** Timeout for tmux commands to prevent indefinite hangs (ms) */
 const TMUX_TIMEOUT = 5_000;
 
+/** Max length for session names to prevent abuse */
+const MAX_SESSION_NAME_LENGTH = 200;
+
+/** Pattern for valid session/team/member names: alphanumeric, dash, underscore */
+const SAFE_NAME_RE = /^[\w-]+$/;
+
+/** Allowlist of raw key names accepted by sendRawKey() */
+const ALLOWED_RAW_KEYS = new Set([
+  "Enter", "Up", "Down", "Left", "Right",
+  "Escape", "Tab", "BSpace", "DC", "Home", "End",
+  "PageUp", "PageDown", "Space",
+  "C-c", "C-d", "C-z", "C-l", "C-a", "C-e",
+]);
+
+/**
+ * Validate a session name: must match [\w-]+ and be within length limit.
+ * Throws if invalid.
+ */
+function validateSessionName(name: string): void {
+  if (!name || name.length > MAX_SESSION_NAME_LENGTH) {
+    throw new Error(`Invalid session name: must be 1-${MAX_SESSION_NAME_LENGTH} characters`);
+  }
+  if (!SAFE_NAME_RE.test(name)) {
+    throw new Error(`Invalid session name: must match [\\w-]+, got "${name.slice(0, 50)}"`);
+  }
+}
+
+/**
+ * Validate a pane ID: must match %\d+.
+ * Throws if invalid.
+ */
+function validatePaneId(paneId: string): void {
+  if (!/^%\d+$/.test(paneId)) {
+    throw new Error(`Invalid pane ID: must match %\\d+, got "${paneId.slice(0, 50)}"`);
+  }
+}
+
 /**
  * tmux session management for agent teams.
  * Session naming convention: mc-{teamName}-{memberName}
  */
 
 export function getSessionName(teamName: string, memberName: string): string {
+  validateSessionName(teamName);
+  validateSessionName(memberName);
   return `mc-${teamName}-${memberName}`;
 }
 
 export function sessionExists(sessionName: string): boolean {
+  validateSessionName(sessionName);
   try {
     execSync(`tmux has-session -t ${quote(sessionName)} 2>/dev/null`, { timeout: TMUX_TIMEOUT });
     return true;
@@ -29,6 +69,7 @@ export function createSession(
   command: string,
   cwd?: string
 ): void {
+  validateSessionName(sessionName);
   const cwdFlag = cwd ? `-c ${quote(cwd)}` : "";
   execSync(
     `tmux new-session -d -s ${quote(sessionName)} ${cwdFlag} ${quote(command)}`,
@@ -37,6 +78,7 @@ export function createSession(
 }
 
 export function killSession(sessionName: string): void {
+  validateSessionName(sessionName);
   try {
     execSync(`tmux kill-session -t ${quote(sessionName)}`, { stdio: "ignore", timeout: TMUX_TIMEOUT });
   } catch {
@@ -45,6 +87,7 @@ export function killSession(sessionName: string): void {
 }
 
 export function sendKeys(sessionName: string, text: string): void {
+  validateSessionName(sessionName);
   // Send the text followed by Enter to paste it into the input
   execSync(
     `tmux send-keys -t ${quote(sessionName)} ${quote(text)} Enter`,
@@ -57,6 +100,7 @@ export function sendKeys(sessionName: string, text: string): void {
  * Sends the text, waits briefly for the paste to complete, then sends Enter to submit.
  */
 export function sendKeysAndSubmit(sessionName: string, text: string): void {
+  validateSessionName(sessionName);
   // Send the text with Enter (pastes into input)
   execSync(
     `tmux send-keys -t ${quote(sessionName)} ${quote(text)} Enter`,
@@ -74,6 +118,9 @@ export function sendKeysAndSubmit(sessionName: string, text: string): void {
 export function listTeamSessions(
   teamName: string
 ): { sessionName: string; alive: boolean }[] {
+  if (!SAFE_NAME_RE.test(teamName)) {
+    throw new Error(`Invalid team name: must match [\\w-]+`);
+  }
   const prefix = `mc-${teamName}-`;
   try {
     const output = execSync("tmux list-sessions -F '#{session_name}' 2>/dev/null", {
@@ -124,6 +171,7 @@ export function getTeamSessionStatus(
  * Returns true if a non-shell process is running in the pane.
  */
 export function sessionProcessAlive(sessionName: string): boolean {
+  validateSessionName(sessionName);
   try {
     const cmd = execSync(
       `tmux list-panes -t ${quote(sessionName)} -F '#{pane_current_command}' 2>/dev/null`,
@@ -141,6 +189,7 @@ export function sessionProcessAlive(sessionName: string): boolean {
  * Capture the current visible pane content.
  */
 export function capturePane(sessionName: string): string {
+  validateSessionName(sessionName);
   try {
     return execSync(
       `tmux capture-pane -t ${quote(sessionName)} -p 2>/dev/null`,
@@ -155,6 +204,10 @@ export function capturePane(sessionName: string): string {
  * Send a raw key (e.g. "Down", "Up", "Enter") to a tmux session.
  */
 export function sendRawKey(sessionName: string, key: string): void {
+  validateSessionName(sessionName);
+  if (!ALLOWED_RAW_KEYS.has(key)) {
+    throw new Error(`Invalid raw key: "${key}" is not in the allowlist`);
+  }
   try {
     execSync(`tmux send-keys -t ${quote(sessionName)} ${key}`, { stdio: "ignore", timeout: TMUX_TIMEOUT });
   } catch {
@@ -187,6 +240,7 @@ export function killAllTeamSessions(teamName: string): string[] {
 // ── Async variants (non-blocking, for API routes) ──────────────────────────
 
 export async function killSessionAsync(sessionName: string): Promise<void> {
+  validateSessionName(sessionName);
   try {
     await execAsync(`tmux kill-session -t ${quote(sessionName)}`, { timeout: TMUX_TIMEOUT });
   } catch {
@@ -197,6 +251,9 @@ export async function killSessionAsync(sessionName: string): Promise<void> {
 export async function listTeamSessionsAsync(
   teamName: string
 ): Promise<{ sessionName: string; alive: boolean }[]> {
+  if (!SAFE_NAME_RE.test(teamName)) {
+    throw new Error(`Invalid team name: must match [\\w-]+`);
+  }
   const prefix = `mc-${teamName}-`;
   try {
     const { stdout } = await execAsync("tmux list-sessions -F '#{session_name}' 2>/dev/null", { timeout: TMUX_TIMEOUT });
@@ -215,6 +272,7 @@ export async function listTeamSessionsAsync(
  * Used for external teams where we don't know the session name but have pane IDs from config.
  */
 export function paneAlive(paneId: string): boolean {
+  validatePaneId(paneId);
   try {
     const cmd = execSync(
       `tmux display-message -p -t ${quote(paneId)} '#{pane_current_command}' 2>/dev/null`,
